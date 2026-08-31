@@ -3,15 +3,13 @@ services:
     build:
       context: ./db
     environment:
-      POSTGRES_DB: transcendence
-      POSTGRES_USER: transcendence
-      POSTGRES_PASSWORD: transcendence
+      MONGO_INITDB_DATABASE: transcendence
     ports:
-      - "5432:5432"
+      - "27017:27017"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mongo_data:/data/db
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U transcendence -d transcendence"]
+      test: ["CMD-SHELL", "mongosh --quiet --eval 'db.runCommand({ ping: 1 }).ok' --authenticationDatabase admin localhost:27017/test | grep 1"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -21,7 +19,8 @@ services:
       context: ./backend
     environment:
       PORT: 3000
-      DATABASE_URL: postgres://transcendence:transcendence@db:5432/transcendence
+      DATABASE_URL: mongodb://db:27017
+      MONGO_DB: transcendence
     ports:
       - "3000:3000"
     depends_on:
@@ -39,4 +38,4 @@ services:
       - backend
 
 volumes:
-  postgres_data:
+  mongo_data:
