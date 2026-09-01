@@ -6,7 +6,7 @@ interface ProtectedRouteProps {
 	children: React.JSX.Element;
 }
 
-const ProtectedRoute = ( { children } : ProtectedRouterProps) => {
+const ProtectedRoute = ( { children } : ProtectedRouteProps) => {
 	const { token } = useAuth();
 
 	return token ? children : <Navigate to="/login" replace/>;
