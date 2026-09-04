@@ -8,7 +8,7 @@ import {
 } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import Login from "./src/pages/Login";
-import Register from "./components/Register";
+import Register from "./src/pages/Register";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 const Dashboard = () => {
