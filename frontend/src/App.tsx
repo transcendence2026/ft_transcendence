@@ -1,14 +1,18 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
+import { AuthProvider } from "../context/AuthContext";
+import { WebSocketProvider } from "../context/WebSocketContext";
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* <Route path="/" element={<Home />} /> */}
-
-        <Route path="/login" element={<Login />} />
-      </Routes>
-    </BrowserRouter>
+    <AuthProvider>
+      <WebSocketProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+          </Routes>
+        </BrowserRouter>
+      </WebSocketProvider>
+    </AuthProvider>
   );
 }
