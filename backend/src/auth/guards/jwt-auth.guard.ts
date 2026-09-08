@@ -6,7 +6,7 @@
 import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { UserPayload } from '../interfaces/user-payload.interface.js';
 
- // @Injectable() registra esta clase en el sistema de inyección de dependencias de NestJS.
+ // @Injectable() es un Decorador de Clase: registra esta clase en el sistema de inyección de dependencias de NestJS.
  // Actúa como una plantilla o instancia compartida (Singleton) gestionado por el framework:
  // evita crear instancias manuales con 'new' y cualquier cambio en este guard se propaga 
  // automáticamente a todas las rutas protegidas (unico punto de modificacion para todo el sistema)
@@ -23,7 +23,7 @@ export class JwtAuthGuard implements CanActivate {
 			email: 'patquesa@tastesync.42',
 			roles: ['USER'],
 		};
-		//3.- Modificamos el objeto request y le añadimos la propiedad .user con los datos simulados
+		//3.- Modificamos el objeto request y le añadimos la propiedad .user con los datos simulados (payload)
 		request.user = mockUser;
 		//4.- Concedemos el acceso a la ruta
 		return true;
