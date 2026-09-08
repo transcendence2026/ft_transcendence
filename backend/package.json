@@ -5,24 +5,44 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
+<<<<<<< HEAD
     "start": "node dist/src/server.js",
     "postinstall": "prisma skills sync || exit 0"
   },
   "dependencies": {
     "@prisma/client": "^7.10.0",
+=======
+    "start": "node dist/src/main.js"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.0.11",
+    "@nestjs/core": "^11.0.11",
+    "@nestjs/mongoose": "^11.0.3",
+    "@nestjs/platform-express": "^11.0.11",
+    "@nestjs/platform-ws": "^11.0.11",
+    "@nestjs/websockets": "^11.0.11",
+>>>>>>> origin/dev
     "bcryptjs": "^2.4.3",
-    "cors": "^2.8.5",
     "dotenv": "^17.4.2",
     "express": "^5.1.0",
+<<<<<<< HEAD
     "jsonwebtoken": "^9.0.3"
+=======
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^8.3.1",
+    "ws": "^8.21.3"
+>>>>>>> origin/dev
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.4",
-    "@types/cors": "^2.8.17",
     "@types/express": "^5.0.3",
-    "@types/jsonwebtoken": "^9.0.5",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.3.0",
+<<<<<<< HEAD
     "prisma": "^8.0.0-rc.13",
+=======
+    "@types/ws": "^8.18.1",
+>>>>>>> origin/dev
     "typescript": "^5.9.2"
   }
 }
