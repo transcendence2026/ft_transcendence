@@ -22,16 +22,17 @@ enum Status {
 }
 
 model User {
-	id				String		@id @default(uuid())
-	email			String		@unique
-	username		String		@unique
-	passwordHash	String?		// Opcional si inicia sesión vía OAuth 42/Google
-	Role			Role		@default(USER)
-	Status			Status		@default(OFFLINE)
-	twoFactorEnable	Boolean		@default(false)
-	twoFactorSecret	String?
-	createdAt		DateTime	@default(now())
-	updatedAt		DateTime	@updatedAt
+	id					String		@id @default(uuid())
+	email				String		@unique
+	username			String		@unique
+	passwordHash		String?		// Opcional si inicia sesión vía OAuth 42/Google
+	role				Role		@default(USER)
+	status				Status		@default(OFFLINE)
+	isPrivate			Boolean		@default(false)
+	isTwoFactorEnable	Boolean		@default(false)
+	twoFactorSecret		String?
+	createdAt			DateTime	@default(now())
+	updatedAt			DateTime	@updatedAt
 
 	//Relaciones
 	profile				Profile?
@@ -91,7 +92,7 @@ model Block {
 	@@unique([blockerId, blockedId])
 }
 
-// CONTENIDO, PLATOS, RESEÑAS
+// CONTENIDO, RESTAURANTES, PLATOS,  RESEÑAS
 
 model Post {
 	id			String		@id @default(uuid())
@@ -103,13 +104,24 @@ model Post {
 	updatedAt	DateTime	@updatedAt
 }
 
-model Dish {
+model Restaurant {
 	id			String		@id @default(uuid())
 	name		String
-	description	String?
-	price		Float
-	createdAt	DateTime	@default(now())
-	updatedAt	DateTime	@updatedAt
+	cuisine		String
+	priceRange	Int
+
+	dishes		Dish[]
+}
+
+model Dish {
+	id				String		@id @default(uuid())
+	name			String
+	description		String?
+	price			Float
+	restaurantId	String
+	restaurant		Restaurant	@relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+	createdAt		DateTime	@default(now())
+	updatedAt		DateTime	@updatedAt
 
 	reviews		Review[]
 	tags		Tag[]		@relation("DishTags")
@@ -141,5 +153,7 @@ model Message {
 	text		String
 	senderId	String
 	sender		User		@relation("UserSentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+	receiverId	String
+	receiver	User		@relation("UserReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
 	createdAt	DateTime	@default(now())
 }
