@@ -24,17 +24,18 @@ export class WebsocketGateway {
   private readonly logger = new Logger(WebsocketGateway.name);
 
   handleConnection(client: Client, request: any) {
-      const token = request.headers.authorization
+    const token = request.headers.authorization
 
-      if (!token) {
-        client.socket.close(1008, "Token manquant")
-        return;
-      }
+    if (!token) {
+      client.socket.close(1008, "Token manquant")
+      return;
+    }
+    
     try {
       const payload = jwt.verify(token, process.env.JWT_SECRET as string);
       
       if (typeof payload === 'string' || !payload.sub) {
-      client.socket.close(1008, "Token manquant")
+        client.socket.close(1008, "Token manquant")
         throw new Error('Token invalido');
       }
 
@@ -43,7 +44,7 @@ export class WebsocketGateway {
       client.userId = userId;
       this.presenceService.addClient(userId, client.socket);
       this.logger.log('Un nuevo cliente se ha conectado.');
-    
+
       client.socket.send('Bienvenido al WebSocket !');
     } catch {
       client.socket.close(1008, 'Token invalido');
@@ -72,8 +73,6 @@ export class WebsocketGateway {
 
   @SubscribeMessage('joinRoom')
   handleJoinRoom(@MessageBody() data: MessagePayload, @ConnectedSocket() client: Client) {
-
     this.roomService.joinRoom(client.userId, data.roomName)
-
   }
 }
