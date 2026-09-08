@@ -1,3 +1,5 @@
-FROM mongo:8.0
+FROM postgres:15-alpine
 
-COPY init-mongo.js /docker-entrypoint-initdb.d/001-init-mongo.js
+ENV POSTGRES_USER=postgres
+ENV POSTGRES_PASSWORD=postgrespassword
+ENV POSTGRES_DB=transcendence
