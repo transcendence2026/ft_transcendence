@@ -58,7 +58,7 @@ export class AuthService {
     }
 
     const user = await this.prisma.user.findUnique({ where: { email: String(email).trim().toLowerCase() } });
-    if (!user || !(await bcrypt.compare(String(password), user.passwordHash))) {
+    if (!user || !user.passwordHash || !(await bcrypt.compare(String(password), user.passwordHash))) {
       throw new BadRequestException('Invalid credentials');
     }
 
