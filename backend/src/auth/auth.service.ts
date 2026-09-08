@@ -46,7 +46,7 @@ export class AuthService {
       data: {
         username: await this.ensureUniqueUsername(String(username)),
         email: normalizedEmail,
-        password: await bcrypt.hash(String(password), 10),
+        passwordHash: await bcrypt.hash(String(password), 10),
       },
     });
     return { token: this.createJwt(user.id), user: { username: user.username, email: user.email } };
@@ -58,7 +58,7 @@ export class AuthService {
     }
 
     const user = await this.prisma.user.findUnique({ where: { email: String(email).trim().toLowerCase() } });
-    if (!user || !(await bcrypt.compare(String(password), user.password))) {
+    if (!user || !(await bcrypt.compare(String(password), user.passwordHash))) {
       throw new BadRequestException('Invalid credentials');
     }
 
@@ -113,7 +113,7 @@ export class AuthService {
     const email = String(userInfo.email ?? `${login}@student.42.fr`).trim().toLowerCase();
     let user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
-      user = await this.prisma.user.create({ data: { username: await this.ensureUniqueUsername(login), email, password: await bcrypt.hash(crypto.randomBytes(24).toString('hex'), 10) } });
+      user = await this.prisma.user.create({ data: { username: await this.ensureUniqueUsername(login), email, passwordHash: await bcrypt.hash(crypto.randomBytes(24).toString('hex'), 10) } });
     }
 
     const callbackUrl = new URL('/oauth/callback', process.env.FRONTEND_URL ?? 'http://localhost:8080');
