@@ -1,159 +1,160 @@
 generator client {
-	provider = "prisma-client-js"
+  provider = "prisma-client-js"
 }
 
 datasource db {
-	provider = "postgresql"
-	url = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // USUARIOS Y PERFILES
 
 enum Role {
-	USER
-	ADMIN
-	MODERATOR
+  USER
+  ADMIN
+  MODERATOR
 }
 
 enum Status {
-	OFFLINE
-	ONLINE
-	INGAME
+  OFFLINE
+  ONLINE
+  INGAME
 }
 
 model User {
-	id					String		@id @default(uuid())
-	email				String		@unique
-	username			String		@unique
-	passwordHash		String?		// Opcional si inicia sesión vía OAuth 42/Google
-	role				Role		@default(USER)
-	status				Status		@default(OFFLINE)
-	isPrivate			Boolean		@default(false)
-	isTwoFactorEnable	Boolean		@default(false)
-	twoFactorSecret		String?
-	createdAt			DateTime	@default(now())
-	updatedAt			DateTime	@updatedAt
+  id                 String   @id @default(uuid())
+  email              String   @unique
+  username           String   @unique
+  passwordHash       String? // Opcional si inicia sesión vía OAuth 42/Google
+  role               Role     @default(USER)
+  status             Status   @default(OFFLINE)
+  isPrivate          Boolean  @default(false)
+  isTwoFactorEnabled Boolean  @default(false)
+  twoFactorSecret    String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
-	//Relaciones
-	profile				Profile?
-	sentFriendships		Friendship[]	@relation("UserSentFriendships")
-	receivedFriendships	Friendship[]	@relation("UserReceivedFriendships")
-	blockedUsers		Block[]			@relation("UserBlocks")
-	blockedBy			Block[]			@relation("UserBlockedBy")
-	posts				Post[]
-	reviews				Review[]
-	sentMessages		Message[]		@relation("UserSentMessages")
+  //Relaciones
+  profile             Profile?
+  sentFriendships     Friendship[] @relation("UserSentFriendships")
+  receivedFriendships Friendship[] @relation("UserReceivedFriendships")
+  blockedUsers        Block[]      @relation("UserBlocks")
+  blockedBy           Block[]      @relation("UserBlockedBy")
+  posts               Post[]
+  reviews             Review[]
+  sentMessages        Message[]    @relation("UserSentMessages")
+  receivedMessages    Message[]    @relation("UserReceivedMessages")
 }
 
 model Profile {
-	id			String		@id @default(uuid())
-	userId		String		@unique
-	user		User		@relation(fields: [userId], references: [id], onDelete: Cascade)
-	firstName	String?
-	lastName	String?
-	avatarUrl	String?		@default("default-avatar.png")
-	bio			String?
-	wins		Int			@default(0)
-	losses		Int			@default(0)
-	rating		Int			@default(1200)
-	createdAt	DateTime	@default(now())
-	updatedAt	DateTime	@updatedAt
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName String?
+  lastName  String?
+  avatarUrl String?  @default("default-avatar.png")
+  bio       String?
+  wins      Int      @default(0)
+  losses    Int      @default(0)
+  rating    Int      @default(1200)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // SOCIAL Y Relaciones
 
 enum FriendshipStatus {
-	PENDING
-	ACCEPTED
-	DECLINED
+  PENDING
+  ACCEPTED
+  DECLINED
 }
 
 model Friendship {
-	id			String				@id @default(uuid())
-	senderId	String
-	sender		User				@relation("UserSentFriendships", fields: [senderId], references: [id], onDelete: Cascade)
-	receiverId	String
-	receiver	User				@relation("UserReceivedFriendships", fields: [receiverId], references: [id], onDelete: Cascade)
-	status		FriendshipStatus	@default(PENDING)
-	createdAt	DateTime			@default(now())
-	updatedAt	DateTime			@updatedAt
+  id         String           @id @default(uuid())
+  senderId   String
+  sender     User             @relation("UserSentFriendships", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId String
+  receiver   User             @relation("UserReceivedFriendships", fields: [receiverId], references: [id], onDelete: Cascade)
+  status     FriendshipStatus @default(PENDING)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
 
-	@@unique([senderId, receiverId])
+  @@unique([senderId, receiverId])
 }
 
 model Block {
-	id			String		@id @default(uuid())
-	blockerId	String
-	blocker		User		@relation("UserBlocks", fields: [blockerId], references: [id], onDelete: Cascade)
-	blockedId	String
-	blocked		User		@relation("UserBlockedBy", fields: [blockedId], references: [id], onDelete: Cascade)
-	createdAt	DateTime	@default(now())
+  id        String   @id @default(uuid())
+  blockerId String
+  blocker   User     @relation("UserBlocks", fields: [blockerId], references: [id], onDelete: Cascade)
+  blockedId String
+  blocked   User     @relation("UserBlockedBy", fields: [blockedId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
 
-	@@unique([blockerId, blockedId])
+  @@unique([blockerId, blockedId])
 }
 
 // CONTENIDO, RESTAURANTES, PLATOS,  RESEÑAS
 
 model Post {
-	id			String		@id @default(uuid())
-	title		String
-	content		String
-	authorId	String
-	author		User		@relation(fields: [authorId], references: [id], onDelete: Cascade)
-	createdAt	DateTime	@default(now())
-	updatedAt	DateTime	@updatedAt
+  id        String   @id @default(uuid())
+  title     String
+  content   String
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Restaurant {
-	id			String		@id @default(uuid())
-	name		String
-	cuisine		String
-	priceRange	Int
+  id         String @id @default(uuid())
+  name       String
+  cuisine    String
+  priceRange Int
 
-	dishes		Dish[]
+  dishes Dish[]
 }
 
 model Dish {
-	id				String		@id @default(uuid())
-	name			String
-	description		String?
-	price			Float
-	restaurantId	String
-	restaurant		Restaurant	@relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-	createdAt		DateTime	@default(now())
-	updatedAt		DateTime	@updatedAt
+  id           String     @id @default(uuid())
+  name         String
+  description  String?
+  price        Float
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 
-	reviews		Review[]
-	tags		Tag[]		@relation("DishTags")
+  reviews Review[]
+  tags    Tag[]    @relation("DishTags")
 }
 
 model Tag {
-	id			String		@id @default(uuid())
-	name		String		@unique
-	dishes		Dish[]		@relation("DishTags")
+  id     String @id @default(uuid())
+  name   String @unique
+  dishes Dish[] @relation("DishTags")
 }
 
 model Review {
-	id			String		@id @default(uuid())
-	rating		Int			// Puntuación, por ejemple del 1 al 5
-	comment		String?
-	authorId	String
-	author		User		@relation(fields: [authorId], references: [id], onDelete: Cascade)
-	dishId		String
-	dish		Dish		@relation(fields: [dishId], references: [id], onDelete: Cascade)
-	createdAt	DateTime	@default(now())
+  id        String   @id @default(uuid())
+  rating    Int // Puntuación, por ejemple del 1 al 5
+  comment   String?
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  dishId    String
+  dish      Dish     @relation(fields: [dishId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
 
-	@@unique([authorId, dishId]) // Una reseña por usuario para cada plato
+  @@unique([authorId, dishId]) // Una reseña por usuario para cada plato
 }
 
 // CHAT Y MENSAJERÍA
 
 model Message {
-	id			String		@id @default(uuid())
-	text		String
-	senderId	String
-	sender		User		@relation("UserSentMessages", fields: [senderId], references: [id], onDelete: Cascade)
-	receiverId	String
-	receiver	User		@relation("UserReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
-	createdAt	DateTime	@default(now())
+  id         String   @id @default(uuid())
+  text       String
+  senderId   String
+  sender     User     @relation("UserSentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId String
+  receiver   User     @relation("UserReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
 }
