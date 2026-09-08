@@ -54,6 +54,4 @@ export class RoomService {
   getUsersInRoom(roomName: string) {
     return this.channels.get(roomName)
   }
-
-
 }
