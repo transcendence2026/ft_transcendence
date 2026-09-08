@@ -1,9 +1,9 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Inject } from '@nestjs/common';
 import { MessagesService } from './messages.service.js';
 
 @Controller('api/message')
 export class MessagesController {
-  constructor(private readonly messagesService: MessagesService) {}
+  constructor(@Inject(MessagesService) private readonly messagesService: MessagesService) {}
 
   @Get()
   findAll() {

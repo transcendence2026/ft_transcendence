@@ -1,10 +1,10 @@
-import { Body, Controller, Get, Query, Redirect, Req, UseGuards, Post } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Query, Redirect, Req, UseGuards, Post } from '@nestjs/common';
 import { AuthGuard, AuthenticatedRequest } from './auth.guard.js';
 import { AuthService } from './auth.service.js';
 
 @Controller('api/auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(@Inject(AuthService) private readonly authService: AuthService) {}
 
   @Post('register')
   register(@Body() body: { username?: string; email?: string; password?: string }) {

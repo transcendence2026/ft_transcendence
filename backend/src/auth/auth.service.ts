@@ -1,9 +1,8 @@
-import { BadRequestException, Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
+import { BadRequestException, Inject, Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
+import { PrismaService } from '../database/prisma.service.js';
+import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
-import { Model } from 'mongoose';
-import { User, UserDocument } from '../users/user.schema.js';
 
 type OAuthUserInfo = { login?: string; email?: string; first_name?: string };
 
@@ -11,7 +10,7 @@ type OAuthUserInfo = { login?: string; email?: string; first_name?: string };
 export class AuthService {
   private readonly oauthStateStore = new Map<string, string>();
 
-  constructor(@InjectModel(User.name) private readonly userModel: Model<UserDocument>) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   private createJwt(userId: string): string {
     return jwt.sign({ id: userId }, process.env.JWT_SECRET ?? 'dev-secret-change-me', { expiresIn: '1d' });
@@ -25,7 +24,7 @@ export class AuthService {
     const base = this.sanitizeUsername(preferredUsername);
     let candidate = base;
     let suffix = 1;
-    while (await this.userModel.exists({ username: candidate })) {
+    while (await this.prisma.user.findUnique({ where: { username: candidate } })) {
       candidate = `${base}${suffix}`;
       suffix += 1;
     }
@@ -38,17 +37,19 @@ export class AuthService {
     }
 
     const normalizedEmail = String(email).trim().toLowerCase();
-    const existingUser = await this.userModel.findOne({ $or: [{ email: normalizedEmail }, { username: String(username).trim() }] });
+    const existingUser = await this.prisma.user.findFirst({ where: { OR: [{ email: normalizedEmail }, { username: String(username).trim() }] } });
     if (existingUser) {
       throw new BadRequestException('User already exists');
     }
 
-    const user = await this.userModel.create({
-      username: await this.ensureUniqueUsername(String(username)),
-      email: normalizedEmail,
-      password: String(password),
+    const user = await this.prisma.user.create({
+      data: {
+        username: await this.ensureUniqueUsername(String(username)),
+        email: normalizedEmail,
+        password: await bcrypt.hash(String(password), 10),
+      },
     });
-    return { token: this.createJwt(String(user._id)), user: { username: user.username, email: user.email } };
+    return { token: this.createJwt(user.id), user: { username: user.username, email: user.email } };
   }
 
   async login(email?: string, password?: string) {
@@ -56,12 +57,12 @@ export class AuthService {
       throw new BadRequestException('Email and password are required');
     }
 
-    const user = await this.userModel.findOne({ email: String(email).trim().toLowerCase() });
-    if (!user || !(await user.comparePassword(String(password)))) {
+    const user = await this.prisma.user.findUnique({ where: { email: String(email).trim().toLowerCase() } });
+    if (!user || !(await bcrypt.compare(String(password), user.password))) {
       throw new BadRequestException('Invalid credentials');
     }
 
-    return { token: this.createJwt(String(user._id)), user: { username: user.username, email: user.email } };
+    return { token: this.createJwt(user.id), user: { username: user.username, email: user.email } };
   }
 
   buildOAuthUrl(): string {
@@ -110,20 +111,20 @@ export class AuthService {
     const userInfo = await userResponse.json() as OAuthUserInfo;
     const login = userInfo.login ?? userInfo.first_name ?? '42user';
     const email = String(userInfo.email ?? `${login}@student.42.fr`).trim().toLowerCase();
-    let user = await this.userModel.findOne({ email });
+    let user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
-      user = await this.userModel.create({ username: await this.ensureUniqueUsername(login), email, password: crypto.randomBytes(24).toString('hex') });
+      user = await this.prisma.user.create({ data: { username: await this.ensureUniqueUsername(login), email, password: await bcrypt.hash(crypto.randomBytes(24).toString('hex'), 10) } });
     }
 
     const callbackUrl = new URL('/oauth/callback', process.env.FRONTEND_URL ?? 'http://localhost:8080');
-    callbackUrl.searchParams.set('token', this.createJwt(String(user._id)));
+    callbackUrl.searchParams.set('token', this.createJwt(user.id));
     callbackUrl.searchParams.set('username', user.username);
     callbackUrl.searchParams.set('email', user.email);
     return callbackUrl.toString();
   }
 
   async getCurrentUser(id: string) {
-    const user = await this.userModel.findById(id).select('username email');
+    const user = await this.prisma.user.findUnique({ where: { id }, select: { username: true, email: true } });
     if (!user) throw new UnauthorizedException('User not found');
     return { user: { username: user.username, email: user.email } };
   }

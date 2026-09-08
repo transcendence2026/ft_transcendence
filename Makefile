@@ -5,7 +5,7 @@ COMPOSE := docker compose
 help:
 	@printf "Available commands:\n"
 	@printf "  make build    Build all service images\n"
-	@printf "  make up       Build and start the application\n"
+		@printf "  make up       Build and start the development stack\n"
 	@printf "  make down     Stop and remove containers\n"
 	@printf "  make restart  Restart all services\n"
 	@printf "  make logs     Follow service logs\n"

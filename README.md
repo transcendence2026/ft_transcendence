@@ -1,5 +1,16 @@
 # ft_transcendence
 
+## Local development
+
+The application uses PostgreSQL with Prisma. Start the development stack with:
+
+```sh
+make up
+```
+
+The frontend is available at http://localhost:8080 and the backend at http://localhost:3000.
+Backend and frontend source directories are bind-mounted into their containers, so edits on the host are picked up by `tsx watch` and Vite without rebuilding. Prisma runs `db push` when the backend starts.
+
 This project started as a minimal full-stack app with Dockerized services and evolved into a secure authentication flow with local login/register and a 42 OAuth-ready backend.
 
 The goal of this README is to explain the project in order:
