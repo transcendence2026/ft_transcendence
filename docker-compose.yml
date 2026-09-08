@@ -3,13 +3,15 @@ services:
     build:
       context: ./db
     environment:
-      MONGO_INITDB_DATABASE: transcendence
+      POSTGRES_DB: transcendence
+      POSTGRES_USER: transcendence
+      POSTGRES_PASSWORD: transcendence
     ports:
-      - "27017:27017"
+      - "5432:5432"
     volumes:
-      - mongo_data:/data/db
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "mongosh --quiet --eval 'db.runCommand({ ping: 1 }).ok' --authenticationDatabase admin localhost:27017/test | grep 1"]
+      test: ["CMD-SHELL", "pg_isready -U transcendence -d transcendence"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -19,8 +21,7 @@ services:
       context: ./backend
     environment:
       PORT: 3000
-      DATABASE_URL: mongodb://db:27017
-      MONGO_DB: transcendence
+      DATABASE_URL: postgresql://transcendence:transcendence@db:5432/transcendence?schema=public
       JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}
       BACKEND_URL: ${BACKEND_URL:-http://localhost:3000}
@@ -29,6 +30,10 @@ services:
       FORTY_TWO_REDIRECT_URI: ${FORTY_TWO_REDIRECT_URI:-http://localhost:3000/api/auth/oauth/42/callback}
     ports:
       - "3000:3000"
+    command: sh -c "npm run db:push && npm run dev"
+    volumes:
+      - ./backend:/app
+      - backend_node_modules:/app/node_modules
     depends_on:
       db:
         condition: service_healthy
@@ -39,9 +44,17 @@ services:
       args:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
     ports:
-      - "8080:80"
+      - "8080:5173"
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
+    command: npm run dev -- --host 0.0.0.0
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
     depends_on:
       - backend
 
 volumes:
-  mongo_data:
+  postgres_data:
+  backend_node_modules:
+  frontend_node_modules:

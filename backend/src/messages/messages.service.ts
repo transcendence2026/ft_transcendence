@@ -1,13 +1,14 @@
-import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { Message, MessageDocument } from './message.schema.js';
+import { Inject, Injectable } from '@nestjs/common';
+import { PrismaService } from '../database/prisma.service.js';
 
 @Injectable()
 export class MessagesService {
-  constructor(@InjectModel(Message.name) private readonly messageModel: Model<MessageDocument>) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   findAll() {
-    return this.messageModel.find({}, { _id: 0 }).sort({ created_at: -1 }).lean();
+    return this.prisma.message.findMany({
+      orderBy: { createdAt: 'desc' },
+      select: { text: true, sender: true, createdAt: true },
+    }).then((messages) => messages.map(({ createdAt, ...message }) => ({ ...message, created_at: createdAt })));
   }
 }

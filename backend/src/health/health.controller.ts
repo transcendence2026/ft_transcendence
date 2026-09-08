@@ -1,14 +1,15 @@
-import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
-import { InjectConnection } from '@nestjs/mongoose';
-import type { Connection } from 'mongoose';
+import { Controller, Get, Inject, ServiceUnavailableException } from '@nestjs/common';
+import { PrismaService } from '../database/prisma.service.js';
 
 @Controller('api/health')
 export class HealthController {
-  constructor(@InjectConnection() private readonly connection: Connection) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   @Get()
-  check() {
-    if (this.connection.readyState !== 1) {
+  async check() {
+    try {
+      await this.prisma.$queryRawUnsafe('SELECT 1');
+    } catch {
       throw new ServiceUnavailableException({ status: 'error' });
     }
     return { status: 'ok' };

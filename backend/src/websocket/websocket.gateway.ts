@@ -5,9 +5,10 @@ import { PresenceService, RoomService } from './websocket.service.js';
 import jwt from 'jsonwebtoken';
 
 export type Client = {
-  socket: WebSocket;
-  userId: string;
+  userId?: string;
 };
+
+type ConnectedClient = WebSocket & Client;
 
 type MessagePayload = {
   roomName: string, 
@@ -23,37 +24,40 @@ export class WebsocketGateway {
   ) {}
   private readonly logger = new Logger(WebsocketGateway.name);
 
-  handleConnection(client: Client, request: any) {
-    const token = request.headers.authorization
+  handleConnection(client: ConnectedClient, request: any) {
+    const token = request.headers?.authorization?.replace(/^Bearer\s+/i, '');
 
     if (!token) {
-      client.socket.close(1008, "Token manquant")
+      client.close(1008, "Token manquant")
       return;
     }
     
     try {
       const payload = jwt.verify(token, process.env.JWT_SECRET as string);
       
-      if (typeof payload === 'string' || !payload.sub) {
-        client.socket.close(1008, "Token manquant")
+      if (typeof payload === 'string' || (!payload.id && !payload.sub)) {
+        client.close(1008, "Token manquant")
         throw new Error('Token invalido');
       }
 
-      const userId = payload.sub.toString();
+      const userId = String(payload.id ?? payload.sub);
       
       client.userId = userId;
-      this.presenceService.addClient(userId, client.socket);
+      this.presenceService.addClient(userId, client);
       this.logger.log('Un nuevo cliente se ha conectado.');
 
-      client.socket.send('Bienvenido al WebSocket !');
+      client.send('Bienvenido al WebSocket !');
     } catch {
-      client.socket.close(1008, 'Token invalido');
+      client.close(1008, 'Token invalido');
     }
   }
   
-  handleDisconnect(client: Client, request: any) {
+  handleDisconnect(client: ConnectedClient) {
+    if (!client.userId) {
+      return;
+    }
 
-    this.presenceService.removeClient(client.userId, client.socket);
+    this.presenceService.removeClient(client.userId, client);
 
     this.logger.log('Le client a fermé la page ou perdu la connexion.');
   }
@@ -73,6 +77,10 @@ export class WebsocketGateway {
 
   @SubscribeMessage('joinRoom')
   handleJoinRoom(@MessageBody() data: MessagePayload, @ConnectedSocket() client: Client) {
+    if (!client.userId) {
+      return;
+    }
+
     this.roomService.joinRoom(client.userId, data.roomName)
   }
 }
