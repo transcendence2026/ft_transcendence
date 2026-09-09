@@ -1,22 +1,49 @@
 services:
+  nginx:
+    # Public entry point for HTTPS traffic and optional HTTP-to-HTTPS redirects.
+    build:
+      context: ./proxy
+    ports:
+      - "443:443"
+      - "80:80"   # Optional; used only to redirect HTTP traffic to HTTPS.
+    volumes:
+      # Certificates are mounted read-only so they can be replaced without rebuilding.
+      - ./proxy/certs:/etc/nginx/certs:ro
+      # Share uploaded files with the backend while serving them read-only through Nginx.
+      - uploads_data:/usr/share/nginx/uploads:ro
+    networks:
+      # The edge network is reserved for a future public-facing layer.
+      # - edge-net
+      - proxy-net
+    # Start the proxy after the application services are available.
+    depends_on:
+      - frontend
+      - backend
+    # Restart the proxy automatically unless it is stopped explicitly.
+    restart: unless-stopped
   db:
+    # PostgreSQL is kept on the private backend network.
     build:
       context: ./db
     environment:
       POSTGRES_DB: transcendence
       POSTGRES_USER: transcendence
       POSTGRES_PASSWORD: transcendence
-    ports:
-      - "5432:5432"
+    # Keep the database inaccessible from the host by default.
+    networks:
+      - backend-net
     volumes:
+      # Persist database data across container recreations.
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
+      # Backend startup waits for PostgreSQL to accept connections.
       test: ["CMD-SHELL", "pg_isready -U transcendence -d transcendence"]
       interval: 5s
       timeout: 5s
       retries: 10
 
   backend:
+    # API server and WebSocket gateway.
     build:
       context: ./backend
     environment:
@@ -28,33 +55,57 @@ services:
       FORTY_TWO_CLIENT_ID: ${FORTY_TWO_CLIENT_ID:-}
       FORTY_TWO_CLIENT_SECRET: ${FORTY_TWO_CLIENT_SECRET:-}
       FORTY_TWO_REDIRECT_URI: ${FORTY_TWO_REDIRECT_URI:-http://localhost:3000/api/auth/oauth/42/callback}
-    ports:
-      - "3000:3000"
+    networks:
+      # The backend can access the database and receive traffic from the proxy.
+      - backend-net
+      - proxy-net
+    expose:
+      # Expose port 3000 only to other services, not directly to the host.
+      - "3000"
     command: sh -c "npm run db:push && npm run dev"
     volumes:
+      # Mount source code for live development and keep dependencies in a named volume.
       - ./backend:/app
       - backend_node_modules:/app/node_modules
+      # Persist uploads and make them available to the Nginx container.
+      - uploads_data:/app/uploads
     depends_on:
       db:
         condition: service_healthy
 
   frontend:
+    # Vite development server for the client application.
     build:
       context: ./frontend
       args:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
-    ports:
-      - "8080:5173"
+    networks:
+      - proxy-net
+    expose:
+      # The frontend is reachable internally through the proxy network.
+      - "5173"
     environment:
       VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
     command: npm run dev -- --host 0.0.0.0
     volumes:
+      # Mount source code for hot reloading while preserving installed packages.
       - ./frontend:/app
       - frontend_node_modules:/app/node_modules
     depends_on:
       - backend
 
+networks:
+  # Frontend and Nginx communication network.
+  proxy-net:
+    driver: bridge
+  # Internal network that prevents direct external access to the database.
+  backend-net:
+    driver: bridge
+    internal: true
+
 volumes:
+  # Named volumes preserve state and dependencies between container restarts.
   postgres_data:
   backend_node_modules:
   frontend_node_modules:
+  uploads_data:
