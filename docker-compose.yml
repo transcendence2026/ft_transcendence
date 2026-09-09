@@ -4,8 +4,8 @@ services:
     build:
       context: ./proxy
     ports:
-      - "443:443"
-      - "80:80"   # Optional; used only to redirect HTTP traffic to HTTPS.
+      - "${HTTPS_PORT:-8443}:443"
+      - "${HTTP_PORT:-8080}:80"   # Redirects HTTP traffic to HTTPS locally.
     volumes:
       # Certificates are mounted read-only so they can be replaced without rebuilding.
       - ./proxy/certs:/etc/nginx/certs:ro
@@ -50,11 +50,11 @@ services:
       PORT: 3000
       DATABASE_URL: postgresql://transcendence:transcendence@db:5432/transcendence?schema=public
       JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}
+      FRONTEND_URL: ${FRONTEND_URL:-https://localhost:8443}
       BACKEND_URL: ${BACKEND_URL:-http://localhost:3000}
       FORTY_TWO_CLIENT_ID: ${FORTY_TWO_CLIENT_ID:-}
       FORTY_TWO_CLIENT_SECRET: ${FORTY_TWO_CLIENT_SECRET:-}
-      FORTY_TWO_REDIRECT_URI: ${FORTY_TWO_REDIRECT_URI:-http://localhost:3000/api/auth/oauth/42/callback}
+      FORTY_TWO_REDIRECT_URI: ${FORTY_TWO_REDIRECT_URI:-https://localhost:8443/api/auth/oauth/42/callback}
     networks:
       # The backend can access the database and receive traffic from the proxy.
       - backend-net
@@ -78,14 +78,14 @@ services:
     build:
       context: ./frontend
       args:
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
+        VITE_API_URL: ${VITE_API_URL:-https://localhost:8443}
     networks:
       - proxy-net
     expose:
       # The frontend is reachable internally through the proxy network.
       - "5173"
     environment:
-      VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
+      VITE_API_URL: ${VITE_API_URL:-https://localhost:8443}
     command: npm run dev -- --host 0.0.0.0
     volumes:
       # Mount source code for hot reloading while preserving installed packages.
