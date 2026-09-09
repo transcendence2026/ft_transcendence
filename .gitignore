@@ -83,3 +83,6 @@ postgres-data/
 
 # Automated test coverage reports directory
 coverage/
+
+# 9. CERTS
+proxy/certs
