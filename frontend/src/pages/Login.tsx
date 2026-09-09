@@ -16,7 +16,7 @@ export default function Login() {
   }, [messages]);
 
   return (
-    <main className="h-screen w-full overflow-hidden bg-[#141312] font-serif text-[#e6e1df] lg:grid lg:grid-cols-2">
+    <main className="auth-page">
       <AuthSide side="left" />
       <LoginRightSide />
     </main>
