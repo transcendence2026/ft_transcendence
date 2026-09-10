@@ -7,7 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// USERS Y PROFILES
+// USUARIOS Y PERFILES
 
 enum Role {
   USER
@@ -18,13 +18,14 @@ enum Role {
 enum Status {
   OFFLINE
   ONLINE
+  INGAME
 }
 
 model User {
   id                 String   @id @default(uuid())
   email              String   @unique
   username           String   @unique
-  passwordHash       String? // Optional if logging in via 42/Google OAuth
+  passwordHash       String? // Opcional si inicia sesión vía OAuth 42/Google
   role               Role     @default(USER)
   status             Status   @default(OFFLINE)
   isPrivate          Boolean  @default(false)
@@ -33,7 +34,7 @@ model User {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
-  //Relations
+  //Relaciones
   profile             Profile?
   sentFriendships     Friendship[] @relation("UserSentFriendships")
   receivedFriendships Friendship[] @relation("UserReceivedFriendships")
@@ -46,21 +47,21 @@ model User {
 }
 
 model Profile {
-  id               String   @id @default(uuid())
-  userId           String   @unique
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  firstName        String?
-  lastName         String?
-  avatarUrl        String?  @default("default-avatar.png")
-  bio              String?
-  preferredCuisine String? // Example: "ITALIAN, JAPANESE, MEXICAN"
-  spicyTolerance   Int      @default(0) // Level (0 - 5)
-  pricePreference  Int      @default(2) // Range (1 - 4)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName String?
+  lastName  String?
+  avatarUrl String?  @default("default-avatar.png")
+  bio       String?
+  wins      Int      @default(0)
+  losses    Int      @default(0)
+  rating    Int      @default(1200)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
-// SOCIAL AND RELATIONS
+// SOCIAL Y Relaciones
 
 enum FriendshipStatus {
   PENDING
@@ -92,7 +93,7 @@ model Block {
   @@unique([blockerId, blockedId])
 }
 
-// CONTENT, RESTAURANTS, DISHES, REVIEWS
+// CONTENIDO, RESTAURANTES, PLATOS,  RESEÑAS
 
 model Post {
   id        String   @id @default(uuid())
@@ -135,7 +136,7 @@ model Tag {
 
 model Review {
   id        String   @id @default(uuid())
-  rating    Int // Score, e.g., from 1 to 5
+  rating    Int // Puntuación, por ejemple del 1 al 5
   comment   String?
   authorId  String
   author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
@@ -143,10 +144,10 @@ model Review {
   dish      Dish     @relation(fields: [dishId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 
-  @@unique([authorId, dishId]) // One review per user for each dish
+  @@unique([authorId, dishId]) // Una reseña por usuario para cada plato
 }
 
-// CHAT AND MESSAGING
+// CHAT Y MENSAJERÍA
 
 model Message {
   id         String   @id @default(uuid())
