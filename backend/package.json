@@ -4,8 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc",
-    "start": "node dist/src/server.js"
+    "start": "node dist/src/server.js",
+    "start:dev": "nest start --watch",
+    "build": "tsc"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",
@@ -23,6 +24,7 @@
     "rxjs": "^7.8.2"
   },
   "devDependencies": {
+    "@nestjs/cli": "^12.0.0",
     "@nestjs/testing": "^12.0.1",
     "@types/bcryptjs": "^2.4.4",
     "@types/cors": "^2.8.17",
