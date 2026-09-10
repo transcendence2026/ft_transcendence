@@ -4,7 +4,13 @@ import { Module } from '@nestjs/common';
 import { AuthModule } from './auth/auth.module.js'; //importas la rama
 
 @Module({
-	imports: [AuthModule], //la conectas al tronco principal de la App
+	imports: [
+		AuthModule, //Importa el Modulo de Autenticación
+		//Modulos siguientes que importaremos cuando se hagan
+		//UsersModule,  //Modulo para gesrionar perfiles y datos usuarios
+		//ProductsModule, //Modulo para catálogo de tienda
+		//OrdersModule, //Modulo para compras y carritos
+	],
 	controllers: [],
 	providers: [],
 })
