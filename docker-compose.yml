@@ -22,11 +22,16 @@ services:
     # Restart the proxy automatically unless it is stopped explicitly.
     restart: unless-stopped
   db:
+    image: postgres:15-alpine
     # PostgreSQL is kept on the private backend network.
     build:
       context: ./db
     environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
       POSTGRES_DB: transcendence
+    ports:
+      - "5432:5432"
       POSTGRES_USER: transcendence
       POSTGRES_PASSWORD: transcendence
     # Keep the database inaccessible from the host by default.
@@ -36,6 +41,7 @@ services:
       # Persist database data across container recreations.
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d transcendence"]
       # Backend startup waits for PostgreSQL to accept connections.
       test: ["CMD-SHELL", "pg_isready -U transcendence -d transcendence"]
       interval: 5s
@@ -48,7 +54,8 @@ services:
       context: ./backend
     environment:
       PORT: 3000
-      DATABASE_URL: postgresql://transcendence:transcendence@db:5432/transcendence?schema=public
+      # Formato: postgresql://USUARIO:CONTRASEÑA@HOST_SERVICIO:PUERTO/NOMBRE_BD?schema=public
+      DATABASE_URL: postgresql://postgres:postgrespassword@db:5432/transcendence?schema=public
       JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
       FRONTEND_URL: ${FRONTEND_URL:-https://localhost:8443}
       BACKEND_URL: ${BACKEND_URL:-http://localhost:3000}
@@ -106,6 +113,3 @@ networks:
 volumes:
   # Named volumes preserve state and dependencies between container restarts.
   postgres_data:
-  backend_node_modules:
-  frontend_node_modules:
-  uploads_data:
