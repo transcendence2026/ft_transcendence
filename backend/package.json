@@ -10,6 +10,7 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "prisma:generate": "prisma generate",
+    "db:push": "prisma db push",
     "prisma:migrate": "prisma migrate dev"
   },
   "dependencies": {

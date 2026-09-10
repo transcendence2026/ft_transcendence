@@ -4,6 +4,7 @@ import { DatabaseModule } from './database/database.module.js';
 import { HealthModule } from './health/health.module.js';
 import { MessagesModule } from './messages/messages.module.js';
 import { WebsocketGateway } from './websocket/websocket.gateway.js';
+import { PresenceService, RoomService } from './websocket/websocket.service.js';
 
 @Module({
   imports: [
@@ -12,6 +13,6 @@ import { WebsocketGateway } from './websocket/websocket.gateway.js';
     MessagesModule,
     HealthModule,
   ],
-  providers: [WebsocketGateway],
+  providers: [WebsocketGateway, PresenceService, RoomService],
 })
 export class AppModule {}
