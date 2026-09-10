@@ -1,5 +1,63 @@
 @import "tailwindcss";
 
+@theme {
+  --color-primary: #ef6540;
+  --color-primary-hover: #ff7955;
+  --color-primary-soft: #ffb4a1;
+  --color-secondary: #fabc4d;
+  --color-background: #141312;
+  --color-background-deep: #0f0e0d;
+  --color-surface: #1d1b1a;
+  --color-surface-raised: #2b2a28;
+  --color-border: #363433;
+  --color-text: #e6e1df;
+  --color-text-soft: #e0bfb7;
+  --color-muted: #a88a83;
+
+  --font-sans: "DM Sans", sans-serif;
+  --font-serif: "DM Serif Display", serif;
+
+  --radius-control: 4px;
+  --radius-card: 12px;
+  --shadow-action: 0 10px 24px rgb(239 101 64 / 20%);
+}
+
+@utility auth-page {
+  @apply min-h-screen w-full overflow-hidden bg-background font-serif text-text lg:grid lg:grid-cols-2;
+}
+
+@utility auth-panel {
+  @apply flex h-full flex-col bg-background px-6 py-6 sm:px-10 lg:px-16;
+}
+
+@utility auth-content {
+  @apply mx-auto flex w-full max-w-md flex-1 flex-col justify-center;
+}
+
+@utility auth-label {
+  @apply block font-sans text-xs text-text-soft;
+}
+
+@utility auth-input-shell {
+  @apply flex h-10 items-center rounded-control border border-transparent bg-surface px-3 transition-colors focus-within:border-primary;
+}
+
+@utility auth-input {
+  @apply w-full border-none bg-transparent font-serif text-sm text-text outline-none placeholder:text-muted/50;
+}
+
+@utility auth-button {
+  @apply flex h-10 w-full items-center justify-center gap-2 rounded-control bg-primary font-sans text-[13px] font-semibold text-background shadow-action transition-colors hover:bg-primary-hover;
+}
+
+@utility auth-secondary-button {
+  @apply flex h-10 w-full items-center justify-center gap-2 rounded-control bg-surface font-sans text-[13px] font-medium text-text transition-colors hover:bg-surface-raised;
+}
+
+@utility auth-outline-button {
+  @apply flex h-10 w-full items-center justify-center rounded-control border border-primary font-sans text-[13px] font-semibold text-primary-soft transition-colors hover:bg-primary/10;
+}
+
 button {
   cursor: pointer;
 }

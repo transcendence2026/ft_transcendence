@@ -31,15 +31,15 @@ export default function RegisterLeftSide() {
     }
   };
   return (
-    <section className="flex h-full flex-col bg-[#141312] px-6 py-6 sm:px-10 lg:px-16">
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center">
-        <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-[#2b2a28] text-xl text-[#fabc4d] shadow-sm">
+    <section className="auth-panel">
+      <div className="auth-content">
+        <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-card bg-surface-raised text-xl text-secondary shadow-sm">
           É
         </div>
-        <h1 className="text-3xl font-normal tracking-[-0.04em] text-[#e6e1df] sm:text-4xl">
+        <h1 className="text-3xl font-normal text-text sm:text-4xl">
           Crea tu cuenta.
         </h1>
-        <p className="mt-2 text-[14px] leading-relaxed text-[#a88a83]">
+        <p className="mt-2 text-sm leading-relaxed text-muted">
           Únete a tu equipo, gestiona tus proyectos y conecta con tus
           compañeros.
         </p>
@@ -48,39 +48,39 @@ export default function RegisterLeftSide() {
           <button
             type="button"
             onClick={oauth42}
-            className="flex h-10 w-full items-center justify-center gap-2 rounded bg-[#1d1b1a] font-sans text-[13px] font-medium text-[#e6e1df] transition-colors hover:bg-[#2b2a28]"
+            className="auth-secondary-button"
           >
-            <span className="flex h-5 w-5 items-center justify-center rounded bg-[#ffb4a1] text-xs font-bold text-[#141312]">
+            <span className="flex h-5 w-5 items-center justify-center rounded-control bg-primary-soft text-xs font-bold text-background">
               42
             </span>
             Continuar con 42
           </button>
         </div>
 
-        <div className="my-5 flex items-center gap-4 text-center font-sans text-[10px] font-semibold uppercase tracking-widest text-[#a88a83]">
-          <hr className="flex-1 border-[#2b2a28]" />
+        <div className="my-5 flex items-center gap-4 text-center font-sans text-[10px] font-semibold uppercase tracking-widest text-muted">
+          <hr className="flex-1 border-border" />
           o registrarte con email
-          <hr className="flex-1 border-[#2b2a28]" />
+          <hr className="flex-1 border-border" />
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3.5">
-          <label className="block font-sans text-xs text-[#e0bfb7]">
+          <label className="auth-label">
             <span className="mb-1 block">Nombre de usuario</span>
-            <div className="flex h-10 items-center rounded bg-[#1d1b1a] px-3 transition-all">
+            <div className="auth-input-shell">
               <input
                 type="text"
                 placeholder="Elige un nombre de usuario"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
-                className="w-full border-none bg-transparent font-serif text-[14px] text-[#e6e1df] outline-none placeholder:text-[#a88a83]/50"
+                className="auth-input"
               />
             </div>
           </label>
 
-          <label className="block font-sans text-xs text-[#e0bfb7]">
+          <label className="auth-label">
             <span className="mb-1 block">Correo electrónico</span>
-            <div className="flex h-10 items-center rounded bg-[#1d1b1a] px-3 transition-all">
+            <div className="auth-input-shell">
               <Mail />
               <input
                 type="email"
@@ -88,14 +88,14 @@ export default function RegisterLeftSide() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full border-none bg-transparent font-serif text-[14px] text-[#e6e1df] outline-none placeholder:text-[#a88a83]/50"
+                className="auth-input"
               />
             </div>
           </label>
 
-          <label className="block font-sans text-xs text-[#e0bfb7]">
+          <label className="auth-label">
             <span className="mb-1 block">Contraseña</span>
-            <div className="flex h-10 items-center rounded bg-[#1d1b1a] px-3 transition-all">
+            <div className="auth-input-shell">
               <Lock />
               <input
                 type={showPassword ? "text" : "password"}
@@ -103,12 +103,12 @@ export default function RegisterLeftSide() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full bg-transparent font-serif text-[14px] tracking-widest text-[#e6e1df] outline-none placeholder:tracking-normal placeholder:text-[#a88a83]/50"
+                className="auth-input tracking-widest placeholder:tracking-normal"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="text-[#a88a83] transition-colors hover:text-[#e0bfb7]"
+                className="text-muted transition-colors hover:text-text-soft"
               >
                 {showPassword ? <EyeOpen /> : <EyeClose />}
               </button>
@@ -117,7 +117,7 @@ export default function RegisterLeftSide() {
 
           <button
             type="submit"
-            className="mt-2 flex h-10 w-full items-center justify-center gap-2 rounded bg-[#ef6540] font-sans text-[13px] font-semibold text-[#141312] shadow-lg transition-all hover:bg-[#ff7955] hover:shadow-[#ef6540]/20"
+            className="auth-button mt-2"
           >
             Crear cuenta
             <Arrow />
@@ -126,18 +126,18 @@ export default function RegisterLeftSide() {
 
         <Link
           to="/login"
-          className="mt-4 flex h-10 w-full items-center justify-center rounded border border-[#ef6540] font-sans text-[13px] font-semibold text-[#ffb4a1] transition-colors hover:bg-[#ef6540]/10"
+          className="auth-outline-button mt-4"
         >
           ¿Ya tienes una cuenta? Iniciar sesión
         </Link>
       </div>
 
-      <footer className="mt-auto flex items-center justify-center gap-4 pt-4 font-sans text-[11px] text-[#a88a83]">
-        <Link to="#" className="hover:text-[#e0bfb7]">
+      <footer className="mt-auto flex items-center justify-center gap-4 pt-4 font-sans text-[11px] text-muted">
+        <Link to="#" className="hover:text-text-soft">
           Términos de servicio
         </Link>
-        <span className="h-1 w-1 rounded-full bg-[#363433]" />
-        <Link to="#" className="hover:text-[#e0bfb7]">
+        <span className="h-1 w-1 rounded-full bg-border" />
+        <Link to="#" className="hover:text-text-soft">
           Política de privacidad
         </Link>
       </footer>
