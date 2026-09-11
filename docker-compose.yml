@@ -24,7 +24,7 @@ services:
     # Restart the proxy automatically unless it is stopped explicitly.
     restart: unless-stopped
   db:
-    image: postgres:15-alpine
+    #image: postgres:15-alpine
     # PostgreSQL is kept on the private backend network.
     build:
       context: ./db
