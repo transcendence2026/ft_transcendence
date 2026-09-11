@@ -1,7 +1,9 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+//import { Body, Controller, HttpCode, HttpStatus, Post, Get, UseGuards, Req } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Post, Get} from '@nestjs/common';
 import { AuthService } from './auth.service.js';
 import { RegisterUserDto } from './dto/register-user.dto.js';
 import { LoginUserDto } from './dto/login-user.dto.js';
+import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
 
 @Controller('auth') //Define ruta base (cualquier ruta empezara por /auth)
 //Declara y publica clase relativa a la autenticacion
@@ -22,4 +24,14 @@ export class AuthController {
 	async login(@Body() loginDto: LoginUserDto) {
 		return this.authService.login(loginDto);
 	}
+
+	/* Ruta de prueba temporal para ver el guard en acción
+    @Get('test-guard')
+    @UseGuards(JwtAuthGuard)
+    testGuard(@Req() req: any) {
+        return {
+            message: '¡El guard dejó pasar la petición!',
+            userEncontrado: req.user,
+        };
+    }*/
 }
