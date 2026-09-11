@@ -2,6 +2,9 @@ FROM node:22-alpine AS build
 
 WORKDIR /app
 
+# Instalar OpenSSL para Prisma
+RUN apk add --no-cache openssl
+
 COPY package*.json tsconfig.json ./
 COPY prisma ./prisma
 RUN npm ci
@@ -12,6 +15,9 @@ RUN npm run build
 FROM node:22-alpine
 
 WORKDIR /app
+
+# Instalar OpenSSL en el contenedor de ejecución final
+RUN apk add --no-cache openssl
 
 COPY package*.json ./
 COPY prisma ./prisma

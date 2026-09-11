@@ -1,3 +1,13 @@
 node_modules/
 dist/
+
+# Variables de entorno en cualquier nivel
 .env
+*.env
+backend/.env
+
+# Certificados y claves SSL
+*.key
+*.crt
+certs/
+proxy/certs/

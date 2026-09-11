@@ -6,6 +6,10 @@ import { AppModule } from './app.module.js';
 //enciende el motor conectando el AppModule
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
+
+	// Configura el prefijo global para que todas las rutas respondan bajo /api
+    app.setGlobalPrefix('api');
+	
     //Habilita las reglas de validacion que hay en los DTOs (que datos esten bien formateados)
     //ValidationPipe revisa por ej que la contraseña cumple requisitos minimos de seguridad
     app.useGlobalPipes(new ValidationPipe());

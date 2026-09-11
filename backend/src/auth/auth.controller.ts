@@ -1,5 +1,5 @@
 //import { Body, Controller, HttpCode, HttpStatus, Post, Get, UseGuards, Req } from '@nestjs/common';
-import { Body, Controller, HttpCode, HttpStatus, Post, Get} from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Post, Get, Inject } from '@nestjs/common';
 import { AuthService } from './auth.service.js';
 import { RegisterUserDto } from './dto/register-user.dto.js';
 import { LoginUserDto } from './dto/login-user.dto.js';
@@ -9,7 +9,8 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
 //Declara y publica clase relativa a la autenticacion
 export class AuthController {
 	//Inyectamos el servicio en el constructor
-	constructor(private readonly authService: AuthService) {}
+	//constructor(private readonly authService: AuthService) {}
+	constructor(@Inject(AuthService) private readonly authService: AuthService) {}
 
 	@Post('register') //Indica que el metodo responde peticiones http con metodo POST  a la url
 	@HttpCode(HttpStatus.CREATED) //codigo de estado que debe devolver la respuesto (201 registro)

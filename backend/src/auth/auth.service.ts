@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, Inject } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt'; //importamos Servicio de tokens
 import * as bcrypt from 'bcrypt'; //importamos libreria de cifrado
 import { RegisterUserDto } from './dto/register-user.dto.js';
@@ -13,8 +13,8 @@ export class AuthService {
 
 	//constructor inyecta el servicio de JWT dentro del serv. de autenticacion par poder firmar tokens
 	constructor(
-		private readonly jwtService: JwtService,
-		private readonly prisma: PrismaService,
+		@Inject(JwtService) private readonly jwtService: JwtService,
+		@Inject(PrismaService) private readonly prisma: PrismaService,
 	) {}
 
 	//Recibe los datos validados del registro
