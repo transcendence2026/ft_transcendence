@@ -8,7 +8,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// USUARIOS Y PERFILES
+// USERS AND PROFILES
 
 enum Role {
   USER
@@ -26,7 +26,7 @@ model User {
   id                 String   @id @default(uuid())
   email              String   @unique
   username           String   @unique
-  passwordHash       String? // Opcional si inicia sesión vía OAuth 42/Google
+  passwordHash       String? // Optional if logged in via OAuth 42/Google
   role               Role     @default(USER)
   status             Status   @default(OFFLINE)
   isPrivate          Boolean  @default(false)
@@ -35,7 +35,7 @@ model User {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
-  //Relaciones
+  //Relations
   profile             Profile?
   sentFriendships     Friendship[] @relation("UserSentFriendships")
   receivedFriendships Friendship[] @relation("UserReceivedFriendships")
@@ -62,7 +62,7 @@ model Profile {
   updatedAt DateTime @updatedAt
 }
 
-// SOCIAL Y Relaciones
+// SOCIAL AND RELATIONS
 
 enum FriendshipStatus {
   PENDING
@@ -94,7 +94,7 @@ model Block {
   @@unique([blockerId, blockedId])
 }
 
-// CONTENIDO, RESTAURANTES, PLATOS,  RESEÑAS
+// CONTENT, RESTAURANTS, DISHES, REVIEWS 
 
 model Post {
   id        String   @id @default(uuid())
@@ -145,10 +145,10 @@ model Review {
   dish      Dish     @relation(fields: [dishId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 
-  @@unique([authorId, dishId]) // Una reseña por usuario para cada plato
+  @@unique([authorId, dishId]) // One review per user for each dish
 }
 
-// CHAT Y MENSAJERÍA
+// CHAT AND MESSAGING
 
 model Message {
   id         String   @id @default(uuid())
