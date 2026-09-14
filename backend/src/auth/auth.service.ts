@@ -36,7 +36,7 @@ export class AuthService {
             data: {
                 email,
                 username,
-                passwordHash: hashedPassword, 
+                passwordHash: hashedPassword,
             },
         });
 		//Una vez el usuario esta guardado, devuelve respuesta al controlador para q sepa quien se acaba de registrar
@@ -66,7 +66,12 @@ export class AuthService {
 
 		//3. Si todo es correcto, generamos y devolvemos el token JWT
 		//se crea un payload con datos que viajan y el wtService.signAsync firma digitalmente el token
-		const payload = { email: user.email, sub: user.id };
+		const payload = { 
+			email: user.email, 
+			sub: user.id,
+			username: user.username, 
+		    roles: user.role
+ 		};
 		const accessToken = await this.jwtService.signAsync(payload);
 		return {
 			message: 'Login successful',
