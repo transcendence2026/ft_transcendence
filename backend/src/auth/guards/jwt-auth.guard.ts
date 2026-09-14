@@ -1,8 +1,3 @@
-//Creamos un guard de prueba temporal
-//que intercepta la peticion antes de que llegue a los controladores
-//como no hay todavia base de datos de usuarios
-//se inyecta un usuario de prueba respetando el molde UserPayload
-//como es de prueba devuelve true (como si tuviera una credencial valida)
 import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, Inject } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UserPayload } from '../interfaces/user-payload.interface.js';
@@ -15,8 +10,9 @@ import { UserPayload } from '../interfaces/user-payload.interface.js';
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
 	constructor(
-        @Inject(JwtService) private readonly jwtService: JwtService,
+        @Inject(JwtService) private readonly jwtService: JwtService, //Le pide a NestJS que le entregue la herramienta (JwtService) para descifrar y validar tokens
     ) {}
+	//punto de entrada que se ejecuta cada vez que alguien intenta acceder
 	async canActivate(context: ExecutionContext): Promise<boolean> {
 		//1.- Obtenemos el objeto de la peticion web HTTP
 		const request = context.switchToHttp().getRequest();
