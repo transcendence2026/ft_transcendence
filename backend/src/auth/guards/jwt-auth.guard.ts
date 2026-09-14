@@ -23,6 +23,7 @@ export class JwtAuthGuard implements CanActivate {
 		}
 		try {
 			//3.- Verificamos y decodificamos el token usando la clave secreta con JwtService
+			//Usamos la funcion verifyAsync de la herramienta jwtServoce
 			const payload: UserPayload = await this.jwtService.verifyAsync(token);
 			//4.- Inyectamos el payload decodificado en request.user
 			request.user = payload;
@@ -30,13 +31,13 @@ export class JwtAuthGuard implements CanActivate {
 		} catch {
 			throw new UnauthorizedException('Invalid or expired token');
 		}
-		//5.- Si es correcto, se permite paso
-		return true;
 	}
-	//Metodo auxiliar para limpiar y separar formato "Bearer <token>"
+	//Cuando cliente manda peticion, de manera estandar le precede Bearer
+    //Extrae y devuelve el token limpio (o undefined si no hay nada)
+    //Separa el esquema de autenticación (ej. 'Bearer') del código cifrado del token
+    //dividiendo el texto por los espacios.
 	private extractTokenFromHeader(request: any): string | undefined {
-		const [type, token] = request.headers.Authorization?.split(' ') ?? [];
+		const [type, token] = request.headers.authorization?.split(' ') ?? [];
 		return type === 'Bearer' ? token : undefined;
 	}
 }
-
