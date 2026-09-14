@@ -9,12 +9,13 @@ import React, {
 } from 'react';
 import { useAuth } from './AuthContext';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
-const WS_URL = import.meta.env.VITE_WS_URL ?? API_BASE_URL.replace(/^http/, 'ws');
+const WS_URL = "wss://localhost:8443/ws/";
 const MAX_RECONNECT_DELAY = 10_000;
 const ALLOW_ANONYMOUS = import.meta.env.VITE_WS_ALLOW_ANONYMOUS === "true";
 
 export type WebSocketStatus = 'idle' | 'connecting' | 'open' | 'closed' | 'error';
+
+export type StatusType = {status: WebSocketStatus, message?: string}
 
 export interface WebSocketMessage {
   data: string;
@@ -22,7 +23,7 @@ export interface WebSocketMessage {
 }
 
 interface WebSocketContextValue {
-  status: WebSocketStatus;
+  status: StatusType;
   messages: WebSocketMessage[];
   sendMessage: (message: string | Record<string, unknown>) => boolean;
   reconnect: () => void;
@@ -37,7 +38,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectAttemptRef = useRef(0);
   const manuallyClosedRef = useRef(false);
-  const [status, setStatus] = useState<WebSocketStatus>('idle');
+  const [status, setStatus] = useState<StatusType>({status: 'idle'});
   const [messages, setMessages] = useState<WebSocketMessage[]>([]);
 
   const clearReconnectTimer = useCallback(() => {
@@ -48,19 +49,25 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const connect = useCallback(() => {
-    if ((!token && !ALLOW_ANONYMOUS) || manuallyClosedRef.current || socketRef.current?.readyState === WebSocket.OPEN) {
+if (
+      (!token && !ALLOW_ANONYMOUS) || 
+      manuallyClosedRef.current || 
+      socketRef.current?.readyState === WebSocket.OPEN ||
+      socketRef.current?.readyState === WebSocket.CONNECTING
+    ) {
         return;
     }
 
-
     clearReconnectTimer();
-    setStatus('connecting');
-    const socket = new WebSocket(WS_URL);
+    setStatus({ status: 'connecting' });
+    console.log(WS_URL)
+    const socket = new WebSocket(WS_URL + '?token=' + encodeURIComponent(token ?? "null"));
+    console.log(WS_URL + '?token=' + encodeURIComponent(token ?? "null"))
     socketRef.current = socket;
 
     socket.onopen = () => {
       reconnectAttemptRef.current = 0;
-      setStatus('open');
+      setStatus({ status: 'open' });
     };
 
     socket.onmessage = async (event) => {
@@ -76,8 +83,9 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       ]);
     };
 
-    socket.onerror = () => {
-      setStatus('error');
+    socket.onerror = (error) => {
+      console.error("Erreur WebSocket détectée", error);
+      setStatus({ status: 'error', message: "Erreur de connexion WebSocket."});
     };
 
     socket.onclose = () => {
@@ -87,11 +95,11 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       socketRef.current = null;
 
       if (manuallyClosedRef.current) {
-        setStatus('idle');
+        setStatus({ status: 'idle' });
         return;
       }
 
-      setStatus('closed');
+      setStatus({ status: 'closed' });
       const delay = Math.min(1_000 * 2 ** reconnectAttemptRef.current, MAX_RECONNECT_DELAY);
       reconnectAttemptRef.current += 1;
       reconnectTimerRef.current = setTimeout(() => connectRef.current(), delay);
@@ -108,7 +116,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     if (socket && socket.readyState !== WebSocket.CLOSED) {
       socket.close(1000, 'Session closed');
     }
-    setStatus('idle');
+    setStatus({ status: 'idle' });
   }, [clearReconnectTimer]);
 
   useEffect(() => {

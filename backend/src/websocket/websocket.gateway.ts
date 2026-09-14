@@ -20,8 +20,9 @@ export class WebsocketGateway {
   private readonly logger = new Logger(WebsocketGateway.name);
 
   handleConnection(client: ConnectedClient, request: any) {
-    const token = request.headers?.authorization?.replace(/^Bearer\s+/i, '');
+    const token = request.url.split('token=')[1];
 
+    console.log(token)
     if (!token) {
       client.close(1008, "Token manquant")
       return;

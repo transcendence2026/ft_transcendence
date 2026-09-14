@@ -10,12 +10,12 @@ export class AuthController {
   
   @Post('register')
   register(@Body() body: RegisterUserDto) {
-    return this.authService.register(body.username, body.email, body.password);
+    return this.authService.register(body);
   }
 
   @Post('login')
   login(@Body() body: LoginUserDto) {
-    return this.authService.login(body.email, body.password);
+    return this.authService.login(body);
   }
 
   @Get('oauth/42')
