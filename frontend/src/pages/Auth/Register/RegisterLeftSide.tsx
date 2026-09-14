@@ -34,7 +34,7 @@ export default function RegisterLeftSide() {
     <section className="auth-panel">
       <div className="auth-content">
         <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-card bg-surface-raised text-xl text-secondary shadow-sm">
-          É
+          Test
         </div>
         <h1 className="text-3xl font-normal text-text sm:text-4xl">
           Crea tu cuenta.
