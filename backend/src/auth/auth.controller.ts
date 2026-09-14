@@ -1,18 +1,20 @@
 import { Body, Controller, Get, Inject, Query, Redirect, Req, UseGuards, Post } from '@nestjs/common';
 import { AuthGuard, AuthenticatedRequest } from './auth.guard.js';
 import { AuthService } from './auth.service.js';
+import { RegisterUserDto } from "./dots/registerUser.dto.js"
+import { LoginUserDto } from './dots/loginUser.dto.js';
 
 @Controller('api/auth')
 export class AuthController {
-  constructor(@Inject(AuthService) private readonly authService: AuthService) {}
-
+  constructor(private readonly authService: AuthService) {}
+  
   @Post('register')
-  register(@Body() body: { username?: string; email?: string; password?: string }) {
+  register(@Body() body: RegisterUserDto) {
     return this.authService.register(body.username, body.email, body.password);
   }
 
   @Post('login')
-  login(@Body() body: { email?: string; password?: string }) {
+  login(@Body() body: LoginUserDto) {
     return this.authService.login(body.email, body.password);
   }
 

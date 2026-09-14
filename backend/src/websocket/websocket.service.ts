@@ -8,6 +8,13 @@ export class PresenceService {
   addClient(userId: string, client: WebSocket) {    
     if (!this.activeSockets.has(userId)) {
       this.activeSockets.set(userId, new Set());
+
+      // Hacer que se envie solo a amigos
+      this.activeSockets.forEach((client) => {
+        client.forEach((socket) => {
+          socket.send(JSON.stringify({ event: "user:online", data: { userId } }))
+        })
+      })
     }
 
     this.activeSockets.get(userId)?.add(client);
@@ -19,8 +26,16 @@ export class PresenceService {
     if (userSocket) {
       userSocket.delete(client)
       
-      if (userSocket.size === 0)
+      if (userSocket.size === 0) {
         this.activeSockets.delete(userId);
+
+        // Hacer que se envie solo a amigos
+        this.activeSockets.forEach((client) => {
+          client.forEach((socket) => {
+            socket.send(JSON.stringify({ event: "user:offline", data: { userId } }))
+          })
+        })
+      }
     }
   }
 

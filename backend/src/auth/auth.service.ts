@@ -3,8 +3,9 @@ import { PrismaService } from '../database/prisma.service.js';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
-
-type OAuthUserInfo = { login?: string; email?: string; first_name?: string };
+import { OAuthUserInfoDto } from './dots/OAuthUserInfo.dto.js';
+import { RegisterUserDto } from './dots/registerUser.dto.js';
+import { LoginUserDto } from './dots/loginUser.dto.js';
 
 @Injectable()
 export class AuthService {
@@ -31,34 +32,31 @@ export class AuthService {
     return candidate;
   }
 
-  async register(username?: string, email?: string, password?: string) {
-    if (!username || !email || !password) {
-      throw new BadRequestException('Username, email and password are required');
-    }
+  async register({username, email, password } : RegisterUserDto) {
+    const normalizedEmail = email.trim().toLowerCase();
+    const existingUser = await this.prisma.user.findFirst({ where: { OR: [{ email: normalizedEmail }, { username: username.trim() }] } });
 
-    const normalizedEmail = String(email).trim().toLowerCase();
-    const existingUser = await this.prisma.user.findFirst({ where: { OR: [{ email: normalizedEmail }, { username: String(username).trim() }] } });
     if (existingUser) {
       throw new BadRequestException('User already exists');
     }
 
     const user = await this.prisma.user.create({
       data: {
-        username: await this.ensureUniqueUsername(String(username)),
+        username: await this.ensureUniqueUsername(username),
         email: normalizedEmail,
-        passwordHash: await bcrypt.hash(String(password), 10),
+        passwordHash: await bcrypt.hash(password, 10),
+        profile: {
+          create: {}
+        }
       },
     });
     return { token: this.createJwt(user.id), user: { username: user.username, email: user.email } };
   }
 
-  async login(email?: string, password?: string) {
-    if (!email || !password) {
-      throw new BadRequestException('Email and password are required');
-    }
-
-    const user = await this.prisma.user.findUnique({ where: { email: String(email).trim().toLowerCase() } });
-    if (!user || !user.passwordHash || !(await bcrypt.compare(String(password), user.passwordHash))) {
+  async login({email, password} : LoginUserDto) {
+    const user = await this.prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });
+  
+    if (!user || !user.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) {
       throw new BadRequestException('Invalid credentials');
     }
 
@@ -108,12 +106,21 @@ export class AuthService {
     const userResponse = await fetch('https://api.intra.42.fr/v2/me', { headers: { Authorization: `Bearer ${tokenPayload.access_token}` } });
     if (!userResponse.ok) throw new UnauthorizedException('Failed to fetch user details from 42 API');
 
-    const userInfo = await userResponse.json() as OAuthUserInfo;
-    const login = userInfo.login ?? userInfo.first_name ?? '42user';
+    const userInfo = await userResponse.json() as OAuthUserInfoDto;
+    const login = userInfo.login ?? userInfo.firstName ?? '42user';
     const email = String(userInfo.email ?? `${login}@student.42.fr`).trim().toLowerCase();
     let user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
-      user = await this.prisma.user.create({ data: { username: await this.ensureUniqueUsername(login), email, passwordHash: await bcrypt.hash(crypto.randomBytes(24).toString('hex'), 10) } });
+      user = await this.prisma.user.create({ 
+        data: { 
+          username: await this.ensureUniqueUsername(login), 
+          email, 
+          passwordHash: await bcrypt.hash(crypto.randomBytes(24).toString('hex'), 10), 
+          profile: {
+            create: {}
+          }
+        } 
+      });
     }
 
     const callbackUrl = new URL('/oauth/callback', process.env.FRONTEND_URL ?? 'http://localhost:8080');

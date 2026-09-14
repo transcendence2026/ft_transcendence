@@ -3,18 +3,13 @@ import { ConnectedSocket, MessageBody, SubscribeMessage, WebSocketGateway } from
 import WebSocket from 'ws';
 import { PresenceService, RoomService } from './websocket.service.js';
 import jwt from 'jsonwebtoken';
+import { MessagePayloadDto } from './dto/messagePayload.dto.js';
 
 export type Client = {
   userId?: string;
 };
 
 type ConnectedClient = WebSocket & Client;
-
-type MessagePayload = {
-  roomName: string, 
-  message: string
-}
-
 
 @WebSocketGateway()
 export class WebsocketGateway {
@@ -71,12 +66,12 @@ export class WebsocketGateway {
   }
 
   @SubscribeMessage('message')
-  handleMessage(@MessageBody() data: MessagePayload) {
+  handleMessage(@MessageBody() data: MessagePayloadDto) {
     this.broadcastToRoom(data.roomName, data.message)
   }
 
   @SubscribeMessage('joinRoom')
-  handleJoinRoom(@MessageBody() data: MessagePayload, @ConnectedSocket() client: Client) {
+  handleJoinRoom(@MessageBody() data: MessagePayloadDto, @ConnectedSocket() client: Client) {
     if (!client.userId) {
       return;
     }
