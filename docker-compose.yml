@@ -32,6 +32,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgrespassword
       POSTGRES_DB: transcendence
+    #esto tiene que estar comentado, no se expone el puerto de la base de datos al exterior
     ports:
       - "5432:5432"
     # Keep the database inaccessible from the host by default.
