@@ -17,8 +17,10 @@ services:
       - proxy-net
     # Start the proxy after the application services are available.
     depends_on:
-      - frontend
-      - backend
+      frontend:
+        condition: service_started
+      backend:
+        condition: service_healthy
     # Restart the proxy automatically unless it is stopped explicitly.
     restart: unless-stopped
   db:
@@ -32,8 +34,6 @@ services:
       POSTGRES_DB: transcendence
     ports:
       - "5432:5432"
-      POSTGRES_USER: transcendence
-      POSTGRES_PASSWORD: transcendence
     # Keep the database inaccessible from the host by default.
     networks:
       - backend-net
@@ -43,7 +43,6 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d transcendence"]
       # Backend startup waits for PostgreSQL to accept connections.
-      test: ["CMD-SHELL", "pg_isready -U transcendence -d transcendence"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -69,7 +68,12 @@ services:
     expose:
       # Expose port 3000 only to other services, not directly to the host.
       - "3000"
-    command: sh -c "npm run db:push && npm run dev"
+    command: sh -c "npm install --include=dev && npm run db:push && npm run start:dev"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
     volumes:
       # Mount source code for live development and keep dependencies in a named volume.
       - ./backend:/app
@@ -113,3 +117,6 @@ networks:
 volumes:
   # Named volumes preserve state and dependencies between container restarts.
   postgres_data:
+  backend_node_modules:
+  frontend_node_modules:
+  uploads_data:
