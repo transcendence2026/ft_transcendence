@@ -3,7 +3,8 @@
 //como no hay todavia base de datos de usuarios
 //se inyecta un usuario de prueba respetando el molde UserPayload
 //como es de prueba devuelve true (como si tuviera una credencial valida)
-import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, Inject } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { UserPayload } from '../interfaces/user-payload.interface.js';
 
  // @Injectable() es un Decorador de Clase: registra esta clase en el sistema de inyección de dependencias de NestJS.
@@ -13,20 +14,33 @@ import { UserPayload } from '../interfaces/user-payload.interface.js';
  //ej.No hay 50 objetos del guard (una unica instancia) desperdigados por el servidor.
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
-	canActivate(context: ExecutionContext): boolean {
+	constructor(
+        @Inject(JwtService) private readonly jwtService: JwtService,
+    ) {}
+	async canActivate(context: ExecutionContext): Promise<boolean> {
 		//1.- Obtenemos el objeto de la peticion web HTTP
 		const request = context.switchToHttp().getRequest();
-		//2.- Creamos los datos simulados cumpliendo el contrato UserPayload definido en interfaces
-		const mockUser: UserPayload = {
-			id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
-			username: 'patquesa_dev',
-			email: 'patquesa@tastesync.42',
-			roles: ['USER'],
-		};
-		//3.- Modificamos el objeto request y le añadimos la propiedad .user con los datos simulados (payload)
-		request.user = mockUser;
-		//4.- Concedemos el acceso a la ruta
+		//2.-Extraemos el token del encabezado 'Authorization'
+		const token = this.extractTokenFromHeader(request);
+		if(!token) {
+			throw new UnauthorizedException('Access token not found');
+		}
+		try {
+			//3.- Verificamos y decodificamos el token usando la clave secreta con JwtService
+			const payload: UserPayload = await this.jwtService.verifyAsync(token);
+			//4.- Inyectamos el payload decodificado en request.user
+			request.user = payload;
+			return true;
+		} catch {
+			throw new UnauthorizedException('Invalid or expired token');
+		}
+		//5.- Si es correcto, se permite paso
 		return true;
+	}
+	//Metodo auxiliar para limpiar y separar formato "Bearer <token>"
+	private extractTokenFromHeader(request: any): string | undefined {
+		const [type, token] = request.headers.Authorization?.split(' ') ?? [];
+		return type === 'Bearer' ? token : undefined;
 	}
 }
 
