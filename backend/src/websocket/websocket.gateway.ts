@@ -9,7 +9,7 @@ export type Client = {
   userId?: string;
 };
 
-type ConnectedClient = WebSocket & Client;
+export type ConnectedClient = WebSocket & Client;
 
 @WebSocketGateway()
 export class WebsocketGateway {

@@ -1,26 +1,40 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import WebSocket from "ws";
+import { PrismaService } from "../database/prisma.service";
 
 @Injectable()
 export class PresenceService {
   private readonly activeSockets: Map<string, Set<WebSocket>> = new Map();
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  addClient(userId: string, client: WebSocket) {    
+  async addClient(userId: string, client: WebSocket) {    
     if (!this.activeSockets.has(userId)) {
       this.activeSockets.set(userId, new Set());
 
-      // Hacer que se envie solo a amigos
-      this.activeSockets.forEach((client) => {
-        client.forEach((socket) => {
-          socket.send(JSON.stringify({ event: "user:online", data: { userId } }))
-        })
+      const friendship = await this.prisma.friendship.findMany({ where: { status: 'ACCEPTED', OR: [ { senderId: userId }, { receiverId: userId } ] } })
+
+      const friendsIds = friendship.map(user => {
+        if (user.senderId == userId)
+          return user.receiverId;
+        else
+          return user.senderId
+      });
+
+      friendsIds.forEach((friendId) => {
+        const friendSockets = this.activeSockets.get(friendId);
+
+        if (friendSockets) {
+          friendSockets.forEach((socket) => {
+            socket.send(JSON.stringify({ event: "user:online", data: { userId } }))
+          })
+        }
       })
     }
 
     this.activeSockets.get(userId)?.add(client);
   }
 
-  removeClient(userId: string, client: WebSocket) {
+  async removeClient(userId: string, client: WebSocket) {
     const userSocket = this.activeSockets.get(userId);
 
     if (userSocket) {
@@ -29,11 +43,23 @@ export class PresenceService {
       if (userSocket.size === 0) {
         this.activeSockets.delete(userId);
 
-        // Hacer que se envie solo a amigos
-        this.activeSockets.forEach((client) => {
-          client.forEach((socket) => {
-            socket.send(JSON.stringify({ event: "user:offline", data: { userId } }))
-          })
+        const friendship = await this.prisma.friendship.findMany({ where: { status: 'ACCEPTED', OR: [ { senderId: userId }, { receiverId: userId } ] } })
+
+        const friendsIds = friendship.map(user => {
+          if (user.senderId == userId)
+            return user.receiverId;
+          else
+            return user.senderId
+        });
+
+        friendsIds.forEach((friendId) => {
+          const friendSockets = this.activeSockets.get(friendId);
+
+          if (friendSockets) {
+            friendSockets.forEach((socket) => {
+              socket.send(JSON.stringify({ event: "user:offline", data: { userId } }))
+            })
+          }
         })
       }
     }
