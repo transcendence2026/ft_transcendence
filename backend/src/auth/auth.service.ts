@@ -30,8 +30,8 @@ export class AuthService {
 		//Ciframos contraseña con bcrypt
 		const hashedPassword = await bcrypt.hash(password, this.saltRounds);
 		
-		// OJO!!!! Más adelante aquí llamaremos a la base de datos para guardar el usuario
 		// Guardamos usando passwordHash como marca el schema.prisma
+		//le dice a Prisma que cree una nnueva linea user con el contenido de data
         const user = await this.prisma.user.create({
             data: {
                 email,
@@ -39,7 +39,7 @@ export class AuthService {
                 passwordHash: hashedPassword, 
             },
         });
-		//OJO!!! lo q devuelva luego se guardara en la Base de Datos
+		//Una vez el usuario esta guardado, devuelve respuesta al controlador para q sepa quien se acaba de registrar
 		return {
 			message: 'User registered successfully',
 			user: {
