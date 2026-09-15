@@ -5,6 +5,7 @@ import { HealthModule } from './health/health.module.js';
 import { MessagesModule } from './messages/messages.module.js';
 import { WebsocketGateway } from './websocket/websocket.gateway.js';
 import { PresenceService, RoomService } from './websocket/websocket.service.js';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { PresenceService, RoomService } from './websocket/websocket.service.js';
     AuthModule,
     MessagesModule,
     HealthModule,
+    EventEmitterModule.forRoot()
   ],
   providers: [WebsocketGateway, PresenceService, RoomService],
 })
