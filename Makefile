@@ -1,10 +1,10 @@
 .PHONY: help build certs up down restart logs ps clean
 
-COMPOSE := docker compose
+install-local:
+	npm --prefix backend install
+	npm --prefix frontend install
 
-CERT_DIR := proxy/certs
-CERT_KEY := $(CERT_DIR)/selfsigned.key
-CERT_CRT := $(CERT_DIR)/selfsigned.crt
+COMPOSE := docker compose
 
 help:
 	@printf "Available commands:\n"
@@ -19,7 +19,7 @@ help:
 build:
 	$(COMPOSE) build
 
-up:
+up: install-local
 	$(COMPOSE) up --build -d
 
 down:

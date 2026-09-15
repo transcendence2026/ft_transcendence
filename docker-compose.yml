@@ -8,9 +8,9 @@ services:
       - "${HTTP_PORT:-8080}:80"   # Redirects HTTP traffic to HTTPS locally.
     volumes:
       # Certificates are mounted read-only so they can be replaced without rebuilding.
-      - ./proxy/certs:/etc/nginx/certs:ro
+      - ./proxy/certs:/etc/nginx/certs
       # Share uploaded files with the backend while serving them read-only through Nginx.
-      - uploads_data:/usr/share/nginx/uploads:ro
+      - uploads_data:/usr/share/nginx/uploads
     networks:
       # The edge network is reserved for a future public-facing layer.
       # - edge-net
@@ -33,8 +33,8 @@ services:
       POSTGRES_PASSWORD: postgrespassword
       POSTGRES_DB: transcendence
     #esto tiene que estar comentado, no se expone el puerto de la base de datos al exterior
-    ports:
-      - "5432:5432"
+    # ports:
+    #   - "5432:5432"
     # Keep the database inaccessible from the host by default.
     networks:
       - backend-net

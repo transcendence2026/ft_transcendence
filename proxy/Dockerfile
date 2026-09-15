@@ -13,4 +13,4 @@ RUN chmod +x /entrypoint.sh
 EXPOSE 80 443
 
 # Validate the configuration and keep Nginx running in the foreground.
-CMD [entrypoint.sh]
+CMD ["/entrypoint.sh"]

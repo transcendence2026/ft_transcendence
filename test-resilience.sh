@@ -1,9 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 trap cleanup EXIT
-DB_CONTAINER="ft_transcendence-db-1"
+DB_CONTAINER=$(docker compose ps -q db)
 DB_VOLUME="ft_transcendence_postgres_data"
-BACKEND_CONTAINER="ft_transcendence-backend-1"
+BACKEND_CONTAINER=$(docker compose ps -q backend)
 DB_USER="postgres"
 DB_NAME="transcendence"
 TEST_TABLE="resilience_test"
