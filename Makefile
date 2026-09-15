@@ -1,9 +1,5 @@
 .PHONY: help build certs up down restart logs ps clean
 
-install-local:
-	npm --prefix backend install
-	npm --prefix frontend install
-
 COMPOSE := docker compose
 
 help:
@@ -19,7 +15,7 @@ help:
 build:
 	$(COMPOSE) build
 
-up: install-local
+up:
 	$(COMPOSE) up --build -d
 
 down:
