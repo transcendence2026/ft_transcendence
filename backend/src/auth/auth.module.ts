@@ -1,6 +1,11 @@
 //Agrupa todas las piezas de la Autenticacion
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
+//ConfigModule: Es el encargado de ir a buscar el archivo .env, leerlo y
+// y cargar variables de entorno en la aplicacion
+//ConfigService: Es la herramienta que inyectas en tus clases
+//para buscar y consultar esas variables desde el código.
+import { ConfigModule, ConfigService } from '@nestjs/config';
 //Libreria para gestionar la identificacion de los usuarios
 import { PassportModule } from '@nestjs/passport';
 import { AuthController } from './auth.controller.js';
@@ -16,10 +21,14 @@ import { PrismaModule } from '../prisma/prisma.module.js';
 	imports: [
 		PrismaModule,
 		PassportModule,
-    	JwtModule.register({
-      		secret: process.env.JWT_SECRET || 'super-secret', // define contraseña maestra para firmar token
-      		signOptions: { expiresIn: '15m' }, //token caduca tras 15 min
-    	}),
+    	JwtModule.registerAsync({
+    	imports: [ConfigModule],
+    	inject: [ConfigService],
+   		useFactory: (configService: ConfigService) => ({
+        	secret: configService.get<string>('JWT_SECRET') || 'super-secret',
+        	signOptions: { expiresIn: '15m' },
+    		}),
+		}),
 	],
 	//Registras el controler y el service para que NestJS sepa de su existencia
 	controllers: [AuthController],
