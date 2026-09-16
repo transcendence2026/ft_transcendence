@@ -277,3 +277,36 @@ async function seedUsers() {
 	}
 }
 
+// Main orchestrator function that executes the database seeding workflow in order
+async function main() {
+	// Step 1: Wipe existing database records to maintain a clean test environment
+	console.log('Cleaning up existing data...');
+	await cleanup();
+
+	// Step 2: Seed tag records first so dishes can reference their IDs
+	console.log('Seeding tags...');
+	const tags = await seedTags();
+
+	// Step 3: Seed resturants and dishes, passing down created tags for relational connections
+	console.log('Seeding restaurants and dishes...');
+	const dishCount = await seedRestaurantsAndDishes(tags);
+
+	// Step 4: Seed test user accounts along with their profile data
+	console.log('Seeding test users...');
+	await seedUsers();
+
+	// Log a summary of all inserted entities
+	console.log(`Done: ${RESTAURANTS.length} restaurants, ${dishCount} dishes, ${tags.length} tags, 10 users.`);
+}
+
+// Execute the main seeding flow with error handling and cleanup logic
+main()
+	.catch((e) => {
+		// Log any uncaught exception during seeding and exit the process with failure status (1)
+		console.error('Seeding failed:', e);
+		process.exit(1);
+	})
+	.finally(async () => {
+		// Safely close the Prisma Client database connection upon completion or error
+		await prisma.$disconnect();
+	});
