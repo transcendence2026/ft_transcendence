@@ -13,6 +13,9 @@
     "prisma:migrate": "prisma migrate dev",
     "db:push": "prisma db push"
   },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
     "@nestjs/core": "^10.0.0",
