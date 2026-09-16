@@ -39,12 +39,23 @@ export class AuthService {
                 passwordHash: hashedPassword,
             },
         });
+		// 1. Creamos el payload para el nuevo usuario (igual que en el login) // <-- AQUÍ
+        const payload = { 
+            email: user.email, 
+            sub: user.id,
+            username: user.username, 
+            role: user.role 
+        };
+        
+        // 2. Firmamos el token con el JwtService // <-- AQUÍ
+        const accessToken = await this.jwtService.signAsync(payload);
 		//Una vez el usuario esta guardado, devuelve respuesta al controlador para q sepa quien se acaba de registrar
 		return {
 			message: 'User registered successfully',
+			token:accessToken,
 			user: {
-				email,
 				username: user.username,
+                email: user.email,
 			},
 		};
 	}
