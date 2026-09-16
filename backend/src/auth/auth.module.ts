@@ -19,6 +19,7 @@ import { PrismaModule } from '../prisma/prisma.module.js';
 //Registras y juntas el AuthController mas AuthService y se guardan en el NestJS
 @Module({
 	imports: [
+		ConfigModule,
 		PrismaModule,
 		PassportModule,
     	JwtModule.registerAsync({

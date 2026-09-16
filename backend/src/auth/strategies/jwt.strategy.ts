@@ -24,7 +24,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
             ignoreExpiration: false,
             //Obtenemos la clave secreta JWT_SECRET con la que se firmó el token (dentro de .env)
 			//para comprobar la validez del token
-            secretOrKey: configService.get<string>('JWT_SECRET') || 'secretKeyDefault',
+            secretOrKey: process.env.JWT_SECRET || 'super-secret',
         });
     }
 
