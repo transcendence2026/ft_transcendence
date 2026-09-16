@@ -7,6 +7,7 @@ import { ConfigModule } from '@nestjs/config';
 
 @Module({
 	imports: [
+		//ConfigModule: te permite cargar y leer las variables de entorno del .env
 		ConfigModule.forRoot({
 			isGlobal: true,
 		}),
