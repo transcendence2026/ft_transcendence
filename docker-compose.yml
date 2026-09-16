@@ -4,13 +4,8 @@ services:
     build:
       context: ./proxy
     ports:
-<<<<<<< HEAD
-      - "8443:443"
-      - "8080:80" # Optional; used only to redirect HTTP traffic to HTTPS.
-=======
       - "${HTTPS_PORT:-8443}:443"
       - "${HTTP_PORT:-8080}:80"   # Redirects HTTP traffic to HTTPS locally.
->>>>>>> origin/dev
     volumes:
       # Certificates are mounted read-only so they can be replaced without rebuilding.
       - ./proxy/certs:/etc/nginx/certs:ro
@@ -22,13 +17,6 @@ services:
       - proxy-net
     # Start the proxy after the application services are available.
     depends_on:
-<<<<<<< HEAD
-      - frontend
-      - backend
-    # Restart the proxy automatically unless it is stopped explicitly.
-    restart: unless-stopped
-  db:
-=======
       frontend:
         condition: service_started
       backend:
@@ -37,22 +25,15 @@ services:
     restart: unless-stopped
   db:
     image: postgres:15-alpine
->>>>>>> origin/dev
     # PostgreSQL is kept on the private backend network.
     build:
       context: ./db
     environment:
-<<<<<<< HEAD
-      POSTGRES_DB: transcendence
-      POSTGRES_USER: transcendence
-      POSTGRES_PASSWORD: transcendence
-=======
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgrespassword
       POSTGRES_DB: transcendence
     ports:
       - "5432:5432"
->>>>>>> origin/dev
     # Keep the database inaccessible from the host by default.
     networks:
       - backend-net
@@ -60,13 +41,8 @@ services:
       # Persist database data across container recreations.
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-<<<<<<< HEAD
-      # Backend startup waits for PostgreSQL to accept connections.
-      test: ["CMD-SHELL", "pg_isready -U transcendence -d transcendence"]
-=======
       test: ["CMD-SHELL", "pg_isready -U postgres -d transcendence"]
       # Backend startup waits for PostgreSQL to accept connections.
->>>>>>> origin/dev
       interval: 5s
       timeout: 5s
       retries: 10
@@ -77,22 +53,14 @@ services:
       context: ./backend
     environment:
       PORT: 3000
-<<<<<<< HEAD
-      DATABASE_URL: postgresql://transcendence:transcendence@db:5432/transcendence?schema=public
-=======
       # Formato: postgresql://USUARIO:CONTRASEÑA@HOST_SERVICIO:PUERTO/NOMBRE_BD?schema=public
       DATABASE_URL: postgresql://postgres:postgrespassword@db:5432/transcendence?schema=public
->>>>>>> origin/dev
       JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
       FRONTEND_URL: ${FRONTEND_URL:-https://localhost:8443}
       BACKEND_URL: ${BACKEND_URL:-http://localhost:3000}
       FORTY_TWO_CLIENT_ID: ${FORTY_TWO_CLIENT_ID:-}
       FORTY_TWO_CLIENT_SECRET: ${FORTY_TWO_CLIENT_SECRET:-}
-<<<<<<< HEAD
-      FORTY_TWO_REDIRECT_URI: ${FORTY_TWO_REDIRECT_URI:-http://localhost:3000/api/auth/oauth/42/callback}
-=======
       FORTY_TWO_REDIRECT_URI: ${FORTY_TWO_REDIRECT_URI:-https://localhost:8443/api/auth/oauth/42/callback}
->>>>>>> origin/dev
     networks:
       # The backend can access the database and receive traffic from the proxy.
       - backend-net
@@ -100,16 +68,12 @@ services:
     expose:
       # Expose port 3000 only to other services, not directly to the host.
       - "3000"
-<<<<<<< HEAD
-    command: sh -c "npm run db:push && npm run dev"
-=======
     command: sh -c "npm install --include=dev && npm run db:push && npm run start:dev"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
       interval: 5s
       timeout: 3s
       retries: 12
->>>>>>> origin/dev
     volumes:
       # Mount source code for live development and keep dependencies in a named volume.
       - ./backend:/app
@@ -125,22 +89,14 @@ services:
     build:
       context: ./frontend
       args:
-<<<<<<< HEAD
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
-=======
         VITE_API_URL: ${VITE_API_URL:-https://localhost:8443}
->>>>>>> origin/dev
     networks:
       - proxy-net
     expose:
       # The frontend is reachable internally through the proxy network.
       - "5173"
     environment:
-<<<<<<< HEAD
-      VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
-=======
       VITE_API_URL: ${VITE_API_URL:-https://localhost:8443}
->>>>>>> origin/dev
     command: npm run dev -- --host 0.0.0.0
     volumes:
       # Mount source code for hot reloading while preserving installed packages.
@@ -163,8 +119,4 @@ volumes:
   postgres_data:
   backend_node_modules:
   frontend_node_modules:
-<<<<<<< HEAD
   uploads_data:
-=======
-  uploads_data:
->>>>>>> origin/dev

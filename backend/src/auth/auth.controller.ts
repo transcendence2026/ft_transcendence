@@ -4,7 +4,7 @@ import { RegisterUserDto } from './dto/register-user.dto.js';
 import { LoginUserDto } from './dto/login-user.dto.js';
 import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
 
-@Controller('auth') //Define ruta base (cualquier ruta empezara por /auth)
+@Controller('api/auth') //Define ruta base (cualquier ruta empezara por /auth)
 //Declara y publica clase relativa a la autenticacion
 export class AuthController {
 	//Inyectamos el servicio en el constructor
