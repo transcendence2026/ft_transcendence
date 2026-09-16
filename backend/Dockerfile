@@ -1,28 +1,51 @@
+# --- STAGE 1: build ---
 FROM node:22-alpine AS build
 
 WORKDIR /app
 
+<<<<<<< HEAD
 # Instalar OpenSSL para Prisma
+=======
+>>>>>>> origin/dev
 RUN apk add --no-cache openssl
 
 COPY package*.json tsconfig.json ./
 COPY prisma ./prisma
 RUN npm ci
 
+# Generate Prisma Client for TypeScript
+RUN npx prisma generate
+
 COPY src ./src
 RUN npm run build
 
+# --- STAGE 2: Production ---
 FROM node:22-alpine
 
 WORKDIR /app
 
+<<<<<<< HEAD
 # Instalar OpenSSL en el contenedor de ejecución final
+=======
+>>>>>>> origin/dev
 RUN apk add --no-cache openssl
 
 COPY package*.json ./
 COPY prisma ./prisma
+<<<<<<< HEAD
 RUN npm ci
 COPY --from=build /app/dist ./dist
 
 EXPOSE 3000
 CMD ["node", "dist/main.js"]
+=======
+RUN npm ci --only=production
+
+# Generate Prisma Client for the runtime environment
+RUN npx prisma generate
+
+COPY --from=build /app/dist ./dist
+
+EXPOSE 3000
+CMD ["node", "dist/main.js"]
+>>>>>>> origin/dev
