@@ -75,7 +75,11 @@ export class AuthService {
 		const accessToken = await this.jwtService.signAsync(payload);
 		return {
 			message: 'Login successful',
-			accessToken,
+			token: accessToken, //yo tenia accesToken perohay otra configuracion y esta dando problemas
+			user: {
+			username: user.username,
+			email: user.email,
+  			},
 		};
 	}
 	// Simulacion de consulta a Base de Datos:
