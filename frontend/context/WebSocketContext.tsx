@@ -9,8 +9,7 @@ import React, {
 } from 'react';
 import { useAuth } from './AuthContext';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
-const WS_URL = import.meta.env.VITE_WS_URL ?? API_BASE_URL.replace(/^http/, 'ws');
+const WS_URL = "wss://localhost:8443/ws/";
 const MAX_RECONNECT_DELAY = 10_000;
 const ALLOW_ANONYMOUS = import.meta.env.VITE_WS_ALLOW_ANONYMOUS === "true";
 
@@ -48,14 +47,20 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const connect = useCallback(() => {
-    if ((!token && !ALLOW_ANONYMOUS) || manuallyClosedRef.current || socketRef.current?.readyState === WebSocket.OPEN) {
+if (
+      (!token && !ALLOW_ANONYMOUS) || 
+      manuallyClosedRef.current || 
+      socketRef.current?.readyState === WebSocket.OPEN ||
+      socketRef.current?.readyState === WebSocket.CONNECTING
+    ) {
         return;
     }
 
-
     clearReconnectTimer();
     setStatus('connecting');
-    const socket = new WebSocket(WS_URL);
+    console.log(WS_URL)
+    const socket = new WebSocket(WS_URL + '?token=' + encodeURIComponent(token ?? "null"));
+    console.log(WS_URL + '?token=' + encodeURIComponent(token ?? "null"))
     socketRef.current = socket;
 
     socket.onopen = () => {
@@ -76,7 +81,8 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       ]);
     };
 
-    socket.onerror = () => {
+    socket.onerror = (error) => {
+      console.error("Erreur WebSocket détectée", error);
       setStatus('error');
     };
 
