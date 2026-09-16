@@ -36,7 +36,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         // El 'payload' contiene lo que firmamos en el login: sub (id) y email.
         // Lo devolvemos estructurado para que se inyecte automáticamente en request.user
         return {
-            id: payload.sub,
+            id: payload.id,
             email: payload.email,
 			username: payload.username,
         	role: payload.role,

@@ -42,7 +42,7 @@ export class AuthService {
 		// 1. Creamos el payload para el nuevo usuario (igual que en el login) // <-- AQUÍ
         const payload = { 
             email: user.email, 
-            sub: user.id,
+            id: user.id,
             username: user.username, 
             role: user.role 
         };
@@ -79,7 +79,7 @@ export class AuthService {
 		//se crea un payload con datos que viajan y el wtService.signAsync firma digitalmente el token
 		const payload = { 
 			email: user.email, 
-			sub: user.id,
+			id: user.id,
 			username: user.username, 
 		    role: user.role
  		};
@@ -93,6 +93,25 @@ export class AuthService {
   			},
 		};
 	}
+
+	// NUEVO MÉTODO: Responde al /api/auth/me del frontend al recargar la página
+    async getMe(userId: string) {
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+        });
+
+        if (!user) {
+            throw new UnauthorizedException('User not found');
+        }
+
+        return {
+            user: {
+                username: user.username,
+                email: user.email,
+            },
+        };
+    }
+
 	// Simulacion de consulta a Base de Datos:
 	// Método auxiliar preparado para cuando se integre la base de datos
     private async findUserByEmail(email: string) {

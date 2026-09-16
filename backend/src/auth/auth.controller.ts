@@ -1,8 +1,9 @@
-import { Body, Controller, HttpCode, HttpStatus, Post, Get, Inject } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Post, Inject, Get, UseGuards, Request } from '@nestjs/common';
 import { AuthService } from './auth.service.js';
 import { RegisterUserDto } from './dto/register-user.dto.js';
 import { LoginUserDto } from './dto/login-user.dto.js';
 import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
+import { UserPayload } from './interfaces/user-payload.interface.js';
 
 @Controller('api/auth') //Define ruta base (cualquier ruta empezara por /auth)
 //Declara y publica clase relativa a la autenticacion
@@ -24,4 +25,11 @@ export class AuthController {
 	async login(@Body() loginDto: LoginUserDto) {
 		return this.authService.login(loginDto);
 	}
+
+	@Get('me')
+  	@UseGuards(JwtAuthGuard)
+  	async getMe(@Request() req: { user: UserPayload }) {
+    // req.user.id viene directamente del payload del token tipado con tu interfaz
+    return this.authService.getMe(req.user.id);
+  }
 }
