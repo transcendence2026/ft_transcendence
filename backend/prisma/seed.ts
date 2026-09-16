@@ -171,7 +171,7 @@ const FIRST_NAMES = [
 	'Mateo', 'Nora', 'Hugo', 'Alicia', 'Pablo'
 ];
 
-const LAST_NAME = [
+const LAST_NAMES = [
 	'Garcia', 'Silva', 'Quesada', 'Rossi', 'Tanaka',
 	'Ruz', 'Garrido', 'Mondon', 'Landeira', 'Romero'
 ];
@@ -242,5 +242,38 @@ async function seedRestaurantsAndDishes(tags: { id: string; name: string }[]) {
 	}
 	// Return the total count of created dishes
 	return totalDishes;
+}
+
+// Seeds the database with mock user records and nested profile data
+async function seedUsers() {
+	// Generate a SHA-256 password hash to reuse across all seeded users
+	const passwordHash = fakeHash('Password123!');
+
+	for (let i = 0; i < 10; i++) {
+		const firstName = FIRST_NAMES[i];
+		const lastName = randomChoice(LAST_NAMES);
+		const username = `${firstName.toLowerCase()}${randomInt(10, 99)}`;
+
+		// Create user along with a nested profile in a single Prisma operation
+		await prisma.user.create({
+			data: {
+				email: `${username}@tastesync.dev`,
+				username,
+				passwordHash,
+				role: 'USER',
+				status: 'OFFLINE',
+				profile: {
+					create: {
+						firstName,
+						lastName,
+						bio: `Food lover exploring the best ${randomChoice(Object.keys(DISH_POLL),)} spots in twon.`,
+						wins: randomInt(0, 15),
+						losses: randomInt(0, 15),
+						rating: randomInt(900, 1600),
+					},
+				},
+			},
+		});
+	}
 }
 
