@@ -1,7 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { ConfigService } from '@nestjs/config';
+//import { ConfigService } from '@nestjs/config'; //no es necesario, su uso daba latencia y error
 import { UserPayload } from '../interfaces/user-payload.interface.js';
 
 @Injectable()
@@ -14,7 +14,8 @@ import { UserPayload } from '../interfaces/user-payload.interface.js';
 //Como nuestra clase JwtStrategy hereda de la clase de Passport (extends PassportStrategy(Strategy)),
 // estamos obligados a llamar a la función super()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-    constructor(private readonly configService: ConfigService) {
+    //constructor(private readonly configService: ConfigService) {
+    constructor() {
         super({
             // ¿Dónde busca el token? En la cabecera HTTP de la petición, 
         	// buscando la palabra "Bearer <token>" (ej: Authorization: Bearer eyJhbGci...)
