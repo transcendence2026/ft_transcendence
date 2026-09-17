@@ -1,8 +1,8 @@
 import { extname } from 'path';
-import { Request } from 'express';
+//import { Request } from 'express';
 
 export const editFileName = (
-    req: Request,
+    req: any,
     file: Express.Multer.File,
     callback: (error: Error | null, filename: string) => void
 ) => {

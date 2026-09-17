@@ -1,4 +1,4 @@
-import { Controller, Post, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { Controller, Post, Req, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { editFileName } from './file-upload.utils';
@@ -17,7 +17,12 @@ export class UsersController {
       }),
     }),
   )
-  uploadAvatar(@UploadedFile() file: Express.Multer.File) {
-    return this.usersService.formatAvatarResponse(file);
-  }
+  async uploadAvatar(
+    @UploadedFile() file: Express.Multer.File,
+    // Supongamos que recibes el ID desde un Decorador de usuario autenticado o req.user
+    @Req() req: any, 
+    ) {
+    const userId = req.user.id; // O el método con el que recuperes el ID del usuario
+    return this.usersService.updateAvatar(userId, file.filename);
+    }
 }

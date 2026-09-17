@@ -1,24 +1,42 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../database/prisma.service'; // Ajusta la ruta a tu PrismaService
 
 @Injectable()
 export class UsersService {
-  // Aquí inyectarías tu repositorio/ORM (TypeORM, Prisma, Mongoose, etc.)
+  constructor(private readonly prisma: PrismaService) {}
 
   async updateAvatar(userId: string, filename: string) {
-    // 1. Buscar al usuario
-    // const user = await this.userRepository.findOne(userId);
-    // if (!user) throw new NotFoundException('Usuario no encontrado');
+    const avatarUrl = `/uploads/avatars/${filename}`;
 
-    // 2. Aplicar la lógica (asignar la imagen)
-    // user.avatar = filename;
+    // 1. Verificamos que el usuario exista en la base de datos
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
 
-    // 3. Persistir los cambios
-    // return await this.userRepository.save(user);
+    if (!user) {
+      throw new NotFoundException(`El usuario con ID ${userId} no existe`);
+    }
 
-    return {
-      message: 'Avatar actualizado con éxito',
-      userId,
-      avatar: filename,
-    };
+    // 2. Actualizamos el campo avatarUrl DENTRO del modelo Profile relacionado
+    return await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        profile: {
+          upsert: {
+            // Si el perfil no existe, lo crea con la foto
+            create: {
+              avatarUrl: avatarUrl,
+            },
+            // Si el perfil ya existe, actualiza solo el avatarUrl
+            update: {
+              avatarUrl: avatarUrl,
+            },
+          },
+        },
+      },
+      include: {
+        profile: true, // Incluye el perfil actualizado en la respuesta
+      },
+    });
   }
 }
