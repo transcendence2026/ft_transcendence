@@ -1,12 +1,21 @@
 {
+	// Configure the TypeScript compiler for the Prisma seed script.
 	"compilerOptions": {
+		// Compile the script to modern ES2022 JavaScript.
 		"target": "es2022",
+		// Use Node's modern module system.
 		"module": "nodenext",
+		// Resolve imports according to Node.js module rules.
 		"moduleResolution": "nodenext",
+		// Enable strict type checking.
 		"strict": true,
+		// Allow default imports from modules without default exports.
 		"esModuleInterop": true,
+		// Include Node.js global types such as `process`.
 		"types": ["node"],
+		// Skip type checking for declaration files in dependencies.
 		"skipLibCheck": true
 	},
+	// Include the seed script in this TypeScript project.
 	"include": ["seed.ts"]
 }
