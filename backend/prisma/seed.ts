@@ -178,16 +178,22 @@ const LAST_NAMES = [
 
 // ---- Main seeding logic ----
 
+/* Clears all database tables prior to re-seeding.
+ * Deletes child records before parent records to satisfy foreign key constraints
+ * and avoid referentialintegrity errors (even with cascading deletes enabled)
+*/
 async function cleanup() {
-	// Delete children before parents to respect foreign keys, even though most relations already cascade
+	// 1. Delete dependents / child entities with foreign key references
 	await prisma.review.deleteMany();
 	await prisma.message.deleteMany();
 	await prisma.post.deleteMany();
 	await prisma.block.deleteMany();
 	await prisma.friendship.deleteMany();
 	await prisma.dish.deleteMany();
+	// 2. Delete mid-level parent entities
 	await prisma.restaurant.deleteMany();
 	await prisma.tag.deleteMany();
+	// 3. Delete root parent entities
 	await prisma.profile.deleteMany();
 	await prisma.user.deleteMany();
 }
