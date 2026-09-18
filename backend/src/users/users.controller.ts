@@ -1,13 +1,15 @@
-import { Controller, Post, Req, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { Controller, Post, Req, UseGuards ,UseInterceptors, BadRequestException,UnauthorizedException ,UploadedFile } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
+import { AuthGuard, AuthenticatedRequest } from '../auth/auth.guard.js';
 import { editFileName } from './file-upload.utils';
 import { UsersService } from './users.service';
 
 @Controller('api/users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
-
+  
+  @UseGuards(AuthGuard)
   @Post('avatar') // Escucha peticiones POST /api/users/avatar
   @UseInterceptors(
     FileInterceptor('file', { // 'file' es la clave que enviará el cliente HTTP
@@ -21,8 +23,15 @@ export class UsersController {
     @UploadedFile() file: Express.Multer.File,
     // Supongamos que recibes el ID desde un Decorador de usuario autenticado o req.user
     @Req() req: any, 
-    ) {
-    const userId = req.user.id; // O el método con el que recuperes el ID del usuario
+  ) {
+    if (!file) { // <-- AÑADIR
+      throw new BadRequestException('Debes adjuntar una imagen');
+    }
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedException('Usuario no autenticado');
+    }
+    const avatarUrl = `/uploads/avatars/${file.filename}`;
     return this.usersService.updateAvatar(userId, file.filename);
     }
 }
