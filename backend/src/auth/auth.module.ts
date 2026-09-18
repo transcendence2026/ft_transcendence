@@ -15,6 +15,7 @@ import { AuthService } from './auth.service.js';
 import { JwtStrategy } from './strategies/jwt.strategy.js';
 //PrismaModule da acceso a la Base de Datos
 import { PrismaModule } from '../prisma/prisma.module.js';
+import { FortyTwoStrategy } from './oauth/forty-two.strategy.js';
 
 //Registras y juntas el AuthController mas AuthService y se guardan en el NestJS
 @Module({
@@ -33,7 +34,7 @@ import { PrismaModule } from '../prisma/prisma.module.js';
 	],
 	//Registras el controler y el service para que NestJS sepa de su existencia
 	controllers: [AuthController],
-	providers: [AuthService, JwtStrategy], // Registramos el servicio y la estrategia de Passport
+	providers: [AuthService, JwtStrategy, FortyTwoStrategy], // Registramos el servicio y la estrategia de Passport
 })
 export class AuthModule {}
 //al AuthModule se exporta, luego sera importado por app.module.ts

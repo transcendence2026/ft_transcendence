@@ -94,7 +94,7 @@ export class AuthService {
 		};
 	}
 
-	// NUEVO MÉTODO: Responde al /api/auth/me del frontend al recargar la página
+	// Responde al /api/auth/me del frontend al recargar la página
     async getMe(userId: string) {
         const user = await this.prisma.user.findUnique({
             where: { id: userId },
@@ -112,11 +112,55 @@ export class AuthService {
         };
     }
 
-	// Simulacion de consulta a Base de Datos:
 	// Método auxiliar preparado para cuando se integre la base de datos
     private async findUserByEmail(email: string) {
         return await this.prisma.user.findUnique({
             where: { email },
         });
+    }
+
+	//Una vez que el proveedor externo nos da los datos del usuario en el req.user (callback),
+	//  el servicio hace lo siguiente: BUSCA en la BD con prisma si exite el usuario
+	//si existe, GENERA EL TOKEN
+	//si no, lo crea en al BD y luego emite token
+	//por ultimo redirige al us al frontend pasando el token para que la interfaz lo guarde
+    async oauthLogin(userDto: { email: string; username: string; avatarUrl: string }) {
+        // 1. Buscamos si el usuario ya existe en la base de datos por su email
+        let user = await this.prisma.user.findUnique({
+            where: { email: userDto.email },
+        });
+
+        // 2. Si no existe, lo creamos automáticamente en la BD
+        if (!user) {
+            user = await this.prisma.user.create({
+                data: {
+                    email: userDto.email,
+                    username: userDto.username,
+                    // Como entra por 42, no tiene contraseña propia de registro clásico
+                    passwordHash: '', 
+                },
+            });
+        }
+
+        // 3. Creamos el payload exactamente igual que en el login o registro normal
+        const payload = { 
+            email: user.email, 
+            id: user.id,
+            username: user.username, 
+            role: user.role 
+        };
+
+        // 4. Firmamos el token JWT con el JwtService
+        const accessToken = await this.jwtService.signAsync(payload);
+
+        // 5. Devolvemos el token y los datos del usuario al cliente
+        return {
+            message: 'OAuth login successful',
+            token: accessToken,
+            user: {
+                username: user.username,
+                email: user.email,
+            },
+        };
     }
 }
