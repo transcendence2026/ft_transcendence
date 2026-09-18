@@ -35,6 +35,7 @@ import { FortyTwoStrategy } from './oauth/forty-two.strategy.js';
 	//Registras el controler y el service para que NestJS sepa de su existencia
 	controllers: [AuthController],
 	providers: [AuthService, JwtStrategy, FortyTwoStrategy], // Registramos el servicio y la estrategia de Passport
+	exports: [JwtModule, PassportModule],
 })
 export class AuthModule {}
 //al AuthModule se exporta, luego sera importado por app.module.ts

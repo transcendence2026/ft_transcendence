@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, HttpStatus, Post, Inject, Get, UseGuards, Request } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Post, Res, Inject, Get, UseGuards, Request } from '@nestjs/common';
 import { AuthService } from './auth.service.js';
 import { RegisterUserDto } from './dto/register-user.dto.js';
 import { LoginUserDto } from './dto/login-user.dto.js';
@@ -61,12 +61,12 @@ export class AuthController {
 	//da luz verde a la petición para que entre finalmente a tu controlador (fortyTwoAuthCallback).
 	@Get('oauth/42/callback')
 	@UseGuards(AuthGuard('42'))
-	async fortyTwoAuthCallback(@Request() req: any) {
-		// Obligamos a TypeScript a ver claramente qué datos estamos sacando
-        const fortyTwoUser = req.user as { email: string; username: string; avatarUrl?: string };
-		//gracias a la estrategia tenemos en req.user los datos q extrajo la estrategia
-		//aqui llamamos al servicio para registrar/logear al usuario y devolverle su token JWT
-		return this.authService.oauthLogin(req.user);
+	async fortyTwoAuthCallback(@Request() req: any, @Res() res: any) {
+		// 1. Guarda al usuario en la BD y genera el token
+		const result = await this.authService.oauthLogin(req.user);
+
+		// 2. Redirige al navegador de vuelta a la página web con el token
+		return res.redirect(`https://localhost:8443/?token=${result.token}`);
 	}
 
 }

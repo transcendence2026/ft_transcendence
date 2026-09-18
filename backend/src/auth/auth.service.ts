@@ -21,11 +21,18 @@ export class AuthService {
 	async register(registerDto: RegisterUserDto) {
 		const { email, username, password } = registerDto;
 
-		//Comprobamos si ya existe el usuario por email o username
-        const existingUser = await this.prisma.user.findUnique({ where: { email } });
-        if (existingUser) {
-            throw new ConflictException('Email already registered');
-        }
+	//Comprobamos si ya existe el usuario por email o username
+    // 1. Comprobamos si el email ya existe
+	const existingEmail = await this.prisma.user.findUnique({ where: { email } });
+	if (existingEmail) {
+    	throw new ConflictException('Email already registered');
+	}
+
+	// 2. Comprobamos si el username ya está ocupado
+	const existingUsername = await this.prisma.user.findUnique({ where: { username } });
+	if (existingUsername) {
+		throw new ConflictException('Username already taken');
+	}
 
 		//Ciframos contraseña con bcrypt
 		const hashedPassword = await bcrypt.hash(password, this.saltRounds);
@@ -37,8 +44,12 @@ export class AuthService {
                 email,
                 username,
                 passwordHash: hashedPassword,
+				profile: {
+                    create: {}, // Genera su fila en Profile con avatarUrl por defecto
+				}
             },
         });
+
 		// 1. Creamos el payload para el nuevo usuario (igual que en el login) // <-- AQUÍ
         const payload = { 
             email: user.email, 
@@ -53,7 +64,9 @@ export class AuthService {
 		return {
 			message: 'User registered successfully',
 			token:accessToken,
+			accessToken: accessToken,
 			user: {
+				id: user.id,
 				username: user.username,
                 email: user.email,
 			},
@@ -87,9 +100,11 @@ export class AuthService {
 		return {
 			message: 'Login successful',
 			token: accessToken, //yo tenia accesToken perohay otra configuracion y esta dando problemas
+			accessToken: accessToken,
 			user: {
-			username: user.username,
-			email: user.email,
+				id: user.id,
+				username: user.username,
+				email: user.email,
   			},
 		};
 	}
@@ -98,6 +113,7 @@ export class AuthService {
     async getMe(userId: string) {
         const user = await this.prisma.user.findUnique({
             where: { id: userId },
+			include: { profile: true },
         });
 
         if (!user) {
@@ -106,8 +122,10 @@ export class AuthService {
 
         return {
             user: {
+				id: user.id,
                 username: user.username,
                 email: user.email,
+				avatarUrl: user.profile?.avatarUrl,
             },
         };
     }
@@ -128,17 +146,30 @@ export class AuthService {
         // 1. Buscamos si el usuario ya existe en la base de datos por su email
         let user = await this.prisma.user.findUnique({
             where: { email: userDto.email },
+			include: { profile: true },
         });
 
         // 2. Si no existe, lo creamos automáticamente en la BD
         if (!user) {
+			let finalUsername = userDto.username;
+            const existingUsername = await this.prisma.user.findUnique({
+                where: { username: finalUsername },
+            });
+
+            if (existingUsername) {
+                finalUsername = `${userDto.username}_42`;
+            }
             user = await this.prisma.user.create({
                 data: {
                     email: userDto.email,
-                    username: userDto.username,
-                    // Como entra por 42, no tiene contraseña propia de registro clásico
-                    passwordHash: '', 
+                    username: finalUsername,
+                    profile: {
+                        create: {
+                            avatarUrl: userDto.avatarUrl || 'default-avatar.png',
+						},
+					},
                 },
+				include: { profile: true },
             });
         }
 
@@ -157,7 +188,9 @@ export class AuthService {
         return {
             message: 'OAuth login successful',
             token: accessToken,
+			accessToken: accessToken,
             user: {
+				id: user.id,
                 username: user.username,
                 email: user.email,
             },
