@@ -16,6 +16,8 @@ import { JwtStrategy } from './strategies/jwt.strategy.js';
 //PrismaModule da acceso a la Base de Datos
 import { PrismaModule } from '../prisma/prisma.module.js';
 import { FortyTwoStrategy } from './oauth/forty-two.strategy.js';
+import { TwoFactorController } from './2fa/two-factor.controller.js'; // El nuevo controlador de 2FA
+import { TwoFactorService } from './2fa/two-factor.service.js';     // El nuevo servicio de 2FA
 
 //Registras y juntas el AuthController mas AuthService y se guardan en el NestJS
 @Module({
@@ -33,8 +35,8 @@ import { FortyTwoStrategy } from './oauth/forty-two.strategy.js';
 		}),
 	],
 	//Registras el controler y el service para que NestJS sepa de su existencia
-	controllers: [AuthController],
-	providers: [AuthService, JwtStrategy, FortyTwoStrategy], // Registramos el servicio y la estrategia de Passport
+	controllers: [AuthController, TwoFactorController],
+	providers: [AuthService, JwtStrategy, FortyTwoStrategy, TwoFactorService], // Registramos el servicio y la estrategia de Passport
 	exports: [JwtModule, PassportModule],
 })
 export class AuthModule {}
