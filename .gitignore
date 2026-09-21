@@ -1,3 +1,15 @@
+node_modules/
+dist/
+
+# Variables de entorno en cualquier nivel
+*.env
+backend/.env
+
+# Certificados y claves SSL
+*.key
+*.crt
+certs/
+proxy/certs/
 
 # 1. SYSTEM FILES AND EDITORS
  
@@ -44,6 +56,10 @@ apps/*/node_modules
 dist/
 /dist
 
+# Compiled JS files generated alongside TS source files
+backend/**/*.js
+!backend/**/*.config.js
+
 # NestJS CLI build cache folder
 .nest/
 
@@ -85,4 +101,8 @@ postgres-data/
 coverage/
 
 # 9. CERTS
+<<<<<<< HEAD
 proxy/certs
+=======
+proxy/certs
+>>>>>>> c5321d7f20ed2bfbbb172e975885e536c2edf78e
