@@ -1,18 +1,3 @@
-<<<<<<< HEAD
-node_modules/
-dist/
-
-# Variables de entorno en cualquier nivel
-.env
-*.env
-backend/.env
-
-# Certificados y claves SSL
-*.key
-*.crt
-certs/
-proxy/certs/
-=======
 
 # 1. SYSTEM FILES AND EDITORS
  
@@ -101,4 +86,3 @@ coverage/
 
 # 9. CERTS
 proxy/certs
->>>>>>> origin/dev
