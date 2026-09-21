@@ -19,7 +19,6 @@ enum Role {
 enum Status {
   OFFLINE
   ONLINE
-  INGAME
 }
 
 model User {
@@ -37,6 +36,7 @@ model User {
 
   //Relations
   profile             Profile?
+  preference          Preference?
   sentFriendships     Friendship[] @relation("UserSentFriendships")
   receivedFriendships Friendship[] @relation("UserReceivedFriendships")
   blockedUsers        Block[]      @relation("UserBlocks")
@@ -55,11 +55,24 @@ model Profile {
   lastName  String?
   avatarUrl String?  @default("default-avatar.png")
   bio       String?
-  wins      Int      @default(0)
-  losses    Int      @default(0)
-  rating    Int      @default(1200)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// GASTRONOMIC PREFERENCES
+
+model Preference {
+  id      String          @id @default(uuid())
+  userId  String          @unique
+  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  favoriteCuisine   String[] // e.g. ["Italian", "Japanese"]
+  spiceLevel        Int   @default(2) // 1 = mild ... 5 = very spicy
+  preferredPriceMin Int   @default(1) // matches Restaurant.priceRange (1-4)
+  preferredPriceMax Int   @default(4)
+
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 }
 
 // SOCIAL AND RELATIONS
@@ -107,7 +120,7 @@ model Post {
 }
 
 model Restaurant {
-  id           String @id @default(uuid())
+  id           String     @id @default(uuid())
   name         String
   cuisine      String
   priceRange   Int
