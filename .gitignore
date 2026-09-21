@@ -1,3 +1,16 @@
+node_modules/
+dist/
+
+# Variables de entorno en cualquier nivel
+*.env
+backend/.env
+
+# Certificados y claves SSL
+*.key
+*.crt
+certs/
+proxy/certs/
+
 # 1. SYSTEM FILES AND EDITORS
  
 # macOS system folder view settings

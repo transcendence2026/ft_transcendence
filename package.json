@@ -1,6 +1,19 @@
 {
+<<<<<<< HEAD
+  "dependencies": {
+    "@nestjs/config": "^12.0.0",
+    "@nestjs/passport": "^12.0.0",
+    "bcrypt": "^6.0.0",
+    "passport": "^0.7.0",
+    "passport-jwt": "^4.0.1"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/passport-jwt": "^4.0.1"
+=======
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
     "tailwindcss": "^4.3.3"
+>>>>>>> origin/dev
   }
 }
