@@ -3,10 +3,13 @@ import { Button } from "../components/Button";
 import { Card } from "../components/Card";
 import ProtectedRoute from "../components/ProtectedRoute";
 import { useAuth } from "../../context/AuthContext";
+import { useWebSocket } from "@/context/WebSocketContext";
+import { useEffect } from "react";
 
 function DashboardContent() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { sendMessage, messages, status } = useWebSocket();
   const username = user?.username ?? "user";
 
   const navigation = [
@@ -49,11 +52,25 @@ const posts = [
     },
   ];
 
-
   const handleLogout = () => {
     logout();
     navigate("/login");
   };
+
+  const handleRejoindreSalon = () => {
+    // Ton sendMessage convertit déjà les objets en JSON, c'est parfait !
+    sendMessage({ event: 'joinRoom', roomName: 'general' });
+  }
+
+
+  useEffect(() => {
+    console.log("Statut WebSocket :", status);
+  }, [status]);
+
+  useEffect(() => {
+    console.log("Messages reçus:", messages);
+  }, [messages]);
+
 
   return (
     <main className="min-h-screen bg-background font-sans text-text">
@@ -107,6 +124,13 @@ const posts = [
 			))}
 		</nav>
 
+          <Button
+            type="button"
+            onClick={handleRejoindreSalon}
+            className="rounded border border-[#ef6540] px-4 py-2 font-sans text-sm font-semibold text-[#ffb4a1] transition-colors hover:bg-[#ef6540]/10"
+          >
+            joinRoom
+          </Button>
           <Button
             type="button"
             onClick={handleLogout}

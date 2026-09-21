@@ -1,131 +1,199 @@
-import { BadRequestException, Inject, Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
-import { PrismaService } from '../database/prisma.service.js';
-import bcrypt from 'bcryptjs';
-import crypto from 'crypto';
-import jwt from 'jsonwebtoken';
+import { Injectable, UnauthorizedException, ConflictException, Inject } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt'; //importamos Servicio de tokens
+import * as bcrypt from 'bcrypt'; //importamos libreria de cifrado
+import { RegisterUserDto } from './dto/register-user.dto.js';
+import { LoginUserDto } from './dto/login-user.dto.js';
+import { PrismaService } from '../prisma/prisma.service.js';
 
-type OAuthUserInfo = { login?: string; email?: string; first_name?: string };
-
+//declara y exporta la clase de servicio dd reside la logica de autenticacion
 @Injectable()
 export class AuthService {
-  private readonly oauthStateStore = new Map<string, string>();
+	//define la complejidad con la que bcrypt revuelve y cifra las contraseñas
+	private readonly saltRounds = 10;
 
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+	//constructor inyecta el servicio de JWT dentro del serv. de autenticacion par poder firmar tokens
+	constructor(
+		@Inject(JwtService) private readonly jwtService: JwtService,
+		@Inject(PrismaService) private readonly prisma: PrismaService,
+	) {}
 
-  private createJwt(userId: string): string {
-    return jwt.sign({ id: userId }, process.env.JWT_SECRET ?? 'dev-secret-change-me', { expiresIn: '1d' });
-  }
+	//Recibe los datos validados del registro
+	async register(registerDto: RegisterUserDto) {
+		const { email, username, password } = registerDto;
 
-  private sanitizeUsername(value: string): string {
-    return value.toLowerCase().replace(/[^a-z0-9_-]+/g, '').slice(0, 20) || 'user';
-  }
+	//Comprobamos si ya existe el usuario por email o username
+    // 1. Comprobamos si el email ya existe
+	const existingEmail = await this.prisma.user.findUnique({ where: { email } });
+	if (existingEmail) {
+    	throw new ConflictException('Email already registered');
+	}
 
-  private async ensureUniqueUsername(preferredUsername: string): Promise<string> {
-    const base = this.sanitizeUsername(preferredUsername);
-    let candidate = base;
-    let suffix = 1;
-    while (await this.prisma.user.findUnique({ where: { username: candidate } })) {
-      candidate = `${base}${suffix}`;
-      suffix += 1;
+	// 2. Comprobamos si el username ya está ocupado
+	const existingUsername = await this.prisma.user.findUnique({ where: { username } });
+	if (existingUsername) {
+		throw new ConflictException('Username already taken');
+	}
+
+		//Ciframos contraseña con bcrypt
+		const hashedPassword = await bcrypt.hash(password, this.saltRounds);
+		
+		// Guardamos usando passwordHash como marca el schema.prisma
+		//le dice a Prisma que cree una nnueva linea user con el contenido de data
+        const user = await this.prisma.user.create({
+            data: {
+                email,
+                username,
+                passwordHash: hashedPassword,
+				profile: {
+                    create: {}, // Genera su fila en Profile con avatarUrl por defecto
+				}
+            },
+        });
+
+		// 1. Creamos el payload para el nuevo usuario (igual que en el login) // <-- AQUÍ
+        const payload = { 
+            email: user.email, 
+            id: user.id,
+            username: user.username, 
+            role: user.role 
+        };
+        
+        // 2. Firmamos el token con el JwtService // <-- AQUÍ
+        const accessToken = await this.jwtService.signAsync(payload);
+		//Una vez el usuario esta guardado, devuelve respuesta al controlador para q sepa quien se acaba de registrar
+		return {
+			message: 'User registered successfully',
+			token:accessToken,
+			accessToken: accessToken,
+			user: {
+				id: user.id,
+				username: user.username,
+                email: user.email,
+			},
+		};
+	}
+	// Recibe las credeciales para logearse e intentar entrar en la aplicacion
+	async login(loginUserDto: LoginUserDto) {
+		const { email, password } = loginUserDto;
+		// 1. Buscamos al usuario (punto de enganche para la base de datos)
+		const user = await this.findUserByEmail(email);
+		//si no lo encuentra, lanza error 401
+		if(!user || !user.passwordHash) {
+			throw new UnauthorizedException('Invalid credentials');
+		}
+
+		//2. Comparamos la contraseña con el hash usando bcrypt.compare
+		const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+		if(!isPasswordValid) {
+			throw new UnauthorizedException('Invalid credentials');
+		}
+
+		//3. Si todo es correcto, generamos y devolvemos el token JWT
+		//se crea un payload con datos que viajan y el wtService.signAsync firma digitalmente el token
+		const payload = { 
+			email: user.email, 
+			id: user.id,
+			username: user.username, 
+		    role: user.role
+ 		};
+		const accessToken = await this.jwtService.signAsync(payload);
+		return {
+			message: 'Login successful',
+			token: accessToken, //yo tenia accesToken perohay otra configuracion y esta dando problemas
+			accessToken: accessToken,
+			user: {
+				id: user.id,
+				username: user.username,
+				email: user.email,
+  			},
+		};
+	}
+
+	// Responde al /api/auth/me del frontend al recargar la página
+    async getMe(userId: string) {
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+			include: { profile: true },
+        });
+
+        if (!user) {
+            throw new UnauthorizedException('User not found');
+        }
+
+        return {
+            user: {
+				id: user.id,
+                username: user.username,
+                email: user.email,
+				avatarUrl: user.profile?.avatarUrl,
+            },
+        };
     }
-    return candidate;
-  }
 
-  async register(username?: string, email?: string, password?: string) {
-    if (!username || !email || !password) {
-      throw new BadRequestException('Username, email and password are required');
+	// Método auxiliar preparado para cuando se integre la base de datos
+    private async findUserByEmail(email: string) {
+        return await this.prisma.user.findUnique({
+            where: { email },
+        });
     }
 
-    const normalizedEmail = String(email).trim().toLowerCase();
-    const existingUser = await this.prisma.user.findFirst({ where: { OR: [{ email: normalizedEmail }, { username: String(username).trim() }] } });
-    if (existingUser) {
-      throw new BadRequestException('User already exists');
+	//Una vez que el proveedor externo nos da los datos del usuario en el req.user (callback),
+	//  el servicio hace lo siguiente: BUSCA en la BD con prisma si exite el usuario
+	//si existe, GENERA EL TOKEN
+	//si no, lo crea en al BD y luego emite token
+	//por ultimo redirige al us al frontend pasando el token para que la interfaz lo guarde
+    async oauthLogin(userDto: { email: string; username: string; avatarUrl: string }) {
+        // 1. Buscamos si el usuario ya existe en la base de datos por su email
+        let user = await this.prisma.user.findUnique({
+            where: { email: userDto.email },
+			include: { profile: true },
+        });
+
+        // 2. Si no existe, lo creamos automáticamente en la BD
+        if (!user) {
+			let finalUsername = userDto.username;
+            const existingUsername = await this.prisma.user.findUnique({
+                where: { username: finalUsername },
+            });
+
+            if (existingUsername) {
+                finalUsername = `${userDto.username}_42`;
+            }
+            user = await this.prisma.user.create({
+                data: {
+                    email: userDto.email,
+                    username: finalUsername,
+                    profile: {
+                        create: {
+                            avatarUrl: userDto.avatarUrl || 'default-avatar.png',
+						},
+					},
+                },
+				include: { profile: true },
+            });
+        }
+
+        // 3. Creamos el payload exactamente igual que en el login o registro normal
+        const payload = { 
+            email: user.email, 
+            id: user.id,
+            username: user.username, 
+            role: user.role 
+        };
+
+        // 4. Firmamos el token JWT con el JwtService
+        const accessToken = await this.jwtService.signAsync(payload);
+
+        // 5. Devolvemos el token y los datos del usuario al cliente
+        return {
+            message: 'OAuth login successful',
+            token: accessToken,
+			accessToken: accessToken,
+            user: {
+				id: user.id,
+                username: user.username,
+                email: user.email,
+            },
+        };
     }
-
-    const user = await this.prisma.user.create({
-      data: {
-        username: await this.ensureUniqueUsername(String(username)),
-        email: normalizedEmail,
-        passwordHash: await bcrypt.hash(String(password), 10),
-      },
-    });
-    return { token: this.createJwt(user.id), user: { username: user.username, email: user.email } };
-  }
-
-  async login(email?: string, password?: string) {
-    if (!email || !password) {
-      throw new BadRequestException('Email and password are required');
-    }
-
-    const user = await this.prisma.user.findUnique({ where: { email: String(email).trim().toLowerCase() } });
-    if (!user || !user.passwordHash || !(await bcrypt.compare(String(password), user.passwordHash))) {
-      throw new BadRequestException('Invalid credentials');
-    }
-
-    return { token: this.createJwt(user.id), user: { username: user.username, email: user.email } };
-  }
-
-  buildOAuthUrl(): string {
-    const clientId = process.env.FORTY_TWO_CLIENT_ID;
-    if (!clientId) {
-      throw new InternalServerErrorException('42 OAuth is not configured. Set FORTY_TWO_CLIENT_ID.');
-    }
-
-    const state = crypto.randomBytes(16).toString('hex');
-    this.oauthStateStore.set(state, '42');
-    const params = new URLSearchParams({
-      client_id: clientId,
-      redirect_uri: process.env.FORTY_TWO_REDIRECT_URI ?? 'http://localhost:3000/api/auth/oauth/42/callback',
-      response_type: 'code',
-      scope: 'public',
-      state,
-    });
-    return `https://api.intra.42.fr/oauth/authorize?${params.toString()}`;
-  }
-
-  async handleOAuthCallback(code: string, state: string): Promise<string> {
-    if (!code || !state || !this.oauthStateStore.has(state)) {
-      throw new BadRequestException('Invalid OAuth callback state');
-    }
-    this.oauthStateStore.delete(state);
-
-    const tokenResponse = await fetch('https://api.intra.42.fr/oauth/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        client_id: process.env.FORTY_TWO_CLIENT_ID ?? '',
-        client_secret: process.env.FORTY_TWO_CLIENT_SECRET ?? '',
-        code,
-        redirect_uri: process.env.FORTY_TWO_REDIRECT_URI ?? 'http://localhost:3000/api/auth/oauth/42/callback',
-      }).toString(),
-    });
-    if (!tokenResponse.ok) throw new UnauthorizedException('Failed to exchange 42 authorization code');
-
-    const tokenPayload = await tokenResponse.json() as { access_token?: string };
-    if (!tokenPayload.access_token) throw new UnauthorizedException('42 token exchange returned no access token');
-
-    const userResponse = await fetch('https://api.intra.42.fr/v2/me', { headers: { Authorization: `Bearer ${tokenPayload.access_token}` } });
-    if (!userResponse.ok) throw new UnauthorizedException('Failed to fetch user details from 42 API');
-
-    const userInfo = await userResponse.json() as OAuthUserInfo;
-    const login = userInfo.login ?? userInfo.first_name ?? '42user';
-    const email = String(userInfo.email ?? `${login}@student.42.fr`).trim().toLowerCase();
-    let user = await this.prisma.user.findUnique({ where: { email } });
-    if (!user) {
-      user = await this.prisma.user.create({ data: { username: await this.ensureUniqueUsername(login), email, passwordHash: await bcrypt.hash(crypto.randomBytes(24).toString('hex'), 10) } });
-    }
-
-    const callbackUrl = new URL('/oauth/callback', process.env.FRONTEND_URL ?? 'http://localhost:8080');
-    callbackUrl.searchParams.set('token', this.createJwt(user.id));
-    callbackUrl.searchParams.set('username', user.username);
-    callbackUrl.searchParams.set('email', user.email);
-    return callbackUrl.toString();
-  }
-
-  async getCurrentUser(id: string) {
-    const user = await this.prisma.user.findUnique({ where: { id }, select: { username: true, email: true } });
-    if (!user) throw new UnauthorizedException('User not found');
-    return { user: { username: user.username, email: user.email } };
-  }
 }
