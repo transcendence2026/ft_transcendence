@@ -1,0 +1,19 @@
+{
+	// Inherit all base compiler options (strict, esModuleInterop, etc.)
+	// from the project's root tsconfig.json, so the seed script follows
+	// the same TypeScript rules as the rest of the backend.
+	"extends": "../tsconfig.json",
+	"compilerOptions": {
+		// The root tsconfig.json restricts rootDir to "src", but seed.ts
+		// lives in "prisma/", outside that folder. Setting rootDir to the
+		// project root (one level up from prisma/) allows TypeScript to
+		// type-check seed.ts without conflicting with the "src"-only build.
+		"rootDir": "..",
+		// Separate output folder for the compiled seed script, so it never
+		// mixes with the production build output in "dist/".
+		"outDir": "../dist-seed"
+	},
+	// Only compile seed.ts with this config — nothing else from the
+	// project should be picked up here.
+	"include": ["seed.ts"]
+}
