@@ -7,7 +7,7 @@ import * as qrcode from 'qrcode';
 export class TwoFactorService {
 	constructor(private readonly prisma: PrismaService) {}
 
-		//Genera el  secreto único y la imagen QR
+		//GENERA el  SECRETO único y la imagen QR
 	async generateTwoFactorSecret(userId: string, userEmail: string) {
 		//generateSecret(): La librería otplib te devuelve un secreto aleatorio unico
 		const secret = generateSecret();
@@ -37,14 +37,14 @@ export class TwoFactorService {
 
 	//Tras escaner el QR se te genera un codigo de 6 digitos
 
-	//Ahora toca validar y activar el Doble Factor
+	//Ahora toca validar y ACTIVAR el Doble Factor
 	//recibes id y el codigo de 6 digitos y buscas al usuario en la BD
 	async turnOnTwoFactor(userId: string, code: string) {
 		const user = await this.prisma.user.findUnique({
 			where: { id:userId },
 		});
 		if (!user || !user.twoFactorSecret) {
-      		throw new UnauthorizedException('No se ha configurado un secreto 2FA previo');
+      		throw new UnauthorizedException('No 2FA secret has been configured previously');
     	}
 		//authenticator.verify(...): La librería comprueba si el código de 6 dígitos (code) 
 		//encaja matemáticamente con el secreto del usuario (user.twoFactorSecret)
@@ -53,7 +53,7 @@ export class TwoFactorService {
 			secret: user.twoFactorSecret, //La llave secreta que teníamos guardada en la base de datos
 		});
 		if (!isCodeValid) {
-      		throw new UnauthorizedException('Código de verificación inválido');
+      		throw new UnauthorizedException('Invalid verification code');
 		}
 		//Si es valido, se activa el doble factor
 		return this.prisma.user.update({
@@ -61,4 +61,25 @@ export class TwoFactorService {
 			data: { isTwoFactorEnabled: true},
 		});
 	}
+	// VERIFICAR EL CODIGO 6 DIGITOS introducido durante el login (o cuando sea necesario)
+    async verifyCode(userId: string, code: string): Promise<boolean> {
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+        });
+
+        if (!user || !user.twoFactorSecret) {
+            throw new UnauthorizedException('No 2FA secret configured for this user');
+        }
+
+        const isCodeValid = verify({
+            token: code,
+            secret: user.twoFactorSecret,
+        });
+
+        if (!isCodeValid) {
+            throw new UnauthorizedException('Invalid 2FA code');
+        }
+
+        return true;
+    }
 }
