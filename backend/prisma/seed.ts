@@ -254,11 +254,17 @@ async function seedRestaurantsAndDishes(tags: { id: string; name: string }[]) {
 async function seedUsers() {
 	// Generate a SHA-256 password hash to reuse across all seeded users
 	const passwordHash = fakeHash('Password123!');
+	const cuisineNames = Object.keys(DISH_POLL);
 
 	for (let i = 0; i < 10; i++) {
 		const firstName = FIRST_NAMES[i];
 		const lastName = randomChoice(LAST_NAMES);
 		const username = `${firstName.toLowerCase()}${randomInt(10, 99)}`;
+
+		// Pick 2-4 favorite cuisines and a coherent min/max price range
+		const favoriteCuisines = randomSubset(cuisineNames, randomInt(2, 4));
+		const priceMin = randomInt(1, 3);
+		const priceMax = randomInt(priceMin, 4);
 
 		// Create user along with a nested profile in a single Prisma operation
 		await prisma.user.create({
@@ -273,6 +279,14 @@ async function seedUsers() {
 						firstName,
 						lastName,
 						bio: `Food lover exploring the best ${randomChoice(Object.keys(DISH_POLL),)} spots in town.`,
+					},
+				},
+				preference: {
+					create: {
+						favoriteCuisines,
+						spiceLevel: randomInt(1, 5),
+						preferredPriceMin: priceMin,
+						preferredPriceMax: priceMax,
 					},
 				},
 			},
