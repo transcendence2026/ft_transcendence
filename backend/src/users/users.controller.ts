@@ -1,7 +1,7 @@
 import { Controller, Post, Req, ParseFilePipe, MaxFileSizeValidator, FileTypeValidator, UseGuards ,UseInterceptors, BadRequestException,UnauthorizedException ,UploadedFile } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
-import { AuthGuard, AuthenticatedRequest } from '../auth/auth.guard.js';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { editFileName } from './file-upload.utils';
 import { UsersService } from './users.service';
 
@@ -9,7 +9,7 @@ import { UsersService } from './users.service';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
   
-  @UseGuards(AuthGuard)
+  @UseGuards(JwtAuthGuard)
   @Post('avatar') // Escucha peticiones POST /api/users/avatar
   @UseInterceptors(
     FileInterceptor('file', { // 'file' es la clave que enviará el cliente HTTP
