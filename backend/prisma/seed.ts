@@ -200,13 +200,13 @@ async function cleanup() {
 
 // Seeds the data base with predefined tag names
 async function seedTags() {
-	// Create all tags first so dishes can connect to them by name
-	const tags = await Promise.all(
-		TAG_NAMES.map((name) =>
-			prisma.tag.create({data: {name } }),
-		),
-	);
-	return tags;
+	await prisma.tag.createMany({
+		data: TAG_NAMES.map((name) => ({ name })),
+		skipDuplicates: true,
+	});
+	return prisma.tag.findMany({
+		where: { name: { in: TAG_NAMES } },
+	});
 }
 
 // Seeds restaurants and their associated dishes, linking each dish with random tags
