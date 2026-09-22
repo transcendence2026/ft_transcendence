@@ -1,4 +1,5 @@
 import { Body, Controller, HttpCode, HttpStatus, Post, Res, Inject, Get, UseGuards, Request } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service.js';
 import { RegisterUserDto } from './dto/register-user.dto.js';
 import { LoginUserDto } from './dto/login-user.dto.js';
@@ -12,7 +13,10 @@ import type { Request as ExpressRequest } from 'express';
 export class AuthController {
 	//Inyectamos el servicio en el constructor
 	//constructor(private readonly authService: AuthService) {}
-	constructor(@Inject(AuthService) private readonly authService: AuthService) {}
+	constructor(
+		@Inject(AuthService) private readonly authService: AuthService,
+		@Inject(ConfigService) private readonly configService: ConfigService,
+	) {}
 
 	@Post('register') //Indica que el metodo responde peticiones http con metodo POST  a la url
 	@HttpCode(HttpStatus.CREATED) //codigo de estado que debe devolver la respuesto (201 registro)
@@ -66,7 +70,13 @@ export class AuthController {
 		const result = await this.authService.oauthLogin(req.user);
 
 		// 2. Redirige al navegador de vuelta a la página web con el token
-		return res.redirect(`https://localhost:8443/?token=${result.token}`);
+		//return res.redirect(`https://localhost:8443/?token=${result.token}`);
+
+		// 2. Lee la URL del entorno, si no existe usa la estándar por defecto
+        const frontendUrl = process.env.FRONTEND_URL || 'https://localhost';
+        
+        // 3. Redirige dinámicamente
+        return res.redirect(`${frontendUrl}/?token=${result.token}`);
 	}
 
 }
