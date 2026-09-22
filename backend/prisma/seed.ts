@@ -272,10 +272,7 @@ async function seedUsers() {
 					create: {
 						firstName,
 						lastName,
-						bio: `Food lover exploring the best ${randomChoice(Object.keys(DISH_POLL),)} spots in twon.`,
-						wins: randomInt(0, 15),
-						losses: randomInt(0, 15),
-						rating: randomInt(900, 1600),
+						bio: `Food lover exploring the best ${randomChoice(Object.keys(DISH_POLL),)} spots in town.`,
 					},
 				},
 			},
