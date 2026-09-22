@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { Input } from '../components/Input';
@@ -7,13 +8,80 @@ import { Modal } from '../components/Modal';
 import ProtectedRoute from '../components/ProtectedRoute';
 import { useAuth } from '../../context/AuthContext';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+
+interface AvatarUploadResponse {
+	profile?: {
+		avatarUrl?: string | null;
+	} | null;
+}
+
 function ProfileContent() {
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const [username, setUsername] = useState(user?.username ?? 'user');
-  const [email, setEmail] = useState(user?.email ?? '');
-  const [bio, setBio] = useState('Learning, competing, and building with the community.');
-  const [showSaveModal, setShowSaveModal] = useState(false);
+	const { user } = useAuth();
+	const navigate = useNavigate();
+	const [username, setUsername] = useState(user?.username ?? 'user');
+	const [email, setEmail] = useState(user?.email ?? '');
+	const [bio, setBio] = useState('Learning, competing, and building with the community.');
+	const [showSaveModal, setShowSaveModal] = useState(false);
+	const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+	const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+	const [avatarFile, setAvatarFile] = useState<File | null>(null);
+	const [avatarError, setAvatarError] = useState<string | null>(null);
+	const [isUploading, setIsUploading] = useState(false);
+	const fileInputRef = useRef<HTMLInputElement>(null);
+
+	useEffect(() => {
+		return () => {
+			if (avatarPreview) URL.revokeObjectURL(avatarPreview);
+		};
+	}, [avatarPreview]);
+
+	const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+		const file = event.target.files?.[0];
+		setAvatarError(null);
+
+		if (!file) return;
+		if (!['image/jpeg', 'image/png'].includes(file.type)) {
+			setAvatarFile(null);
+			setAvatarPreview(null);
+			setAvatarError('Choose a JPG or PNG image.');
+			return;
+		}
+		if (file.size > 2 * 1024 * 1024) {
+			setAvatarFile(null);
+			setAvatarPreview(null);
+			setAvatarError('The image must be smaller than 2 MB.');
+			return;
+		}
+
+		setAvatarFile(file);
+		setAvatarPreview(URL.createObjectURL(file));
+	};
+
+	const uploadAvatar = async () => {
+		if (!avatarFile) return;
+
+		setIsUploading(true);
+		setAvatarError(null);
+		const formData = new FormData();
+		formData.append('file', avatarFile);
+
+		try {
+			const response = await axios.post<AvatarUploadResponse>(`${API_BASE_URL}/api/users/avatar`, formData);
+			const nextAvatarUrl = response.data.profile?.avatarUrl;
+			if (nextAvatarUrl) setAvatarUrl(`${API_BASE_URL}${nextAvatarUrl}`);
+			setAvatarFile(null);
+			if (fileInputRef.current) fileInputRef.current.value = '';
+		} catch (error) {
+			if (axios.isAxiosError(error)) {
+				setAvatarError(error.response?.data?.message ?? 'The avatar could not be uploaded.');
+			} else {
+				setAvatarError('The avatar could not be uploaded.');
+			}
+		} finally {
+			setIsUploading(false);
+		}
+	};
 
   const initials = username.slice(0, 2).toUpperCase();
 
@@ -45,13 +113,37 @@ function ProfileContent() {
 		<div className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.8fr)]">
 		  <Card tag="Public profile" title="Profile details" className="max-w-none">
 			<div className="mb-8 flex items-center gap-4 border-b border-border pb-6">
-			  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-primary bg-surface-raised font-serif text-2xl text-primary-soft">
-				{initials}
+							<div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-primary bg-surface-raised font-serif text-2xl text-primary-soft">
+								{avatarPreview || avatarUrl ? (
+									<img src={avatarPreview ?? avatarUrl ?? ''} alt="Your avatar" className="h-full w-full object-cover" />
+								) : initials}
 			  </div>
 			  <div>
 				<p className="font-serif text-2xl text-text">{username}</p>
 				<p className="text-sm text-muted">@{username || 'user'}</p>
 			  </div>
+			</div>
+
+			<div className="mb-8 border-b border-border pb-6">
+			  <div className="flex flex-wrap items-end justify-between gap-4">
+				<div>
+				  <p className="font-serif text-lg text-text">Profile photo</p>
+				  <p className="mt-1 text-sm text-muted">JPG or PNG, up to 2 MB.</p>
+				</div>
+				<div className="flex flex-wrap gap-3">
+				  <input
+					ref={fileInputRef}
+					type="file"
+					accept="image/jpeg,image/png"
+					onChange={handleAvatarChange}
+					className="block max-w-full text-sm text-muted file:mr-3 file:rounded-control file:border-0 file:bg-surface-raised file:px-3 file:py-2 file:font-sans file:text-sm file:font-medium file:text-text file:hover:bg-border"
+				  />
+				  <Button type="button" onClick={() => void uploadAvatar()} disabled={!avatarFile || isUploading}>
+					{isUploading ? 'Uploading...' : 'Upload photo'}
+				  </Button>
+				</div>
+			  </div>
+			  {avatarError && <p className="mt-3 text-sm text-red-300" role="alert">{avatarError}</p>}
 			</div>
 
 			<div className="grid gap-5 sm:grid-cols-2">
