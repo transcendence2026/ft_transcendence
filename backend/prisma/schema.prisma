@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
@@ -7,7 +8,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// USUARIOS Y PERFILES
+// USERS AND PROFILES
 
 enum Role {
   USER
@@ -25,7 +26,7 @@ model User {
   id                 String   @id @default(uuid())
   email              String   @unique
   username           String   @unique
-  passwordHash       String? // Opcional si inicia sesión vía OAuth 42/Google
+  passwordHash       String? // Optional if logged in via OAuth 42/Google
   role               Role     @default(USER)
   status             Status   @default(OFFLINE)
   isPrivate          Boolean  @default(false)
@@ -34,7 +35,7 @@ model User {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
-  //Relaciones
+  //Relations
   profile             Profile?
   sentFriendships     Friendship[] @relation("UserSentFriendships")
   receivedFriendships Friendship[] @relation("UserReceivedFriendships")
@@ -61,7 +62,7 @@ model Profile {
   updatedAt DateTime @updatedAt
 }
 
-// SOCIAL Y Relaciones
+// SOCIAL AND RELATIONS
 
 enum FriendshipStatus {
   PENDING
@@ -93,7 +94,7 @@ model Block {
   @@unique([blockerId, blockedId])
 }
 
-// CONTENIDO, RESTAURANTES, PLATOS,  RESEÑAS
+// CONTENT, RESTAURANTS, DISHES, REVIEWS 
 
 model Post {
   id        String   @id @default(uuid())
@@ -106,10 +107,12 @@ model Post {
 }
 
 model Restaurant {
-  id         String @id @default(uuid())
-  name       String
-  cuisine    String
-  priceRange Int
+  id           String @id @default(uuid())
+  name         String
+  cuisine      String
+  priceRange   Int
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 
   dishes Dish[]
 }
@@ -136,7 +139,7 @@ model Tag {
 
 model Review {
   id        String   @id @default(uuid())
-  rating    Int // Puntuación, por ejemple del 1 al 5
+  rating    Int // Rating, e.g. from 1 to 5
   comment   String?
   authorId  String
   author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
@@ -144,10 +147,10 @@ model Review {
   dish      Dish     @relation(fields: [dishId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 
-  @@unique([authorId, dishId]) // Una reseña por usuario para cada plato
+  @@unique([authorId, dishId]) // One review per user for each dish
 }
 
-// CHAT Y MENSAJERÍA
+// CHAT AND MESSAGING
 
 model Message {
   id         String   @id @default(uuid())

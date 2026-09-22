@@ -31,4 +31,10 @@ ps:
 	$(COMPOSE) ps
 
 clean:
+	@if [ -d proxy/certs ]; then \
+		rm -rf proxy/certs; \
+		printf "Self-signed certificate deleted\n"; \
+	fi
+	
 	$(COMPOSE) down -v --remove-orphans
+

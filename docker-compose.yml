@@ -59,8 +59,8 @@ services:
       JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
       FRONTEND_URL: ${FRONTEND_URL:-https://localhost:8443}
       BACKEND_URL: ${BACKEND_URL:-http://localhost:3000}
-      FORTY_TWO_CLIENT_ID: ${FORTY_TWO_CLIENT_ID:-}
-      FORTY_TWO_CLIENT_SECRET: ${FORTY_TWO_CLIENT_SECRET:-}
+      FORTY_TWO_CLIENT_ID: ${FORTY_TWO_CLIENT_ID:-dummy_id}
+      FORTY_TWO_CLIENT_SECRET: ${FORTY_TWO_CLIENT_SECRET:-dummy_secret}
       FORTY_TWO_REDIRECT_URI: ${FORTY_TWO_REDIRECT_URI:-https://localhost:8443/api/auth/oauth/42/callback}
     networks:
       # The backend can access the database and receive traffic from the proxy.
