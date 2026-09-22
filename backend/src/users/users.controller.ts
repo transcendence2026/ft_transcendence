@@ -1,4 +1,4 @@
-import { Controller, Post, Req, UseGuards ,UseInterceptors, BadRequestException,UnauthorizedException ,UploadedFile } from '@nestjs/common';
+import { Controller, Post, Req, ParseFilePipe, MaxFileSizeValidator, FileTypeValidator, UseGuards ,UseInterceptors, BadRequestException,UnauthorizedException ,UploadedFile } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { AuthGuard, AuthenticatedRequest } from '../auth/auth.guard.js';
@@ -20,7 +20,17 @@ export class UsersController {
     }),
   )
   async uploadAvatar(
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          // 1. Limita el tamaño a 2MB
+          new MaxFileSizeValidator({ maxSize: 1024 * 1024 * 2 }),
+          // 2. Solo permite JPG, JPEG y PNG (bloquea SVG implícitamente)
+          new FileTypeValidator({ fileType: /(jpg|jpeg|png)$/i }),
+        ],
+      }),
+
+    ) file: Express.Multer.File,
     // Supongamos que recibes el ID desde un Decorador de usuario autenticado o req.user
     @Req() req: any, 
   ) {
