@@ -70,6 +70,11 @@ export class TwoFactorService {
         if (!user || !user.twoFactorSecret) {
             throw new UnauthorizedException('No 2FA secret configured for this user');
         }
+		
+		//obligamos a que el codigo sea de 6 digitos
+		if (!code || !/^\d{6}$/.test(code)) {
+			throw new UnauthorizedException('Invalid 2FA code format');
+		}
 
         const isCodeValid = verify({
             token: code,

@@ -215,6 +215,10 @@ export class AuthService {
 	// Si requiresTwoFactor: true
 	//frontend muestra al usuario una ventanita para que introduzca los 6 dígitos de su aplicación de autenticación.
     async authenticate2faLogin(userId: string, code: string) {
+        //Comprobamos que nos envien userID y si no lo hacen decuelve 401
+        if(!userId) {
+            throw new UnauthorizedException('User ID is required')
+        }
         // 1. Validamos el código usando el TwoFactorService (en concreto con verifyCode)
         await this.twoFactorService.verifyCode(userId, code);
 
