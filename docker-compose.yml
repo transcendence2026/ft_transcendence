@@ -31,12 +31,17 @@ services:
       JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}
       BACKEND_URL: ${BACKEND_URL:-http://localhost:3000}
-      FORTY_TWO_CLIENT_ID: ${FORTY_TWO_CLIENT_ID:-}
-      FORTY_TWO_CLIENT_SECRET: ${FORTY_TWO_CLIENT_SECRET:-}
+      FORTY_TWO_CLIENT_ID: ${FORTY_TWO_CLIENT_ID:-dummy_id}
+      FORTY_TWO_CLIENT_SECRET: ${FORTY_TWO_CLIENT_SECRET:-dummy_secret}
       FORTY_TWO_REDIRECT_URI: ${FORTY_TWO_REDIRECT_URI:-http://localhost:3000/api/auth/oauth/42/callback}
     ports:
       - "3000:3000"
-    command: sh -c "npm run db:push && npm run start:dev"
+    command: sh -c "npm install --include=dev && npm run db:push && npm run start:dev"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
     volumes:
       - ./backend:/app
       - backend_node_modules:/app/node_modules

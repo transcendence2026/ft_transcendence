@@ -11,6 +11,8 @@ make up
 The application is available at https://localhost:8443. Because the local certificate is self-signed, your browser will show a certificate warning; accept it for local development. HTTP on http://localhost:8080 redirects to HTTPS.
 Backend and frontend source directories are bind-mounted into their containers, so edits on the host are picked up by `tsx watch` and Vite without rebuilding. Prisma runs `db push` when the backend starts.
 
+Frontend component usage is documented in [`frontend/COMPONENTS.md`](frontend/COMPONENTS.md), including the interactive component playground at `/components`.
+
 This project started as a minimal full-stack app with Dockerized services and evolved into a secure authentication flow with local login/register and a 42 OAuth-ready backend.
 
 The goal of this README is to explain the project in order:
