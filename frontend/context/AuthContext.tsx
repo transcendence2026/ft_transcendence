@@ -34,20 +34,46 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   });
   const [loading, setLoading] = useState<boolean>(true);
 
+  // CAPTURAR EL TOKEN DE 42 AL VOLVER DE LA REDIRECCIÓN
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlToken = params.get('token');
+
+    if (urlToken) {
+      localStorage.setItem('token', urlToken);
+      setToken(urlToken);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
+  // COMPROBACION DE TOKEN INICIAL
   useEffect(() => {
     if (token) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      void axios.get<{ user: User }>(`${API_BASE_URL}/api/auth/me`)
+      void axios
+        .get<User | { user: User }>(`${API_BASE_URL}/api/auth/me`)
         .then((response) => {
-          const nextUser = response.data.user;
+          // Si el backend devuelve { user: ... } usa eso; si devuelve el objeto directo, usa response.data
+          const data = response.data as any;
+          const nextUser: User = data.user ? data.user : data;
+
           localStorage.setItem('user', JSON.stringify(nextUser));
           setUser(nextUser);
+
+		  // Si el usuario ya está autenticado y sigue en la pantalla de login, redirige a la vista principal
+          if (window.location.pathname === '/login' || window.location.pathname === '/login/') {
+            window.location.href = '/';
+          }
         })
-        .catch(() => {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          setToken(null);
-          setUser(null);
+        .catch((err) => {
+          console.error('Error al verificar sesión en /me:', err);
+          // Solo borramos si el backend rechaza explícitamente el token con 401 Unauthorized
+          if (err.response && err.response.status === 401) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            setToken(null);
+            setUser(null);
+          }
         })
         .finally(() => {
           setLoading(false);
@@ -71,11 +97,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (email: string, password: string) => {
     const res = await axios.post<AuthResponse>(`${API_BASE_URL}/api/auth/login`, { email, password });
     persistSession(res.data.token, res.data.user);
+	window.location.href = '/';
   };
 
   const register = async (username: string, email: string, password: string) => {
     const res = await axios.post<AuthResponse>(`${API_BASE_URL}/api/auth/register`, { username, email, password });
     persistSession(res.data.token, res.data.user);
+	window.location.href = '/';
   };
 
   const oauth42 = () => {
@@ -85,6 +113,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const completeOAuth = (authToken: string, authUser?: User) => {
     const normalizedUser = authUser ?? { username: '42 User', email: '' };
     persistSession(authToken, normalizedUser);
+	window.location.href = '/';
   };
 
   const logout = () => {
@@ -92,6 +121,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem('user');
     setToken(null);
     setUser(null);
+	window.location.href = '/';
   };
 
   return (
