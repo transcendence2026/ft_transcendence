@@ -4,9 +4,11 @@ import {
   UseGuards, 
   UseInterceptors, 
   UploadedFile, 
-  BadRequestException 
+  BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { fileTypeFromFile } from 'file-type';
+import { unlink } from 'node:fs/promises';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { createMulterOptions } from './multer-opts-builder';
 
@@ -22,12 +24,21 @@ import { createMulterOptions } from './multer-opts-builder';
 @UseGuards(JwtAuthGuard) // 1. Protege todas las rutas de este controlador con JWT
 export class FilesController {
 
+  private async ensureJpegOrPng(file: Express.Multer.File) {
+    const detectedType = await fileTypeFromFile(file.path);
+    if (!detectedType || !['image/jpeg', 'image/png'].includes(detectedType.mime)) {
+      await unlink(file.path).catch(() => undefined);
+      throw new BadRequestException('Only real JPEG and PNG images are allowed');
+    }
+  }
+
   @Post('upload')
   @UseInterceptors(FileInterceptor('file', createMulterOptions('')))
-  uploadFile(@UploadedFile() file: Express.Multer.File) {
+  async uploadFile(@UploadedFile() file: Express.Multer.File) {
     if (!file) {
       throw new BadRequestException('You need to attach an image file');
     }
+    await this.ensureJpegOrPng(file);
 
     return {
       filename: file.filename,
@@ -35,26 +46,28 @@ export class FilesController {
     };
   }
 
-  @Post(['avatar', 'upload/avatar'])
-  @UseInterceptors(FileInterceptor('file', createMulterOptions('avatars')))
-  uploadAvatar(@UploadedFile() file: Express.Multer.File) {
-    if (!file) {
-      throw new BadRequestException('You need to attach an image file');
-    }
+//   @Post(['avatar', 'upload/avatar'])
+//   @UseInterceptors(FileInterceptor('file', createMulterOptions('avatars')))
+//   async uploadAvatar(@UploadedFile() file: Express.Multer.File) {
+//     if (!file) {
+//       throw new BadRequestException('You need to attach an image file');
+//     }
+//     await this.ensureJpegOrPng(file);
 
-    // 2. Devuelve la URL relativa lista para guardar en el perfil
-    return {
-      filename: file.filename,
-      url: `/uploads/avatars/${file.filename}`,
-    };
-  }
+//     // 2. Devuelve la URL relativa lista para guardar en el perfil
+//     return {
+//       filename: file.filename,
+//       url: `/uploads/avatars/${file.filename}`,
+//     };
+//   }
 
   @Post(['post', 'upload/post'])
   @UseInterceptors(FileInterceptor('file', createMulterOptions('posts')))
-  uploadPostImage(@UploadedFile() file: Express.Multer.File) {
+  async uploadPostImage(@UploadedFile() file: Express.Multer.File) {
     if (!file) {
       throw new BadRequestException('You need to attach an image file');
     }
+    await this.ensureJpegOrPng(file);
 
     // 3. Devuelve la URL equivalente para las imágenes de posts
     return {

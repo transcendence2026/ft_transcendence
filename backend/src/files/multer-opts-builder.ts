@@ -1,6 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { MulterOptions } from '@nestjs/platform-express/multer/interfaces/multer-options.interface';
-import { diskStorage } from 'multer';
+import { diskStorage, memoryStorage } from 'multer';
 import { extname, join } from 'path';
 import { mkdirSync } from 'fs';
 
@@ -34,11 +34,11 @@ export const createMulterOptions = (subfolder: string): MulterOptions => ({
     filename: editFileName,
   }),
 
-  // 2. Filtro de extensiones (Solo JPG, JPEG, PNG y WEBP - Bloquea SVG)
+  // 2. Filtro preliminar por extensión; el contenido se valida con file-type antes de responder.
   fileFilter: (req: any, file: Express.Multer.File, callback: any) => {
-    if (!file.originalname.match(/\.(jpg|jpeg|png|webp)$/i)) {
+    if (!file.originalname.match(/\.(jpg|jpeg|png)$/i)) {
       return callback(
-        new BadRequestException('Only images in JPG, JPEG, PNG o WEBP format are allowed'),
+        new BadRequestException('Only JPG, JPEG, and PNG files are allowed'),
         false,
       );
     }
@@ -47,6 +47,13 @@ export const createMulterOptions = (subfolder: string): MulterOptions => ({
 
   // 3. Límite de tamaño (ej: 2 MB)
   limits: {
-    fileSize: 1024 * 1024 * 2,
+    fileSize: 1024 * 1024 * 2 - 1,
+  },
+});
+
+export const createAvatarMulterOptions = (): MulterOptions => ({
+  storage: memoryStorage(),
+  limits: {
+    fileSize: 1024 * 1024 * 2 - 1,
   },
 });
