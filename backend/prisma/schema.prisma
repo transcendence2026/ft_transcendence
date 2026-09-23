@@ -110,13 +110,23 @@ model Block {
 // CONTENT, RESTAURANTS, DISHES, REVIEWS 
 
 model Post {
-  id        String   @id @default(uuid())
+  id        String      @id @default(uuid())
   title     String
   content   String
   authorId  String
-  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  author    User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  images    PostImage[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+}
+
+model PostImage {
+  id      String    @id @default(uuid())
+  url     String    // URL o path 
+  postId  String
+  post    Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
 }
 
 model Restaurant {
