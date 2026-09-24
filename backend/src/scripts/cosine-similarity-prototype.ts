@@ -38,15 +38,3 @@ export function cosineSimilarity(vectorA: number[], vectorB: number[]): number {
 	// Apply formula: (A · B) / (||A|| * ||B||)
 	return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
 }
-
-// --- Verification with known edge cases --- 
-console.log("Orthogonal [1,0] vs [0,1]:", cosineSimilarity([1, 0], [0, 1])); // expected: 0
-console.log("Identical [1,1] vs [1,1]:", cosineSimilarity([1, 1], [1, 1])); // expected: 1
-
-// --- Mock Data: User Preference Profiles ---
-const userA = [5, 4, 1, 0];
-const userB = [4, 5, 1, 0];
-const userC = [0, 0, 5, 5];
-
-console.log("A vs B (similar):", cosineSimilarity(userA, userB));
-console.log("A vs C (opposite):", cosineSimilarity(userA, userC));
