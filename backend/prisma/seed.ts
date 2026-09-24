@@ -2,7 +2,7 @@
 // Populates: 20+ restaurants, 50+ dishes, tags, and 10 test users with full profiles
 // Safe to re-run: it wipes the relevant tables before inserting fresh data
 
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient, Prisma, Cuisine } from '@prisma/client';
 import { createHash } from 'node:crypto';
 
 
@@ -47,100 +47,100 @@ function fakeHash(password: string): string {
 
 // ---- Static data pools ----
 
-const RESTAURANTS: { name: string; cuisine: string; priceRange: number }[] = [
-	{ name: 'La Trattoria Nonna', cuisine: 'Italian', priceRange: 2 },
-	{ name: 'Osteria Del Porto', cuisine: 'Italian', priceRange: 3 },
-	{ name: 'Sakura Sushi Bar', cuisine: 'Japanese', priceRange: 3 },
-	{ name: 'Ichiban Ramen House', cuisine: 'Japanese', priceRange: 2 },
-	{ name: 'El Rincón de Taco', cuisine: 'Mexican', priceRange: 1 },
-	{ name: 'Casa Jalapeño', cuisine: 'Mexican', priceRange: 2 },
-	{ name: 'Taj Spice Kitchen', cuisine: 'Indian', priceRange: 2 },
-	{ name: 'Bombay Curry House', cuisine: 'Indian', priceRange: 3 },
-	{ name: 'Le Petit Bistro', cuisine: 'French', priceRange: 4 },
-	{ name: 'Chez Amélie', cuisine: 'French', priceRange: 3 },
-	{ name: 'Bodega Andaluza', cuisine: 'Spanish', priceRange: 2 },
-	{ name: 'Tapas & Vino', cuisine: 'Spanish', priceRange: 2 },
-	{ name: 'Bangkok Street Kitchen', cuisine: 'Thai', priceRange: 2 },
-	{ name: 'Golden Lotus Thai', cuisine: 'Thai', priceRange: 3 },
-	{ name: 'Route 66 Diner', cuisine: 'American', priceRange: 1 },
-	{ name: 'Smokehouse BBQ Co.', cuisine: 'American', priceRange: 2 },
-	{ name: 'Olive & Thyme', cuisine: 'Mediterranean', priceRange: 3 },
-	{ name: 'Santorini Grill', cuisine: 'Mediterranean', priceRange: 2 },
-	{ name: 'Golden Dragon', cuisine: 'Chinese', priceRange: 2 },
-	{ name: 'Panda Wok', cuisine: 'Chinese', priceRange: 1 },
-	{ name: 'Seoul Garden', cuisine: 'Korean', priceRange: 3 },
-	{ name: 'Saigon Corner', cuisine: 'Vietnamese', priceRange: 2 },
+const RESTAURANTS: { name: string; cuisine: Cuisine; priceRange: number }[] = [
+	{ name: 'La Trattoria Nonna', cuisine: Cuisine.ITALIAN, priceRange: 2 },
+	{ name: 'Osteria Del Porto', cuisine: Cuisine.ITALIAN, priceRange: 3 },
+	{ name: 'Sakura Sushi Bar', cuisine: Cuisine.JAPANESE, priceRange: 3 },
+	{ name: 'Ichiban Ramen House', cuisine: Cuisine.JAPANESE, priceRange: 2 },
+	{ name: 'El Rincón de Taco', cuisine: Cuisine.MEXICAN, priceRange: 1 },
+	{ name: 'Casa Jalapeño', cuisine: Cuisine.MEXICAN, priceRange: 2 },
+	{ name: 'Taj Spice Kitchen', cuisine: Cuisine.INDIAN, priceRange: 2 },
+	{ name: 'Bombay Curry House', cuisine: Cuisine.INDIAN, priceRange: 3 },
+	{ name: 'Le Petit Bistro', cuisine: Cuisine.FRENCH, priceRange: 4 },
+	{ name: 'Chez Amélie', cuisine: Cuisine.FRENCH, priceRange: 3 },
+	{ name: 'Bodega Andaluza', cuisine: Cuisine.SPANISH, priceRange: 2 },
+	{ name: 'Tapas & Vino', cuisine: Cuisine.SPANISH, priceRange: 2 },
+	{ name: 'Bangkok Street Kitchen', cuisine: Cuisine.THAI, priceRange: 2 },
+	{ name: 'Golden Lotus Thai', cuisine: Cuisine.THAI, priceRange: 3 },
+	{ name: 'Route 66 Diner', cuisine: Cuisine.AMERICAN, priceRange: 1 },
+	{ name: 'Smokehouse BBQ Co.', cuisine: Cuisine.AMERICAN, priceRange: 2 },
+	{ name: 'Olive & Thyme', cuisine: Cuisine.MEDITERRANEAN, priceRange: 3 },
+	{ name: 'Santorini Grill', cuisine: Cuisine.MEDITERRANEAN, priceRange: 2 },
+	{ name: 'Golden Dragon', cuisine: Cuisine.CHINESE, priceRange: 2 },
+	{ name: 'Panda Wok', cuisine: Cuisine.CHINESE, priceRange: 1 },
+	{ name: 'Seoul Garden', cuisine: Cuisine.KOREAN, priceRange: 3 },
+	{ name: 'Saigon Corner', cuisine: Cuisine.VIETNAMESE, priceRange: 2 },
 ];
 
 // Dish templates per cuisine: [name, description]
-const DISH_POLL: Record<string, [string, string][]> = {
-	Italian: [
+const DISH_POLL: Record<Cuisine, [string, string][]> = {
+	[Cuisine.ITALIAN]: [
 		['Margherita Pizza', 'Classic tomato, mozzarella and basil'],
 		['Spaghetti Carbonara', 'Egg, pecorino, guanciale and black pepper'],
 		['Lasagna alla Bolognese', 'Layered pasta with slow-cooked meat ragù'],
 		['Risotto ai Funghi', 'Creamy risotto with wild mushrooms'],
 	],
-	Japanese: [
+	[Cuisine.JAPANESE]: [
 		['Salmon Nigiri', 'Fresh salmon over seasoned rice'],
 		['Tonkotsu Ramen', 'Rich pork bone broth with chashu'],
 		['Chicken Katsu Curry', 'Crispy chicken cutlet with Japanese curry'],
 		['Dragon Roll', 'Eel and avocado maki roll'],
 	],
-	Mexican: [
+	[Cuisine.MEXICAN]: [
 		['Tacos al Pastor', 'Marinated pork with pineapple and cilantro'],
 		['Chicken Enchiladas', 'Corn tortillas rolled with cheese and red sauce'],
 		['Guacamole & Chips', 'Fresh avocado dip with tortilla chips'],
 		['Carne Asada Burrito', 'Grilled beef, rice, beans and salsa'],
 	],
-	Indian: [
+	[Cuisine.INDIAN]: [
 		['Butter Chicken', 'Creamy tomato curry with tandoori chicken'],
 		['Paneer Tikka Masala', 'Grilled paneer in spiced tomato gravy'],
 		['Chana Masala', 'Spiced chickpea curry'],
 		['Lamb Biryani', 'Fragrant rice layered with spiced lamb'],
 	],
-	French: [
+	[Cuisine.FRENCH]: [
 		['Coq au Vin', 'Chicken braised in red wine'],
 		['Boeuf Bourguignon', 'Slow-cooked beef stew in red wine'],
 		['Ratatouille', 'Stewed Provençal vegetables'],
 		['Crème Brûlée', 'Vanilla custard with caramelized sugar top'],
 	],
-	Spanish: [
+	[Cuisine.SPANISH]: [
 		['Paella Valenciana', 'Saffron rice with chicken and rabbit'],
 		['Patatas Bravas', 'Fried potatoes with spicy tomato sauce'],
 		['Jamón Ibérico Board', 'Cured Iberian ham selection'],
 		['Tortilla Española', 'Classic potato and egg omelette'],
 	],
-	Thai: [
+	[Cuisine.THAI]: [
 		['Pad Thai', 'Stir-fried rice noodles with tamarind sauce'],
 		['Green Curry Chicken', 'Coconut curry with Thai basil'],
 		['Tom Yum Soup', 'Hot and sour shrimp soup'],
 		['Mango Sticky Rice', 'Sweet coconut rice with fresh mango'],
 	],
-	American: [
+	[Cuisine.AMERICAN]: [
 		['Classic Cheeseburger', 'Beef patty, cheddar, lettuce and tomato'],
 		['BBQ Pulled Pork Sandwich', 'Slow-smoked pork with coleslaw'],
 		['Mac & Cheese', 'Baked pasta in cheese sauce'],
 		['Buffalo Wings', 'Crispy wings tossed in spicy buffalo sauce'],
 	],
-	Mediterranean: [
+	[Cuisine.MEDITERRANEAN]: [
 		['Falafel Wrap', 'Chickpea fritters with tahini sauce'],
 		['Greek Salad', 'Tomato, cucumber, olives and feta'],
 		['Lamb Souvlaki', 'Grilled skewers with tzatziki'],
 		['Hummus Plate', 'Chickpea dip with warm pita'],
 	],
-	Chinese: [
+	[Cuisine.CHINESE]: [
 		['Kung Pao Chicken', 'Stir-fried chicken with peanuts and chili'],
 		['Sweet and Sour Pork', 'Crispy pork in tangy sauce'],
 		['Vegetable Dumplings', 'Steamed dumplings with vegetable filling'],
 		['Beef Chow Mein', 'Stir-fried noodles with beef and vegetables'],
 	],
-	Korean: [
+	[Cuisine.KOREAN]: [
 		['Bibimbap', 'Mixed rice bowl with vegetables and gochujang'],
 		['Korean Fried Chicken', 'Double-fried chicken with sweet-spicy glaze'],
 		['Kimchi Jjigae', 'Spicy kimchi and pork stew'],
 		['Bulgogi', 'Marinated grilled beef'],
 	],
-	Vietnamese: [
+	[Cuisine.VIETNAMESE]: [
 		['Pho Bo', 'Beef noodle soup with herbs'],
 		['Banh Mi', 'Baguette sandwich with pork and pickled vegetables'],
 		['Fresh Spring Rolls', 'Rice paper rolls with shrimp and herbs'],
@@ -219,7 +219,7 @@ async function seedRestaurantsAndDishes(tags: { id: string; name: string }[]) {
 		const restaurant = await prisma.restaurant.create({ data: restaurantData });
 
 		// Fetch the dish templates matching the restaurant's cuisine (fallback to empty array)
-		const dishTemplates = DISH_POLL[restaurantData.cuisine] ?? [];
+		const dishTemplates = DISH_POLL[restaurantData.cuisine];
 		// 3-4 dishes per restaurant -> comfortably clears the 50+ dish requirement
 		const dishCount = randomInt(3, 4);
 
@@ -254,7 +254,7 @@ async function seedRestaurantsAndDishes(tags: { id: string; name: string }[]) {
 async function seedUsers() {
 	// Generate a SHA-256 password hash to reuse across all seeded users
 	const passwordHash = fakeHash('Password123!');
-	const cuisineNames = Object.keys(DISH_POLL);
+	const cuisineNames = Object.keys(DISH_POLL) as Cuisine[];
 
 	for (let i = 0; i < 10; i++) {
 		const firstName = FIRST_NAMES[i];

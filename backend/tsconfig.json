@@ -14,5 +14,7 @@
   "typeAcquisition": {
     "enable": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  // Exclude specs
+	"exclude": ["node_modules", "**/*.spec.ts"]
 }
