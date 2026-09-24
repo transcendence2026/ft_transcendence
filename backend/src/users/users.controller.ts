@@ -1,13 +1,32 @@
-import { Controller, Post, Req, ParseFilePipe, MaxFileSizeValidator, FileTypeValidator, UseGuards ,UseInterceptors, BadRequestException,UnauthorizedException ,UploadedFile } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Post, Req, ParseFilePipe, MaxFileSizeValidator, FileTypeValidator, UseGuards ,UseInterceptors, BadRequestException,UnauthorizedException ,UploadedFile } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { editFileName } from './file-upload.utils';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UsersService } from './users.service';
 
 @Controller('api/users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
+
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  getCurrentUser(@Req() req: any) {
+    return this.usersService.getProfile(req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('me')
+  updateCurrentUser(@Req() req: any, @Body() updateProfileDto: UpdateProfileDto) {
+    return this.usersService.updateProfile(req.user.id, updateProfileDto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':id')
+  getUser(@Req() req: any) {
+    return this.usersService.getProfile(req.params.id);
+  }
   
   @UseGuards(JwtAuthGuard)
   @Post('avatar') // Escucha peticiones POST /api/users/avatar

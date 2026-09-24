@@ -1,236 +1,157 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
+import { Avatar } from '../components/Avatar';
+import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
-import { Card } from '../components/Card';
 import { Input } from '../components/Input';
-import { Modal } from '../components/Modal';
+import { Tabs } from '../components/Tabs';
 import ProtectedRoute from '../components/ProtectedRoute';
 import { useAuth } from '../../context/AuthContext';
+import { useWebSocket } from '../../context/WebSocketContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
-interface AvatarUploadResponse {
-	profile?: {
-		avatarUrl?: string | null;
-	} | null;
+interface Dish {
+  id: string;
+  name: string;
+  restaurant: string;
+  cuisine: string;
+  rating: number;
+}
+
+interface ProfileData {
+  id: string;
+  username: string;
+  email: string;
+  status: 'ONLINE' | 'OFFLINE' | 'INGAME';
+  createdAt: string;
+  profile: { avatarUrl?: string | null; bio?: string | null } | null;
+  favoriteDishes: Dish[];
+  stats: { recipesRated: number; averageRecipeRating: number; favoriteIngredients: string[] };
+}
+
+function profileImage(url?: string | null) {
+  if (!url || url === 'default-avatar.png') return null;
+  return url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
 }
 
 function ProfileContent() {
-	const { user } = useAuth();
-	const navigate = useNavigate();
-	const [username, setUsername] = useState(user?.username ?? 'user');
-	const [email, setEmail] = useState(user?.email ?? '');
-	const [bio, setBio] = useState('Learning, competing, and building with the community.');
-	const [showSaveModal, setShowSaveModal] = useState(false);
-	const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-	const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-	const [avatarFile, setAvatarFile] = useState<File | null>(null);
-	const [avatarError, setAvatarError] = useState<string | null>(null);
-	const [isUploading, setIsUploading] = useState(false);
-	const fileInputRef = useRef<HTMLInputElement>(null);
+  const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
+  const { status: websocketStatus } = useWebSocket();
+  const navigate = useNavigate();
+  const isOwnProfile = !id || id === user?.id;
+  const profileId = id ?? user?.id;
+  const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [isEditing, setIsEditing] = useState(false);
+  const [form, setForm] = useState({ username: '', email: '', bio: '' });
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-	useEffect(() => {
-		return () => {
-			if (avatarPreview) URL.revokeObjectURL(avatarPreview);
-		};
-	}, [avatarPreview]);
+  useEffect(() => {
+    if (!profileId) return;
 
-	const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-		const file = event.target.files?.[0];
-		setAvatarError(null);
+    const endpoint = isOwnProfile
+      ? `${API_BASE_URL}/api/users/me`
+      : `${API_BASE_URL}/api/users/${profileId}`;
 
-		if (!file) return;
-		if (!['image/jpeg', 'image/png'].includes(file.type)) {
-			setAvatarFile(null);
-			setAvatarPreview(null);
-			setAvatarError('Choose a JPG or PNG image.');
-			return;
-		}
-		if (file.size > 2 * 1024 * 1024) {
-			setAvatarFile(null);
-			setAvatarPreview(null);
-			setAvatarError('The image must be smaller than 2 MB.');
-			return;
-		}
+    void axios.get<ProfileData>(endpoint).then(({ data }) => {
+      setProfile(data);
+      setForm({ username: data.username, email: data.email, bio: data.profile?.bio ?? '' });
+    }).catch(() => setError('We could not load this profile.'));
+  }, [profileId, isOwnProfile, websocketStatus]);
 
-		setAvatarFile(file);
-		setAvatarPreview(URL.createObjectURL(file));
-	};
+  const saveProfile = async () => {
+    try {
+      const { data } = await axios.patch<ProfileData>(`${API_BASE_URL}/api/users/me`, form);
+      setProfile(data);
+      setIsEditing(false);
+      setMessage('Profile updated.');
+      setError(null);
+    } catch (saveError) {
+      setError(axios.isAxiosError(saveError)
+        ? saveError.response?.data?.message ?? 'Profile could not be updated.'
+        : 'Profile could not be updated.');
+    }
+  };
 
-	const uploadAvatar = async () => {
-		if (!avatarFile) return;
+  const uploadAvatar = async (file: File) => {
+    const data = new FormData();
+    data.append('file', file);
 
-		setIsUploading(true);
-		setAvatarError(null);
-		const formData = new FormData();
-		formData.append('file', avatarFile);
+    try {
+      const response = await axios.post<{ profile?: ProfileData['profile'] }>(`${API_BASE_URL}/api/users/avatar`, data);
+      setProfile((current) => current ? { ...current, profile: response.data.profile ?? current.profile } : current);
+      setAvatarPreview(null);
+      setMessage('Avatar updated.');
+      setError(null);
+    } catch {
+      setError('Avatar could not be uploaded.');
+    }
+  };
 
-		try {
-			const response = await axios.post<AvatarUploadResponse>(`${API_BASE_URL}/api/users/avatar`, formData);
-			const nextAvatarUrl = response.data.profile?.avatarUrl;
-			if (nextAvatarUrl) setAvatarUrl(`${API_BASE_URL}${nextAvatarUrl}`);
-			setAvatarFile(null);
-			if (fileInputRef.current) fileInputRef.current.value = '';
-		} catch (error) {
-			if (axios.isAxiosError(error)) {
-				setAvatarError(error.response?.data?.message ?? 'The avatar could not be uploaded.');
-			} else {
-				setAvatarError('The avatar could not be uploaded.');
-			}
-		} finally {
-			setIsUploading(false);
-		}
-	};
+  if (error && !profile) return <main className="min-h-screen bg-background p-8 text-text"><p>{error}</p></main>;
+  if (!profile) return <main className="min-h-screen bg-background p-8 text-muted">Loading profile...</main>;
 
-  const initials = username.slice(0, 2).toUpperCase();
+  const presence = profile.status === 'ONLINE' ? 'online' : profile.status === 'INGAME' ? 'ingame' : 'offline';
+  const memberSince = new Date(profile.createdAt).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 
   return (
-	<main className="min-h-screen bg-background font-sans text-text">
-	  <header className="flex h-18 items-center justify-between border-b border-border bg-surface px-5 sm:px-8">
-		<button
-		  type="button"
-		  className="flex items-center gap-3 text-left"
-		  onClick={() => navigate('/dashboard')}
-		>
-		  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary font-serif text-xl text-background">t</span>
-		  <span className="font-serif text-xl tracking-[-0.03em]">transcendence</span>
-		</button>
-		<Button type="button" variant="ghost" onClick={() => navigate('/dashboard')}>
-		  Back to feed
-		</Button>
-	  </header>
+    <main className="min-h-screen bg-background font-sans text-text">
+      <header className="flex h-18 items-center justify-between border-b border-border bg-surface px-5 sm:px-8">
+        <button type="button" className="flex items-center gap-3 text-left" onClick={() => navigate('/dashboard')}>
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary font-serif text-xl text-background">t</span>
+          <span className="font-serif text-xl tracking-[-0.03em]">transcendence</span>
+        </button>
+        <Button type="button" variant="ghost" onClick={() => navigate('/dashboard')}>Back to feed</Button>
+      </header>
 
-	  <div className="mx-auto max-w-6xl px-4 py-8 sm:px-8 lg:py-12">
-		<div className="mb-8 border-b border-border pb-6">
-		  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Account</p>
-		  <h1 className="mt-2 font-serif text-4xl tracking-[-0.04em]">Your profile</h1>
-		  <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted">
-			Keep your identity and public details ready for the community.
-		  </p>
-		</div>
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-8 lg:py-12">
+        <section className="border-b border-border pb-8">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+            <div className="flex items-center gap-5">
+              <Avatar name={profile.username} src={avatarPreview ?? profileImage(profile.profile?.avatarUrl)} presence={presence} size="xl" />
+              <div>
+                <div className="mb-2 flex flex-wrap items-center gap-2"><Badge tone={profile.status === 'ONLINE' ? 'success' : 'muted'}>{profile.status.toLowerCase()}</Badge><Badge>{profile.stats.recipesRated} recipes rated</Badge></div>
+                <h1 className="font-serif text-4xl tracking-[-0.04em]">{profile.username}</h1>
+                <p className="mt-1 text-sm text-muted">Member since {memberSince}</p>
+              </div>
+            </div>
+            {isOwnProfile && <Button type="button" onClick={() => setIsEditing((current) => !current)}>{isEditing ? 'Close editor' : 'Edit profile'}</Button>}
+          </div>
+          <p className="mt-7 max-w-2xl text-base leading-relaxed text-text-soft">{profile.profile?.bio || 'No bio yet. Tell the community what you are cooking.'}</p>
+        </section>
 
-		<div className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.8fr)]">
-		  <Card tag="Public profile" title="Profile details" className="max-w-none">
-			<div className="mb-8 flex items-center gap-4 border-b border-border pb-6">
-							<div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-primary bg-surface-raised font-serif text-2xl text-primary-soft">
-								{avatarPreview || avatarUrl ? (
-									<img src={avatarPreview ?? avatarUrl ?? ''} alt="Your avatar" className="h-full w-full object-cover" />
-								) : initials}
-			  </div>
-			  <div>
-				<p className="font-serif text-2xl text-text">{username}</p>
-				<p className="text-sm text-muted">@{username || 'user'}</p>
-			  </div>
-			</div>
+        {isEditing && <section className="my-8 max-w-2xl border-b border-border pb-8">
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Input label="Username" value={form.username} onChange={(event) => setForm({ ...form, username: event.target.value })} />
+            <Input label="Email address" type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} />
+          </div>
+          <label className="mt-5 block text-xs font-medium text-text-soft">Bio
+            <textarea value={form.bio} onChange={(event) => setForm({ ...form, bio: event.target.value })} rows={4} className="mt-1.5 w-full resize-y rounded-control border border-border bg-surface-raised px-4 py-2.5 text-sm text-text focus:border-primary focus:outline-none" />
+          </label>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Button type="button" onClick={() => void saveProfile()}>Save changes</Button>
+            <Button type="button" variant="secondary" onClick={() => fileInputRef.current?.click()}>Change avatar</Button>
+            <input ref={fileInputRef} type="file" accept="image/jpeg,image/png" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) { setAvatarPreview(URL.createObjectURL(file)); void uploadAvatar(file); } }} />
+          </div>
+        </section>}
 
-			<div className="mb-8 border-b border-border pb-6">
-			  <div className="flex flex-wrap items-end justify-between gap-4">
-				<div>
-				  <p className="font-serif text-lg text-text">Profile photo</p>
-				  <p className="mt-1 text-sm text-muted">JPG or PNG, up to 2 MB.</p>
-				</div>
-				<div className="flex flex-wrap gap-3">
-				  <input
-					ref={fileInputRef}
-					type="file"
-					accept="image/jpeg,image/png"
-					onChange={handleAvatarChange}
-					className="block max-w-full text-sm text-muted file:mr-3 file:rounded-control file:border-0 file:bg-surface-raised file:px-3 file:py-2 file:font-sans file:text-sm file:font-medium file:text-text file:hover:bg-border"
-				  />
-				  <Button type="button" onClick={() => void uploadAvatar()} disabled={!avatarFile || isUploading}>
-					{isUploading ? 'Uploading...' : 'Upload photo'}
-				  </Button>
-				</div>
-			  </div>
-			  {avatarError && <p className="mt-3 text-sm text-red-300" role="alert">{avatarError}</p>}
-			</div>
-
-			<div className="grid gap-5 sm:grid-cols-2">
-			  <Input
-				label="Username"
-				value={username}
-				onChange={(event) => setUsername(event.target.value)}
-				placeholder="Choose a username"
-			  />
-			  <Input
-				label="Email address"
-				type="email"
-				value={email}
-				onChange={(event) => setEmail(event.target.value)}
-				placeholder="you@example.com"
-			  />
-			</div>
-
-			<label className="mt-5 block max-w-sm text-xs font-medium text-text-soft">
-			  Bio
-			  <textarea
-				value={bio}
-				onChange={(event) => setBio(event.target.value)}
-				rows={4}
-				className="mt-1.5 w-full resize-y rounded-control border border-border bg-surface-raised px-4 py-2.5 text-sm text-text placeholder-muted transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-				placeholder="Tell the community a little about yourself"
-			  />
-			</label>
-
-			<div className="mt-6 flex flex-wrap justify-end gap-3 border-t border-border pt-5">
-			  <Button type="button" variant="ghost" onClick={() => navigate('/dashboard')}>
-				Cancel
-			  </Button>
-			  <Button type="button" onClick={() => setShowSaveModal(true)}>
-				Save changes
-			  </Button>
-			</div>
-		  </Card>
-
-		  <div className="space-y-6">
-			<Card tag="Overview" title="Account snapshot" className="max-w-none">
-			  <dl className="space-y-4">
-				<div className="flex items-center justify-between gap-4 border-b border-border pb-3">
-				  <dt className="text-muted">Member since</dt>
-				  <dd className="text-right text-text">September 2026</dd>
-				</div>
-				<div className="flex items-center justify-between gap-4 border-b border-border pb-3">
-				  <dt className="text-muted">Posts</dt>
-				  <dd className="text-text">12</dd>
-				</div>
-				<div className="flex items-center justify-between gap-4">
-				  <dt className="text-muted">Challenges</dt>
-				  <dd className="text-text">4 completed</dd>
-				</div>
-			  </dl>
-			</Card>
-
-			<Card tag="Next step" title="Account security" className="max-w-none">
-			  <p>Keep your password and sign-in methods up to date as the account grows.</p>
-			  <Button type="button" variant="secondary" className="mt-5" onClick={() => setShowSaveModal(true)}>
-				Manage sign-in
-			  </Button>
-			</Card>
-		  </div>
-		</div>
-	  </div>
-
-	  <Modal
-		isOpen={showSaveModal}
-		onClose={() => setShowSaveModal(false)}
-		title="Profile skeleton"
-		footerActions={
-		  <Button type="button" onClick={() => setShowSaveModal(false)}>
-			Got it
-		  </Button>
-		}
-	  >
-		This profile page is ready for the backend update endpoint. Your edits are currently local to this page.
-	  </Modal>
-	</main>
+        {message && <p className="mt-5 text-sm text-emerald-300" role="status">{message}</p>}
+        {error && <p className="mt-5 text-sm text-red-300" role="alert">{error}</p>}
+        <section className="mt-8">
+          <Tabs tabs={[{ id: 'overview', label: 'Overview' }, { id: 'favorites', label: 'Favorite dishes' }]} activeTab={activeTab} onChange={setActiveTab} />
+          {activeTab === 'overview' ? <div className="mt-8 grid gap-6 md:grid-cols-3"><div className="border-l-2 border-primary px-5"><p className="text-sm text-muted">Recipes rated</p><p className="mt-2 font-serif text-3xl text-text">{profile.stats.recipesRated}</p></div><div className="border-l-2 border-primary px-5"><p className="text-sm text-muted">Average recipe rating</p><p className="mt-2 font-serif text-3xl text-text">{profile.stats.averageRecipeRating || '--'}<span className="ml-1 text-base text-muted">/ 5</span></p></div><div className="border-l-2 border-primary px-5"><p className="text-sm text-muted">Favourite ingredients</p><div className="mt-2 flex flex-wrap gap-2">{profile.stats.favoriteIngredients.length ? profile.stats.favoriteIngredients.map((ingredient) => <Badge key={ingredient} tone="accent">{ingredient}</Badge>) : <span className="font-serif text-lg text-text">Not rated yet</span>}</div></div></div> : <div className="mt-8 grid gap-4 md:grid-cols-3">{profile.favoriteDishes.length ? profile.favoriteDishes.map((dish) => <article key={dish.id} className="border border-border bg-surface p-5"><Badge tone="accent">{dish.cuisine}</Badge><h2 className="mt-4 font-serif text-xl">{dish.name}</h2><p className="mt-1 text-sm text-muted">{dish.restaurant}</p><p className="mt-4 text-sm text-secondary">{'*'.repeat(dish.rating)}<span className="text-border">{'*'.repeat(5 - dish.rating)}</span></p></article>) : <p className="text-muted">Favorite dishes will appear after you review a dish.</p>}</div>}
+        </section>
+      </div>
+    </main>
   );
 }
 
 export default function Profile() {
-  return (
-	<ProtectedRoute>
-	  <ProfileContent />
-	</ProtectedRoute>
-  );
+  return <ProtectedRoute><ProfileContent /></ProtectedRoute>;
 }

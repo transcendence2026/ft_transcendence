@@ -4,6 +4,7 @@ import axios from 'axios';
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
 interface User {
+  id: string;
   username: string;
   email: string;
 }
