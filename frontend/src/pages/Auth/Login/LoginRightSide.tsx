@@ -14,19 +14,57 @@ export default function LoginRightSide() {
   const [remember, setRemember] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  //Estados para 2FA
+  const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
+  const [userId, setUserId] = useState<string>("");
+  const [code, setCode] = useState<string>("");
+  
   const { login, oauth42 } = useAuth();
   const navigate = useNavigate();
 
+  //Enviar credenciales
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
-      await login(email, password);
+      const response = await login(email, password);
+
+      // Si el backend avisa que requiere 2FA
+      if (response && response.requiresTwoFactor) {
+        setRequiresTwoFactor(true);
+        setUserId(response.userId);
+        return;
+      }
+
       navigate("/dashboard");
     } catch (err) {
       if (axios.isAxiosError(err)) {
         alert(err.response?.data?.message ?? "Error al iniciar sesión");
       } else {
         alert("Ha ocurrido un error inesperado");
+      }
+    }
+  };
+
+  // Paso 2: Enviar userId y code al endpoint de verificación
+  const handleVerify2Fa = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    try {
+      const res = await axios.post("/api/auth/2fa/authenticate", {
+        userId,
+        code,
+      });
+
+      const token = res.data.accessToken || res.data.token;
+      if (token) {
+        localStorage.setItem("token", token);
+        navigate("/dashboard");
+        window.location.reload();
+      }
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        alert(err.response?.data?.message ?? "Código 2FA incorrecto o expirado");
+      } else {
+        alert("Error al verificar código 2FA");
       }
     }
   };
@@ -38,103 +76,149 @@ export default function LoginRightSide() {
           É
         </div>
         <h1 className="text-3xl font-normal text-text sm:text-4xl">
-          Bienvenido de nuevo.
+          {requiresTwoFactor ? "Verificación 2FA" : "Bienvenido de nuevo."}
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-muted">
-          Accede a tu panel, gestiona tus proyectos y conecta con tus
-          compañeros.
+          {requiresTwoFactor
+            ? "Introduce el código de 6 dígitos generado por tu app de autenticación."
+            : "Accede a tu panel, gestiona tus proyectos y conecta con tus compañeros."}
         </p>
 
-        <div className="mt-5">
-          <button
-            type="button"
-            onClick={oauth42}
-            className="auth-secondary-button"
-          >
-            <span className="flex h-5 w-5 items-center justify-center rounded-control bg-primary-soft text-xs font-bold text-background">
-              42
-            </span>
-            Continuar con 42
-          </button>
-        </div>
-
-        <div className="my-5 flex items-center gap-4 text-center font-sans text-[10px] font-semibold uppercase tracking-widest text-muted">
-          <hr className="flex-1 border-border" />
-          o continuar con email
-          <hr className="flex-1 border-border" />
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-3.5">
-          <label className="auth-label">
-            <span className="mb-1 block">Correo electrónico</span>
-            <div className="auth-input-shell">
-              <Mail />
-              <input
-                type="email"
-                placeholder="usuario@dominio.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="auth-input"
-              />
-            </div>
-          </label>
-
-          <label className="auth-label">
-            <div className="mb-1 flex justify-between">
-              <span>Contraseña</span>
-              <Link
-                to="#forgot"
-                className="text-primary-soft transition-colors hover:text-primary-hover"
-              >
-                ¿Olvidaste tu contraseña?
-              </Link>
-            </div>
-            <div className="auth-input-shell">
-              <Lock />
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder="••••••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="auth-input tracking-widest placeholder:tracking-normal"
-              />
+        {/* SI NO PIDE 2FA: Mostramos formulario de email y password */}
+        {!requiresTwoFactor ? (
+          <>
+            <div className="mt-5">
               <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="text-muted transition-colors hover:text-text-soft"
+                onClick={oauth42}
+                className="auth-secondary-button"
               >
-                {showPassword ? <EyeOpen /> : <EyeClose />}
+                <span className="flex h-5 w-5 items-center justify-center rounded-control bg-primary-soft text-xs font-bold text-background">
+                  42
+                </span>
+                Continuar con 42
               </button>
             </div>
-          </label>
 
-          <label className="flex w-full cursor-pointer items-center gap-2 py-1 font-sans text-xs text-text-soft transition-colors hover:text-text">
-            <input
-              type="checkbox"
-              checked={remember}
-              onChange={(e) => setRemember(e.target.checked)}
-              className="h-3.5 w-3.5 cursor-pointer rounded border-border bg-surface accent-primary"
-            />
-            Recordar este dispositivo por 30 días
-          </label>
+            <div className="my-5 flex items-center gap-4 text-center font-sans text-[10px] font-semibold uppercase tracking-widest text-muted">
+              <hr className="flex-1 border-border" />
+              o continuar con email
+              <hr className="flex-1 border-border" />
+            </div>
 
-          <button
-            type="submit"
-            className="auth-button mt-2"
-          >
-            Iniciar sesión
-            <Arrow />
-          </button>
-        </form>
+            <form onSubmit={handleSubmit} className="space-y-3.5">
+              <label className="auth-label">
+                <span className="mb-1 block">Correo electrónico</span>
+                <div className="auth-input-shell">
+                  <Mail />
+                  <input
+                    type="email"
+                    placeholder="usuario@dominio.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="auth-input"
+                  />
+                </div>
+              </label>
 
-        <Link
-          to="/register"
-          className="auth-outline-button mt-4"
-        >
-          ¿No tienes una cuenta? Crear cuenta
-        </Link>
+              <label className="auth-label">
+                <div className="mb-1 flex justify-between">
+                  <span>Contraseña</span>
+                  <Link
+                    to="#forgot"
+                    className="text-primary-soft transition-colors hover:text-primary-hover"
+                  >
+                    ¿Olvidaste tu contraseña?
+                  </Link>
+                </div>
+                <div className="auth-input-shell">
+                  <Lock />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="auth-input tracking-widest placeholder:tracking-normal"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="text-muted transition-colors hover:text-text-soft"
+                  >
+                    {showPassword ? <EyeOpen /> : <EyeClose />}
+                  </button>
+                </div>
+              </label>
+
+              <label className="flex w-full cursor-pointer items-center gap-2 py-1 font-sans text-xs text-text-soft transition-colors hover:text-text">
+                <input
+                  type="checkbox"
+                  checked={remember}
+                  onChange={(e) => setRemember(e.target.checked)}
+                  className="h-3.5 w-3.5 cursor-pointer rounded border-border bg-surface accent-primary"
+                />
+                Recordar este dispositivo por 30 días
+              </label>
+
+              <button
+                type="submit"
+                className="auth-button mt-2"
+              >
+                Iniciar sesión
+                <Arrow />
+              </button>
+            </form>
+
+            <Link
+              to="/register"
+              className="auth-outline-button mt-4"
+            >
+              ¿No tienes una cuenta? Crear cuenta
+            </Link>
+          </>
+        ) : (
+          /* SI PIDE 2FA: Mostramos solo la cajita para los 6 números */
+          <form onSubmit={handleVerify2Fa} className="mt-6 space-y-4">
+            <label className="auth-label">
+              <span className="mb-1 block">Código de seguridad</span>
+              <div className="auth-input-shell">
+                <Lock />
+                <input
+                  type="text"
+                  maxLength={6}
+                  autoFocus
+                  placeholder="123456"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                  required
+                  className="auth-input text-center text-xl font-bold tracking-[0.3em]"
+                />
+              </div>
+            </label>
+
+            <button
+              type="submit"
+              disabled={code.length !== 6}
+              className="auth-button mt-2 w-full disabled:opacity-50"
+            >
+              Verificar e ingresar
+              <Arrow />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setRequiresTwoFactor(false);
+                setCode("");
+              }}
+              className="auth-outline-button mt-2 w-full text-xs text-muted"
+            >
+              Volver atrás
+            </button>
+          </form>
+        )}
       </div>
 
       <footer className="mt-auto flex items-center justify-center gap-4 pt-4 font-sans text-[11px] text-muted">

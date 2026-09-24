@@ -3,6 +3,16 @@ import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
+// La respuesta de login puede requerir 2FA
+export interface LoginResponse {
+  message?: string;
+  token?: string;
+  accessToken?: string;
+  user?: User;
+  requiresTwoFactor?: boolean;
+  userId?: string;
+}
+
 interface User {
   username: string;
   email: string;
@@ -10,13 +20,14 @@ interface User {
 
 interface AuthResponse {
   token: string;
+  accessToken?: string;
   user: User;
 }
 
 interface AuthContextType {
   token: string | null;
   user: User | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<any>;
   register: (username: string, email: string, password: string) => Promise<void>;
   oauth42: () => void;
   completeOAuth: (token: string, user?: User) => void;
@@ -95,9 +106,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const login = async (email: string, password: string) => {
-    const res = await axios.post<AuthResponse>(`${API_BASE_URL}/api/auth/login`, { email, password });
-    persistSession(res.data.token, res.data.user);
-	window.location.href = '/';
+    const res = await axios.post<LoginResponse>(`${API_BASE_URL}/api/auth/login`, { email, password });
+    
+    // Si requiere 2FA, devolvemos los datos para que LoginRightSide muestre el input de 6 dígitos
+    if (res.data?.requiresTwoFactor) {
+      return res.data;
+    }
+
+    // Si el login es directo (sin 2FA), guardamos sesión y redirigimos como siempre
+    const token = res.data.token || res.data.accessToken;
+    if (token && res.data.user) {
+      persistSession(token, res.data.user);
+      window.location.href = '/';
+    }
+
+    return res.data;
   };
 
   const register = async (username: string, email: string, password: string) => {

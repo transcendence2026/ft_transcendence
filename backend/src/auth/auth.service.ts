@@ -46,6 +46,7 @@ export class AuthService {
                 email,
                 username,
                 passwordHash: hashedPassword,
+                status: 'ONLINE',
 				profile: {
                     create: {}, // Genera su fila en Profile con avatarUrl por defecto
 				}
@@ -178,6 +179,7 @@ export class AuthService {
                 data: {
                     email: userDto.email,
                     username: finalUsername,
+                    status: 'ONLINE',
                     profile: {
                         create: {
                             avatarUrl: userDto.avatarUrl || 'default-avatar.png',
@@ -186,6 +188,14 @@ export class AuthService {
                 },
 				include: { profile: true },
             });
+        }
+
+        if (user.status !== 'ONLINE') {
+			user = await this.prisma.user.update({
+				where: { id: user.id },
+				data: { status: 'ONLINE' },
+				include: { profile: true },
+			});
         }
 
         // 3. Creamos el payload exactamente igual que en el login o registro normal
