@@ -284,7 +284,7 @@ async function seedUsers() {
 				preference: {
 					create: {
 						favoriteCuisines,
-						spiceLevel: randomInt(1, 5),
+						spicyLevel: randomInt(1, 5),
 						preferredPriceMin: priceMin,
 						preferredPriceMax: priceMax,
 					},

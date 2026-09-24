@@ -21,14 +21,14 @@ export const CUISINE_ORDER = [
 // Matches Restaurant.priceRange (1-4)
 const PRICE_LEVELS = [1, 2, 3, 4] as const;
 
-// Matches Preference.spiceLevel (1-5)
-const SPICE_LEVEL_MAX = 5;
+// Matches Preference.spicyLevel (1-5)
+const SPICY_LEVEL_MAX = 5;
 
 // Minimal shape needed to build the vector — avoids importing Prisma's
 // generated Preference type directly, so this stays easy to unit test
 export interface PreferenceVectorInput {
 	favoriteCuisines: string[];
-	spiceLevel: number;
+	spicyLevel: number;
 	preferredPriceMin: number;
 	preferredPriceMax: number;
 }
@@ -36,7 +36,7 @@ export interface PreferenceVectorInput {
 /**
  * Converts a Preference into a fixed-length numeric vector:
  * - CUISINE_ORDER.length positions -> one-hot (1 if favorite, 0 otherwise)
- * - 1 position -> normalized spice level [0, 1]
+ * - 1 position -> normalized spicy level [0, 1]
  * - PRICE_LEVELS.length positions -> one-hot-ish (1 if level falls in [min, max])
  * 
  * Total length: CUISINE_ORDER.length + 1 PRICE_LEVELS.length
@@ -47,13 +47,13 @@ export function preferenceToVector(pref: PreferenceVectorInput): number[] {
 		pref.favoriteCuisines.includes(cuisine) ? 1 : 0,
 	);
 
-	// 2. Spice level normalized to [0, 1]
-	const spiceVector = [pref.spiceLevel / SPICE_LEVEL_MAX];
+	// 2. spicy level normalized to [0, 1]
+	const spicyVector = [pref.spicyLevel / SPICY_LEVEL_MAX];
 
 	// 3. Price range coverage: which price levels fall inside the user's preferred range
 	const priceVector = PRICE_LEVELS.map((level) =>
 		level >= pref.preferredPriceMin && level <= pref.preferredPriceMax ? 1 : 0,
 	);
 
-	return [...cuisineVector, ...spiceVector, ...priceVector];
+	return [...cuisineVector, ...spicyVector, ...priceVector];
 }

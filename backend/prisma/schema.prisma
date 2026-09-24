@@ -82,7 +82,7 @@ model Preference {
   user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   favoriteCuisines  Cuisine[] // e.g. ["Italian", "Japanese"]
-  spiceLevel        Int   @default(2) // 1 = mild ... 5 = very spicy
+  spicyLevel        Int   @default(2) // 1 = mild ... 5 = very spicy
   preferredPriceMin Int   @default(1) // matches Restaurant.priceRange (1-4)
   preferredPriceMax Int   @default(4)
 
