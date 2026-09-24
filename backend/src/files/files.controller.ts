@@ -61,6 +61,10 @@ export class FilesController {
 //     };
 //   }
 
+
+
+
+//a la espera de la logica de post para pasar a post.service.ts donde se actualice la base de datos con la url de la imagen del post, y luego devolver la url al front para que se muestre en el post creado.
   @Post(['post', 'upload/post'])
   @UseInterceptors(FileInterceptor('file', createMulterOptions('posts')))
   async uploadPostImage(@UploadedFile() file: Express.Multer.File) {
