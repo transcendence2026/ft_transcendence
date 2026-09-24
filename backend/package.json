@@ -11,7 +11,8 @@
     "start:prod": "node dist/main",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "db:push": "prisma db push"
+    "db:push": "prisma db push",
+    "test": "jest"
   },
   "prisma": {
     "seed": "tsx --tsconfig prisma/tsconfig.seed.json prisma/seed.ts"
