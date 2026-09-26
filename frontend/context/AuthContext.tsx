@@ -16,6 +16,7 @@ export interface LoginResponse {
 interface User {
   username: string;
   email: string;
+  isTwoFactorEnabled?: boolean;
 }
 
 interface AuthResponse {
@@ -33,6 +34,7 @@ interface AuthContextType {
   completeOAuth: (token: string, user?: User) => void;
   logout: () => void;
   loading: boolean;
+  refreshUser: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -147,8 +149,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 	window.location.href = '/';
   };
 
+  const refreshUser = async () => {
+    if (!token) return;
+    try {
+      const response = await axios.get<User | { user: User }>(`${API_BASE_URL}/api/auth/me`);
+      const data = response.data as any;
+      const nextUser: User = data.user ? data.user : data;
+      localStorage.setItem('user', JSON.stringify(nextUser));
+      setUser(nextUser);
+    } catch (err) {
+      console.error('Error al refrescar usuario:', err);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ token, user, login, register, oauth42, completeOAuth, logout, loading }}>
+    <AuthContext.Provider value={{ token, user, login, register, oauth42, completeOAuth, logout, loading, refreshUser }}>
       {!loading && children}
     </AuthContext.Provider>
   );
