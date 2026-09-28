@@ -142,6 +142,7 @@ export class AuthService {
                 username: user.username,
                 email: user.email,
 				avatarUrl: user.profile?.avatarUrl,
+				isTwoFactorEnabled: user.isTwoFactorEnabled,
             },
         };
     }
@@ -198,6 +199,15 @@ export class AuthService {
 			});
         }
 
+		//COMPROBACIÓN 2FA PARA USUARIOS DE 42
+		if (user.isTwoFactorEnabled) {
+            return {
+                requiresTwoFactor: true,
+                userId: user.id,
+                message: 'Please provide your 2FA code',
+            };
+        }
+
         // 3. Creamos el payload exactamente igual que en el login o registro normal
         const payload = { 
             email: user.email, 
@@ -218,6 +228,7 @@ export class AuthService {
 				id: user.id,
                 username: user.username,
                 email: user.email,
+				isTwoFactorEnabled: user.isTwoFactorEnabled,
             },
         };
     }
@@ -255,6 +266,7 @@ export class AuthService {
                 id: user.id,
                 username: user.username,
                 email: user.email,
+				isTwoFactorEnabled: user.isTwoFactorEnabled,
             },
         };
     }

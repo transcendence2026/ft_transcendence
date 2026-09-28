@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../../../../context/AuthContext";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import Mail from "@/src/components/Elements/Mail";
 import Lock from "@/src/components/Elements/Lock";
@@ -21,6 +21,14 @@ export default function LoginRightSide() {
   
   const { login, oauth42 } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+	const idFromUrl = searchParams.get("userId");
+	if (idFromUrl) {
+		setUserId(idFromUrl);
+		setRequiresTwoFactor(true);
+	}
+  }, [searchParams]);
 
   //Enviar credenciales
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {

@@ -73,7 +73,11 @@ export class AuthController {
 		//return res.redirect(`https://localhost:8443/?token=${result.token}`);
 
 		// 2. Lee la URL del entorno, si no existe usa la estándar por defecto
-        const frontendUrl = process.env.FRONTEND_URL || 'https://localhost';
+        const frontendUrl = process.env.FRONTEND_URL || 'https://localhost:8443';
+
+		if (result.requiresTwoFactor) {
+            return res.redirect(`${frontendUrl}/login/2fa?userId=${result.userId}`);
+        }
         
         // 3. Redirige dinámicamente
         return res.redirect(`${frontendUrl}/?token=${result.token}`);
