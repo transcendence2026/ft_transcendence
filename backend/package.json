@@ -11,7 +11,11 @@
     "start:prod": "node dist/main",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "db:push": "prisma db push"
+    "db:push": "prisma db push",
+    "test": "jest"
+  },
+  "prisma": {
+    "seed": "tsx --tsconfig prisma/tsconfig.seed.json prisma/seed.ts"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",
@@ -54,6 +58,7 @@
     "@types/passport-jwt": "^4.0.1",
     "prisma": "^5.22.0",
     "ts-node": "^10.9.2",
+    "tsx": "^4.23.15",
     "typescript": "^5.3.3"
   }
 }
