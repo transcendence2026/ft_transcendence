@@ -1,71 +1,63 @@
-import { 
-  Controller, 
-  Patch, 
-  Post,
-  Body, 
-  Req, 
-  UseGuards, 
-  UseInterceptors,
-  UploadedFile,
-  BadRequestException, 
-  UnauthorizedException 
-} from '@nestjs/common';
+import { Body, Controller, Get, Patch, Post, Req, UseGuards, UseInterceptors, UploadedFile, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { fileTypeFromBuffer } from 'file-type';
-import { mkdir, unlink, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import { randomUUID } from 'node:crypto';
+import { fileTypeFromFile } from 'file-type';
+import { unlink } from 'node:fs/promises';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { createAvatarMulterOptions } from '../files/multer-opts-builder';
+import { createMulterOptions } from '../files/multer-opts-builder';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UsersService } from './users.service';
 
 @Controller('api/users')
 @UseGuards(JwtAuthGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
+  //GET /api/users/me
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  getCurrentUser(@Req() req: any) {
+    return this.usersService.getProfile(req.user.id);
+  }
+  //PATCH /api/users/me
+  @UseGuards(JwtAuthGuard)
+  @Patch('me')
+  updateCurrentUser(@Req() req: any, @Body() updateProfileDto: UpdateProfileDto) {
+    return this.usersService.updateProfile(req.user.id, updateProfileDto);
+  }
+  //GET /api/users/:id
+  @UseGuards(JwtAuthGuard)
+  @Get(':id')
+  getUser(@Req() req: any) {
+    return this.usersService.getProfile(req.params.id);
+  }
 
   @Post('avatar')
-  @UseInterceptors(FileInterceptor('file', createAvatarMulterOptions()))
-  async uploadAvatar(
-    @UploadedFile() file: Express.Multer.File,
-    @Req() req: any,
-  ) {
-    if (!file?.buffer) {
+  @UseInterceptors(FileInterceptor('file', createMulterOptions('avatars')))
+  async uploadAvatar(@UploadedFile() file: Express.Multer.File, @Req() req: any) {
+    if (!file) {
       throw new BadRequestException('You need to attach an image file');
+    }
+
+    const detectedType = await fileTypeFromFile(file.path);
+    if (!detectedType || !['image/jpeg', 'image/png'].includes(detectedType.mime)) {
+      await unlink(file.path).catch(() => undefined);
+      throw new BadRequestException('Only real JPEG and PNG images are allowed');
     }
 
     const userId = req.user?.id;
     if (!userId) {
+      await unlink(file.path).catch(() => undefined);
       throw new UnauthorizedException('Usuario no autenticado');
     }
 
-    const detectedType = await fileTypeFromBuffer(file.buffer);
-    if (!detectedType || !['image/jpeg', 'image/png'].includes(detectedType.mime)) {
-      throw new BadRequestException('Only real JPEG and PNG images are allowed');
-    }
+    const url = `/uploads/avatars/${file.filename}`;
 
-    const extension = detectedType.mime === 'image/png' ? 'png' : 'jpg';
-    const destination = join(process.cwd(), 'uploads', 'avatars');
-    const filename = `${randomUUID()}.${extension}`;
-    await mkdir(destination, { recursive: true });
-    const filePath = join(destination, filename);
-    const url = `/uploads/avatars/${filename}`;
-
-    await writeFile(filePath, file.buffer);
-    
     try {
       const updatedUser = await this.usersService.updateAvatar(userId, url);
-
-      return {
-        filename,
-        url,
-        user: updatedUser,
-      };
+      return { filename: file.filename, url, user: updatedUser };
     } catch (error) {
-      await unlink(filePath).catch(() => undefined);
+      await unlink(file.path).catch(() => undefined);
       throw error;
     }
-
   }
 
   @Patch('avatar')
