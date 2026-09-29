@@ -13,6 +13,9 @@ import { WebsocketGateway } from './websocket/websocket.gateway.js';
 import { PresenceService, RoomService } from './websocket/websocket.service.js';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { UsersModule } from './users/users.module.js';
+import { PostsModule } from './posts/posts.module.js';
+import { ReviewsModule } from './reviews/reviews.module.js';
+import { SocialModule } from './social/social.module.js';
 
 @Module({
 	imports: [
@@ -24,6 +27,9 @@ import { UsersModule } from './users/users.module.js';
 		PrismaModule,
 		AuthModule, //Importa el Modulo de Autenticación
 		UsersModule,
+		PostsModule,
+		ReviewsModule,
+		SocialModule,
 		MessagesModule,
     	HealthModule,
     	EventEmitterModule.forRoot(),

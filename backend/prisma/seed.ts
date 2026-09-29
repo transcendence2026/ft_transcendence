@@ -292,6 +292,123 @@ async function seedUsers() {
 			},
 		});
 	}
+
+	return prisma.user.findMany({ select: { id: true, username: true } });
+}
+
+async function seedPosts(users: { id: string; username: string }[]) {
+	const posts = [
+		{
+			title: 'A bright start to the weekend',
+			content: 'Fresh herbs, warm bread and a table full of people. What is everyone cooking this weekend?',
+			imageUrl: 'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=1200&q=80',
+		},
+		{
+			title: 'The comfort bowl I keep coming back to',
+			content: 'A little heat, plenty of texture and the kind of meal that gets better with every bite.',
+			imageUrl: 'https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=1200&q=80',
+		},
+		{
+			title: 'Plating practice: less is more',
+			content: 'Trying a cleaner plating style tonight. The garnish should support the dish, not compete with it.',
+			imageUrl: 'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=1200&q=80',
+		},
+		{
+			title: 'A sweet finish',
+			content: 'Sharing the dessert that disappeared before I could take a second photo.',
+			imageUrl: 'https://images.unsplash.com/photo-1551024506-0bccd828d307?auto=format&fit=crop&w=1200&q=80',
+		},
+		{
+			title: 'Sunday market colours',
+			content: 'A basket of tomatoes, basil and citrus is enough inspiration for the whole afternoon.',
+			imageUrl: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=80',
+		},
+		{
+			title: 'The ramen experiment',
+			content: 'Testing a richer broth today and keeping the toppings simple so the noodles stay centre stage.',
+			imageUrl: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=1200&q=80',
+		},
+		{
+			title: 'Tacos for the whole table',
+			content: 'Crisp onions, smoky salsa and a stack of warm tortillas. This one is made for sharing.',
+			imageUrl: 'https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?auto=format&fit=crop&w=1200&q=80',
+		},
+		{
+			title: 'A green lunch break',
+			content: 'The quickest way to make lunch feel special: a bright dressing and one extra handful of herbs.',
+			imageUrl: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=1200&q=80',
+		},
+		{
+			title: 'Learning to love lentils',
+			content: 'Slow spices, roasted vegetables and a spoonful of yoghurt turned a pantry dinner into a favourite.',
+			imageUrl: 'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=1200&q=80',
+		},
+		{
+			title: 'Pizza night notes',
+			content: 'The dough finally has the bubbles I was looking for. Next challenge: getting everyone a slice before it cools.',
+			imageUrl: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=1200&q=80',
+		},
+		{
+			title: 'Rainy day comfort food',
+			content: 'There is no better weather for a slow stew, toasted bread and an unnecessarily large mug of tea.',
+			imageUrl: 'https://images.unsplash.com/photo-1476718406336-bb5a9690ee2a?auto=format&fit=crop&w=1200&q=80',
+		},
+		{
+			title: 'A little more spice',
+			content: 'Trying the chilli oil from the new market stall. It starts gentle and finishes with a proper kick.',
+			imageUrl: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=1200&q=80',
+		},
+		{
+			title: 'Breakfast worth waking up for',
+			content: 'Crisp edges, a runny centre and coffee strong enough to make the morning feel intentional.',
+			imageUrl: 'https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?auto=format&fit=crop&w=1200&q=80',
+		},
+		{
+			title: 'A new favourite side dish',
+			content: 'Roasted carrots with tahini, lemon and toasted seeds. Simple, colourful and already requested again.',
+			imageUrl: 'https://images.unsplash.com/photo-1592417817098-8fd3d9eb14a5?auto=format&fit=crop&w=1200&q=80',
+		},
+		{
+			title: 'Cooking with friends',
+			content: 'Everyone brought one ingredient and somehow the result tasted like we planned it all along.',
+			imageUrl: 'https://images.unsplash.com/photo-1556911220-bff31c812dba?auto=format&fit=crop&w=1200&q=80',
+		},
+		{
+			title: 'The last slice debate',
+			content: 'A serious community question: does the person who cooked get the last slice, or the person who washed up?',
+			imageUrl: 'https://images.unsplash.com/photo-1579751626657-72bc17010498?auto=format&fit=crop&w=1200&q=80',
+		},
+		{
+			title: 'Fresh pasta practice',
+			content: 'The first batch was uneven, the second batch was better, and the third batch never made it to the plate.',
+			imageUrl: 'https://images.unsplash.com/photo-1473093295043-cdd812d0e601?auto=format&fit=crop&w=1200&q=80',
+		},
+		{
+			title: 'Notes from the bakery',
+			content: 'A warm loaf, a sharp knife and five quiet minutes before the house wakes up.',
+			imageUrl: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=1200&q=80',
+		},
+		{
+			title: 'What is on your plate?',
+			content: 'Starting a small thread for weekday meals that are fast, generous and worth repeating.',
+			imageUrl: 'https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=1200&q=80',
+		},
+	];
+
+	for (const [index, post] of posts.entries()) {
+		const author = users[index % users.length];
+		await prisma.post.create({
+			data: {
+				title: post.title,
+				content: post.content,
+				authorId: author.id,
+				createdAt: new Date(Date.now() - index * 60 * 60 * 1000),
+				images: { create: [{ url: post.imageUrl }] },
+			},
+		});
+	}
+
+	return posts.length;
 }
 
 // Main orchestrator function that executes the database seeding workflow in order
@@ -310,10 +427,14 @@ async function main() {
 
 	// Step 4: Seed test user accounts along with their profile data
 	console.log('Seeding test users...');
-	await seedUsers();
+	const users = await seedUsers();
+
+	// Step 5: Seed social content so the dashboard feed has real examples.
+	console.log('Seeding social posts...');
+	const postCount = await seedPosts(users);
 
 	// Log a summary of all inserted entities
-	console.log(`Done: ${RESTAURANTS.length} restaurants, ${dishCount} dishes, ${tags.length} tags, 10 users.`);
+	console.log(`Done: ${RESTAURANTS.length} restaurants, ${dishCount} dishes, ${tags.length} tags, ${users.length} users, ${postCount} posts.`);
 }
 
 // Execute the main seeding flow with error handling and cleanup logic
