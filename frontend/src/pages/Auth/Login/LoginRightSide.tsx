@@ -98,7 +98,11 @@ export default function LoginRightSide() {
             <div className="mt-5">
               <button
                 type="button"
-                onClick={oauth42}
+                //onClick={oauth42}
+				onClick={() => {
+					window.alert("Click");
+					oauth42();
+    			}}
                 className="auth-secondary-button"
               >
                 <span className="flex h-5 w-5 items-center justify-center rounded-control bg-primary-soft text-xs font-bold text-background">

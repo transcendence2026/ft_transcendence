@@ -39,13 +39,31 @@ interface AuthContextType {
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
+/*export const AuthProvider = ({ children }: { children: ReactNode }) => {
 	const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
 	const [user, setUser] = useState<User | null>(() => {
     	const storedUser = localStorage.getItem('user');
     	return storedUser ? (JSON.parse(storedUser) as User) : null;
   	});
-  	const [loading, setLoading] = useState<boolean>(true);
+  	const [loading, setLoading] = useState<boolean>(true);*/
+
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+    const [token, setToken] = useState<string | null>(() => {
+        const params = new URLSearchParams(window.location.search);
+        const urlToken = params.get('token');
+        if (urlToken) {
+            localStorage.setItem('token', urlToken);
+            return urlToken;
+        }
+        return localStorage.getItem('token');
+    });
+
+    const [user, setUser] = useState<User | null>(() => {
+        const storedUser = localStorage.getItem('user');
+        return storedUser ? (JSON.parse(storedUser) as User) : null;
+    });
+
+    const [loading, setLoading] = useState<boolean>(true);
 
   	// CAPTURAR EL TOKEN DE 42 AL VOLVER DE LA REDIRECCIÓN
   	useEffect(() => {
@@ -64,8 +82,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
    		if (token) {
       		axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       		void axios
-        		.get<User | { user: User }>(`${API_BASE_URL}/api/auth/me`)
-        		.then((response) => {
+        		//.get<User | { user: User }>(`${API_BASE_URL}/api/auth/me`)
+        		.get<User | { user: User }>('/api/auth/me') // <-- ruta directa
+				.then((response) => {
 					// Si el backend devuelve { user: ... } usa eso; si devuelve el objeto directo, usa response.data
 					const data = response.data as any;
 					const nextUser: User = data.user ? data.user : data;
@@ -168,7 +187,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 	return (
 		<AuthContext.Provider value={{ token, user, login, register, oauth42, completeOAuth, logout, loading, refreshUser }}>
-			{!loading && children}
+			{children}
 		</AuthContext.Provider>
 	);
 };

@@ -32,8 +32,6 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgrespassword
       POSTGRES_DB: transcendence
-    ports:
-      - "5432:5432"
     # Keep the database inaccessible from the host by default.
     networks:
       - backend-net
@@ -89,14 +87,14 @@ services:
     build:
       context: ./frontend
       args:
-        VITE_API_URL: ${VITE_API_URL:-https://localhost:8443}
+        VITE_API_URL: ${VITE_API_URL:-}
     networks:
       - proxy-net
     expose:
       # The frontend is reachable internally through the proxy network.
       - "5173"
     environment:
-      VITE_API_URL: ${VITE_API_URL:-https://localhost:8443}
+      VITE_API_URL: ${VITE_API_URL:-}
     command: npm run dev -- --host 0.0.0.0
     volumes:
       # Mount source code for hot reloading while preserving installed packages.
