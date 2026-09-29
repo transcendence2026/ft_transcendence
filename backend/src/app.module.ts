@@ -15,6 +15,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { UsersModule } from './users/users.module.js';
 import { PostsModule } from './posts/posts.module.js';
 import { ReviewsModule } from './reviews/reviews.module.js';
+import { SocialModule } from './social/social.module.js';
 
 @Module({
 	imports: [
@@ -28,6 +29,7 @@ import { ReviewsModule } from './reviews/reviews.module.js';
 		UsersModule,
 		PostsModule,
 		ReviewsModule,
+		SocialModule,
 		MessagesModule,
     	HealthModule,
     	EventEmitterModule.forRoot(),

@@ -18,6 +18,19 @@ export class PostsService {
     });
   }
 
+  async findFeed(cursor?: string, requestedLimit = 8) {
+    const limit = Math.min(Math.max(requestedLimit, 1), 20);
+    const posts = await this.prisma.post.findMany({
+      ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
+      take: limit + 1,
+      include: { author: { select: { id: true, username: true, profile: { select: { avatarUrl: true } } } }, images: true },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    });
+    const hasMore = posts.length > limit;
+    const items = hasMore ? posts.slice(0, limit) : posts;
+    return { items, nextCursor: hasMore ? items[items.length - 1].id : null, hasMore };
+  }
+
   async findOne(id: string) {
     const post = await this.prisma.post.findUnique({
       where: { id },
