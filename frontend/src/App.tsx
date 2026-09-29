@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
+import ComponentPlayground from "./pages/ComponentPlayground";
+import Profile from "./pages/Profile";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { WebSocketProvider } from "../context/WebSocketContext";
 import { NotificationProvider } from "../context/NotificationContext";
@@ -27,7 +29,7 @@ export default function App() {
         <NotificationProvider>
           <BrowserRouter>
             <Routes>
-              {/* Rutas exclusivas para invitados */}
+{/* Rutas exclusivas para invitados */}
               <Route
                 path="/login"
                 element={
@@ -45,7 +47,7 @@ export default function App() {
                 }
               />
 
-              {/* Ruta protegida para usuarios logueados */}
+              {/* Rutas protegidas para usuarios logueados */}
               <Route
                 path="/dashboard"
                 element={
@@ -54,8 +56,27 @@ export default function App() {
                   </PrivateRoute>
                 }
               />
+              <Route
+                path="/profile"
+                element={
+                  <PrivateRoute>
+                    <Profile />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/profile/:id"
+                element={
+                  <PrivateRoute>
+                    <Profile />
+                  </PrivateRoute>
+                }
+              />
 
-              {/* Cualquier otra URL (incluida '/') va al dashboard si estás logueada o al login si no */}
+              {/* Playground de componentes del equipo */}
+              <Route path="/components" element={<ComponentPlayground />} />
+
+              {/* Cualquier otra URL va al dashboard */}
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
           </BrowserRouter>

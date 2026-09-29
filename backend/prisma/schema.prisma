@@ -19,7 +19,6 @@ enum Role {
 enum Status {
   OFFLINE
   ONLINE
-  INGAME
 }
 
 model User {
@@ -37,6 +36,7 @@ model User {
 
   //Relations
   profile             Profile?
+  preference          Preference?
   sentFriendships     Friendship[] @relation("UserSentFriendships")
   receivedFriendships Friendship[] @relation("UserReceivedFriendships")
   blockedUsers        Block[]      @relation("UserBlocks")
@@ -55,11 +55,39 @@ model Profile {
   lastName  String?
   avatarUrl String?  @default("default-avatar.png")
   bio       String?
-  wins      Int      @default(0)
-  losses    Int      @default(0)
-  rating    Int      @default(1200)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// GASTRONOMIC PREFERENCES
+
+enum Cuisine {
+  ITALIAN
+  JAPANESE
+  MEXICAN
+  INDIAN
+  FRENCH
+  SPANISH
+  THAI
+  AMERICAN
+  MEDITERRANEAN
+  CHINESE
+  KOREAN
+  VIETNAMESE
+}
+
+model Preference {
+  id      String          @id @default(uuid())
+  userId  String          @unique
+  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  favoriteCuisines  Cuisine[] // e.g. ["Italian", "Japanese"]
+  spicyLevel        Int   @default(2) // 1 = mild ... 5 = very spicy
+  preferredPriceMin Int   @default(1) // matches Restaurant.priceRange (1-4)
+  preferredPriceMax Int   @default(4)
+
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 }
 
 // SOCIAL AND RELATIONS
@@ -97,19 +125,29 @@ model Block {
 // CONTENT, RESTAURANTS, DISHES, REVIEWS 
 
 model Post {
-  id        String   @id @default(uuid())
+  id        String      @id @default(uuid())
   title     String
   content   String
   authorId  String
-  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  author    User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  images    PostImage[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+}
+
+model PostImage {
+  id      String    @id @default(uuid())
+  url     String    // URL o path 
+  postId  String
+  post    Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
 }
 
 model Restaurant {
-  id           String @id @default(uuid())
+  id           String     @id @default(uuid())
   name         String
-  cuisine      String
+  cuisine      Cuisine
   priceRange   Int
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt

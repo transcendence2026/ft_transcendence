@@ -11,6 +11,7 @@
   --color-surface-raised: #2b2a28;
   --color-border: #363433;
   --color-text: #e6e1df;
+  --color-text-strong: #f8f6f2;
   --color-text-soft: #e0bfb7;
   --color-muted: #a88a83;
 
@@ -21,7 +22,6 @@
   --radius-card: 12px;
   --shadow-action: 0 10px 24px rgb(239 101 64 / 20%);
 }
-
 @utility auth-page {
   @apply min-h-screen w-full overflow-hidden bg-background font-serif text-text lg:grid lg:grid-cols-2;
 }
