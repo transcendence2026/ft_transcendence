@@ -1,75 +1,116 @@
+import { useEffect, useRef, useState } from "react";
+import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { Avatar } from "../components/Avatar";
+import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
+import { Loader } from "../components/Loader";
 import ProtectedRoute from "../components/ProtectedRoute";
 import { useAuth } from "../../context/AuthContext";
-import { useWebSocket } from "@/context/WebSocketContext";
-import { useEffect } from "react";
+
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
+
+interface FeedPost {
+  id: string;
+  title: string;
+  content: string;
+  createdAt: string;
+  author: { id: string; username: string; profile?: { avatarUrl: string | null } | null };
+  images: { id: string; url: string }[];
+}
+
+interface FeedResponse { items: FeedPost[]; nextCursor: string | null; hasMore: boolean; }
+
+const placeholderPosts: FeedPost[] = [{
+  id: "placeholder-1",
+  title: "The feed is ready for your table",
+  content: "No seeded publications are available yet. Share your next dish with the community and it will appear here.",
+  createdAt: new Date().toISOString(),
+  author: { id: "placeholder-author", username: "transcendence", profile: null },
+  images: [],
+}];
+
+function formatDate(value: string) {
+  const minutes = Math.floor((Date.now() - new Date(value).getTime()) / 60000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  return new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function imageUrl(url: string) {
+  return url.startsWith("http") ? url : `${API_BASE_URL}${url.startsWith("/") ? "" : "/"}${url}`;
+}
+
+function PostCard({ post }: { post: FeedPost }) {
+  const [liked, setLiked] = useState(false);
+  const isPlaceholder = post.id.startsWith("placeholder-") || post.id === "placeholder-1";
+  return (
+    <article className="feed-post rounded border border-border bg-surface p-5">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex min-w-0 gap-3">
+          <Avatar name={post.author.username} src={post.author.profile?.avatarUrl ? imageUrl(post.author.profile.avatarUrl) : null} size="sm" />
+          <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><p className="truncate text-sm font-semibold text-text-strong">{post.author.username}</p><Badge tone="muted">{isPlaceholder ? "welcome" : post.title.split(" ")[0]}</Badge></div><p className="mt-1 text-xs text-muted">@{post.author.username} <span className="px-1">·</span> {formatDate(post.createdAt)}</p></div>
+        </div>
+        <Button type="button" variant="ghost" aria-label={`More options for ${post.author.username}`} className="px-2 py-0 text-lg leading-none text-muted">...</Button>
+      </div>
+      <div className="mt-5"><h2 className="font-serif text-xl text-text-strong">{post.title}</h2><p className="mt-2 whitespace-pre-line text-sm leading-7 text-text">{post.content}</p></div>
+      {post.images.length > 0 && <div className={`mt-5 grid gap-2 ${post.images.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>{post.images.slice(0, 4).map((image) => <img key={image.id} src={imageUrl(image.url)} alt={`Dish shared by ${post.author.username}`} className="aspect-[4/3] w-full rounded object-cover" />)}</div>}
+      <div className="mt-5 flex items-center gap-5 border-t border-border pt-4 text-xs text-muted"><Button type="button" variant="ghost" aria-pressed={liked} onClick={() => setLiked((value) => !value)} className={`px-0 py-0 text-xs ${liked ? "text-primary-soft" : "text-muted"}`}>{liked ? "♥" : "♡"} {liked ? 1 : 0}</Button><Button type="button" variant="ghost" className="px-0 py-0 text-xs text-muted">□ 0</Button><Button type="button" variant="ghost" className="px-0 py-0 text-xs text-muted">↗ Share</Button></div>
+    </article>
+  );
+}
 
 function DashboardContent() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { sendMessage, messages, status } = useWebSocket();
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const [posts, setPosts] = useState<FeedPost[]>(placeholderPosts);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [usingPlaceholder, setUsingPlaceholder] = useState(false);
   const username = user?.username ?? "user";
-
   const navigation = [
     { label: "Home", icon: "⌂", active: true },
-    { label: "Discover", icon: "◌" },
-    { label: "Messages", icon: "□" },
-    { label: "Notifications", icon: "☆" },
+    { label: "Discover", icon: "◌", active: false },
+    { label: "Messages", icon: "□", active: false },
+    { label: "Notifications", icon: "☆", active: false },
   ];
 
-const posts = [
-    {
-      author: "Maya Chen",
-      handle: "@mayachen",
-      time: "18 min",
-      initials: "MC",
-      accent: "bg-primary",
-      body: "The weekend brunch rush is almost here. Who is prepping their starter dough for the opening bake?",
-      likes: "24",
-      comments: "6",
-    },
-    {
-      author: "Alex Rivera",
-      handle: "@alexr",
-      time: "1 h",
-      initials: "AR",
-      accent: "bg-primary-soft",
-      body: "Fresh herbs, balanced acidity, and a much cleaner plating style than yesterday. That is the whole plan.",
-      likes: "41",
-      comments: "12",
-    },
-    {
-      author: "Tournament Desk",
-      handle: "@transcendence",
-      time: "3 h",
-      initials: "TD",
-      accent: "bg-secondary",
-      body: "Baking challenge starts at 20:00. Grab an apron, share your secret ingredient, and cook something memorable.",
-      likes: "68",
-      comments: "18",
-    },
-  ];
-
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
-  };
-
-  const handleRejoindreSalon = () => {
-    // Ton sendMessage convertit déjà les objets en JSON, c'est parfait !
-    sendMessage({ event: 'joinRoom', roomName: 'general' });
-  }
-
+  const handleLogout = () => { logout(); navigate("/login"); };
 
   useEffect(() => {
-    console.log("Statut WebSocket :", status);
-  }, [status]);
+    let cancelled = false;
+    void axios.get<FeedResponse>(`${API_BASE_URL}/api/social/feed?limit=8`, { validateStatus: (status) => status < 500 })
+      .then(({ data, status }) => {
+        if (cancelled) return;
+        if (status >= 400 || !data.items?.length) { setPosts(placeholderPosts); setUsingPlaceholder(true); setHasMore(false); return; }
+        setPosts(data.items); setCursor(data.nextCursor); setHasMore(data.hasMore);
+      })
+      .catch(() => { if (!cancelled) { setPosts(placeholderPosts); setUsingPlaceholder(true); setHasMore(false); setError("The live feed is unavailable right now."); } })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
-    console.log("Messages reçus:", messages);
-  }, [messages]);
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !hasMore || loading || loadingMore || usingPlaceholder || !cursor) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      setLoadingMore(true);
+      void axios.get<FeedResponse>(`${API_BASE_URL}/api/social/feed?limit=8&cursor=${encodeURIComponent(cursor)}`)
+        .then(({ data }) => { setPosts((current) => [...current, ...data.items]); setCursor(data.nextCursor); setHasMore(data.hasMore); })
+        .catch(() => setError("More posts could not be loaded."))
+        .finally(() => setLoadingMore(false));
+    }, { rootMargin: "320px" });
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [cursor, hasMore, loading, loadingMore, usingPlaceholder]);
 
 
   return (
@@ -126,13 +167,6 @@ const posts = [
 
           <Button
             type="button"
-            onClick={handleRejoindreSalon}
-            className="rounded border border-[#ef6540] px-4 py-2 font-sans text-sm font-semibold text-[#ffb4a1] transition-colors hover:bg-[#ef6540]/10"
-          >
-            joinRoom
-          </Button>
-          <Button
-            type="button"
             onClick={handleLogout}
             variant="danger"
             className="mt-8 w-fit border-t border-border px-4 pt-6 text-left text-sm"
@@ -156,26 +190,9 @@ const posts = [
               <div className="flex-1 rounded border border-border px-4 py-3 text-sm text-muted">Share something with the community...</div>
             </div>
 
-            {posts.map((post) => (
-              <article key={post.handle} className="rounded border border-border bg-surface p-5 transition-colors hover:border-surface-raised">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex gap-3">
-                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold text-background ${post.accent}`}>{post.initials}</div>
-                    <div>
-                      <p className="text-sm font-semibold">{post.author}</p>
-                      <p className="mt-0.5 text-xs text-muted">{post.handle} <span className="px-1">·</span> {post.time}</p>
-                    </div>
-                  </div>
-                  <Button type="button" variant="ghost" aria-label={`More options for ${post.author}`} className="px-2 py-0 text-lg leading-none text-muted hover:text-text">...</Button>
-                </div>
-                <p className="mt-5 font-serif text-lg leading-relaxed text-text">{post.body}</p>
-                <div className="mt-5 flex gap-6 border-t border-border pt-4 text-xs text-muted">
-                  <Button type="button" variant="ghost" className="px-0 py-0 text-xs text-muted hover:text-primary-soft">♡ {post.likes}</Button>
-                  <Button type="button" variant="ghost" className="px-0 py-0 text-xs text-muted hover:text-primary-soft">□ {post.comments}</Button>
-                  <Button type="button" variant="ghost" className="px-0 py-0 text-xs text-muted hover:text-primary-soft">↗ Share</Button>
-                </div>
-              </article>
-            ))}
+            {loading ? <Loader label="Loading the community" /> : posts.map((post) => <PostCard key={post.id} post={post} />)}
+            {error && <p className="rounded border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary-soft">{error}</p>}
+            {!loading && !usingPlaceholder && <div ref={sentinelRef} className="min-h-20">{loadingMore && <Loader label="Loading more posts" />}</div>}
           </div>
         </section>
 
