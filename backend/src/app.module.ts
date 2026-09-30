@@ -16,6 +16,7 @@ import { UsersModule } from './users/users.module.js';
 import { PostsModule } from './posts/posts.module.js';
 import { ReviewsModule } from './reviews/reviews.module.js';
 import { SocialModule } from './social/social.module.js';
+import { FriendsModule } from './friends/friends.module.js';
 
 @Module({
 	imports: [
@@ -30,6 +31,7 @@ import { SocialModule } from './social/social.module.js';
 		PostsModule,
 		ReviewsModule,
 		SocialModule,
+		FriendsModule,
 		MessagesModule,
     	HealthModule,
     	EventEmitterModule.forRoot(),

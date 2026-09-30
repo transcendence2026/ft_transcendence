@@ -6,7 +6,7 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getProfile(userId: string) {
+  async getProfile(userId: string, viewerId = userId) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
@@ -19,6 +19,17 @@ export class UsersService {
 
     if (!user) throw new NotFoundException('User not found');
 
+    const relationship = userId === viewerId
+      ? { status: 'SELF', requestId: null }
+      : await this.prisma.friendship.findFirst({
+        where: { OR: [{ senderId: viewerId, receiverId: userId }, { senderId: userId, receiverId: viewerId }] },
+        select: { id: true, status: true, senderId: true },
+      }).then((friendship) => {
+        if (!friendship) return { status: 'NONE', requestId: null };
+        if (friendship.status === 'PENDING') return { status: friendship.senderId === viewerId ? 'OUTGOING_PENDING' : 'INCOMING_PENDING', requestId: friendship.id };
+        return { status: friendship.status, requestId: friendship.id };
+      });
+
     return {
       id: user.id,
       username: user.username,
@@ -26,6 +37,7 @@ export class UsersService {
       status: user.status,
       createdAt: user.createdAt,
       profile: user.profile,
+      friendship: relationship,
       favoriteDishes: user.reviews
         .sort((first, second) => second.rating - first.rating)
         .slice(0, 3)
