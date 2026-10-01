@@ -4,6 +4,7 @@ import * as bcrypt from 'bcrypt'; //importamos libreria de cifrado
 import { RegisterUserDto } from './dto/register-user.dto.js';
 import { LoginUserDto } from './dto/login-user.dto.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { TwoFactorService } from './2fa/two-factor.service.js';
 
 //declara y exporta la clase de servicio dd reside la logica de autenticacion
 @Injectable()
@@ -15,9 +16,10 @@ export class AuthService {
 	constructor(
 		@Inject(JwtService) private readonly jwtService: JwtService,
 		@Inject(PrismaService) private readonly prisma: PrismaService,
+		private readonly twoFactorService: TwoFactorService,
 	) {}
 
-	//Recibe los datos validados del registro
+	//REGISTER: Recibe los datos validados del registro
 	async register(registerDto: RegisterUserDto) {
 		const { email, username, password } = registerDto;
 
@@ -44,14 +46,14 @@ export class AuthService {
                 email,
                 username,
                 passwordHash: hashedPassword,
-				status: 'ONLINE',
+                status: 'ONLINE',
 				profile: {
                     create: {}, // Genera su fila en Profile con avatarUrl por defecto
 				}
             },
         });
 
-		// 1. Creamos el payload para el nuevo usuario (igual que en el login) // <-- AQUÍ
+		// 1. Creamos el payload para el nuevo usuario (igual que en el login)
         const payload = { 
             email: user.email, 
             id: user.id,
@@ -59,7 +61,7 @@ export class AuthService {
             role: user.role 
         };
         
-        // 2. Firmamos el token con el JwtService // <-- AQUÍ
+        // 2. Firmamos el token con el JwtService
         const accessToken = await this.jwtService.signAsync(payload);
 		//Una vez el usuario esta guardado, devuelve respuesta al controlador para q sepa quien se acaba de registrar
 		return {
@@ -73,10 +75,11 @@ export class AuthService {
 			},
 		};
 	}
-	// Recibe las credeciales para logearse e intentar entrar en la aplicacion
+
+	// LOGIN: Recibe las credeciales para logearse e intentar entrar en la aplicacion
 	async login(loginUserDto: LoginUserDto) {
 		const { email, password } = loginUserDto;
-		// 1. Buscamos al usuario (punto de enganche para la base de datos)
+		// 1. Buscamos al usuario en la BD por email
 		const user = await this.findUserByEmail(email);
 		//si no lo encuentra, lanza error 401
 		if(!user || !user.passwordHash) {
@@ -89,11 +92,18 @@ export class AuthService {
 			throw new UnauthorizedException('Invalid credentials');
 		}
 
-		await this.prisma.user.update({
-			where: { id: user.id },
-			data: { status: 'ONLINE' },
-		});
-
+		//COMPROBACIÓN DE DOBLE FACTOR
+        if (user.isTwoFactorEnabled) {
+            // Si tiene 2FA, NO le damos el token todavía. 
+            // Devolvemos un aviso para que el frontend sepa que tiene que pedir el código de 6 dígitos.
+            return {
+                requiresTwoFactor: true,
+                userId: user.id,
+                message: 'Please provide your 2FA code',
+            };
+        }
+		
+		// Si NO tiene 2FA, generamos el token normal como hasta ahora
 		//3. Si todo es correcto, generamos y devolvemos el token JWT
 		//se crea un payload con datos que viajan y el wtService.signAsync firma digitalmente el token
 		const payload = { 
@@ -132,6 +142,7 @@ export class AuthService {
                 username: user.username,
                 email: user.email,
 				avatarUrl: user.profile?.avatarUrl,
+				isTwoFactorEnabled: user.isTwoFactorEnabled,
             },
         };
     }
@@ -169,7 +180,7 @@ export class AuthService {
                 data: {
                     email: userDto.email,
                     username: finalUsername,
-					status: 'ONLINE',
+                    status: 'ONLINE',
                     profile: {
                         create: {
                             avatarUrl: userDto.avatarUrl || 'default-avatar.png',
@@ -180,13 +191,22 @@ export class AuthService {
             });
         }
 
-		if (user.status !== 'ONLINE') {
+        if (user.status !== 'ONLINE') {
 			user = await this.prisma.user.update({
 				where: { id: user.id },
 				data: { status: 'ONLINE' },
 				include: { profile: true },
 			});
-		}
+        }
+
+		//COMPROBACIÓN 2FA PARA USUARIOS DE 42
+		if (user.isTwoFactorEnabled) {
+            return {
+                requiresTwoFactor: true,
+                userId: user.id,
+                message: 'Please provide your 2FA code',
+            };
+        }
 
         // 3. Creamos el payload exactamente igual que en el login o registro normal
         const payload = { 
@@ -208,6 +228,45 @@ export class AuthService {
 				id: user.id,
                 username: user.username,
                 email: user.email,
+				isTwoFactorEnabled: user.isTwoFactorEnabled,
+            },
+        };
+    }
+	// COMPLETAR LOGIN CON 2FA: Recibe el ID de usuario y el código de 6 dígitos
+	// Si requiresTwoFactor: true
+	//frontend muestra al usuario una ventanita para que introduzca los 6 dígitos de su aplicación de autenticación.
+    async authenticate2faLogin(userId: string, code: string) {
+        //Comprobamos que nos envien userID y si no lo hacen decuelve 401
+        if(!userId) {
+            throw new UnauthorizedException('User ID is required')
+        }
+        // 1. Validamos el código usando el TwoFactorService (en concreto con verifyCode)
+        await this.twoFactorService.verifyCode(userId, code);
+
+        // 2. Buscamos al usuario para sacar sus datos y firmar el token
+        const user = await this.prisma.user.findUnique({ where: { id: userId } });
+        if (!user) {
+            throw new UnauthorizedException('User not found');
+        }
+
+        // 3. Generamos el token JWT definitivo
+        const payload = { 
+            email: user.email, 
+            id: user.id,
+            username: user.username, 
+            role: user.role 
+        };
+        const accessToken = await this.jwtService.signAsync(payload);
+
+        return {
+            message: 'Login with 2FA successful',
+            token: accessToken,
+            accessToken: accessToken,
+            user: {
+                id: user.id,
+                username: user.username,
+                email: user.email,
+				isTwoFactorEnabled: user.isTwoFactorEnabled,
             },
         };
     }
