@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -41,6 +42,7 @@ export class PostsService {
   }
 
   create(authorId: string, dto: CreatePostDto) {
+    dto.imageUrls?.forEach((url) => this.assertPostImageUrl(url));
     return this.prisma.post.create({
       data: {
         title: dto.title,
@@ -54,6 +56,7 @@ export class PostsService {
 
   async update(id: string, authorId: string, dto: UpdatePostDto) {
     await this.assertOwner(id, authorId);
+    dto.imageUrls?.forEach((url) => this.assertPostImageUrl(url));
     return this.prisma.post.update({
       where: { id },
       data: {
@@ -74,6 +77,7 @@ export class PostsService {
 
   async addImage(id: string, authorId: string, url: string) {
     await this.assertOwner(id, authorId);
+    this.assertPostImageUrl(url);
     return this.prisma.postImage.create({ data: { postId: id, url } });
   }
 
@@ -88,5 +92,11 @@ export class PostsService {
     const post = await this.prisma.post.findUnique({ where: { id }, select: { authorId: true } });
     if (!post) throw new NotFoundException('Post not found');
     if (post.authorId !== authorId) throw new ForbiddenException('You can only edit your own posts');
+  }
+
+  private assertPostImageUrl(url: string) {
+    if (!/^\/uploads\/posts\/[A-Za-z0-9._-]+$/.test(url)) {
+      throw new BadRequestException('The image URL must be a local post upload path');
+    }
   }
 }

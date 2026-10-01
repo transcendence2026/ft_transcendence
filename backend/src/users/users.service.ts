@@ -2,6 +2,7 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import { PrismaService } from '../database/prisma.service'; // Ajusta la ruta a tu PrismaService
 import { UpdateProfileDto } from './dto/update-profile.dto';
 
+
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
@@ -53,7 +54,6 @@ export class UsersService {
       },
     };
   }
-
   async updateProfile(userId: string, data: UpdateProfileDto) {
     if (data.username) {
       const existingUser = await this.prisma.user.findFirst({
@@ -83,38 +83,42 @@ export class UsersService {
     return this.getProfile(userId);
   }
 
-  async updateAvatar(userId: string, filename: string) {
-    const avatarUrl = `/uploads/avatars/${filename}`;
-
+  async updateAvatar(userId: string, avatarUrl: string) {
     // 1. Verificamos que el usuario exista en la base de datos
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
     });
 
     if (!user) {
-      throw new NotFoundException(`El usuario con ID ${userId} no existe`);
+      throw new NotFoundException('Usuario no encontrado');
     }
 
-    // 2. Actualizamos el campo avatarUrl DENTRO del modelo Profile relacionado
-    return await this.prisma.user.update({
+    // 2. Actualizamos la propiedad avatarUrl dentro del perfil (Profile) o User
+    // avatarUrl vive dentro de Profile
+    const updatedUser = await this.prisma.user.update({
       where: { id: userId },
       data: {
         profile: {
           upsert: {
-            // Si el perfil no existe, lo crea con la foto
-            create: {
-              avatarUrl: avatarUrl,
-            },
-            // Si el perfil ya existe, actualiza solo el avatarUrl
-            update: {
-              avatarUrl: avatarUrl,
-            },
+            create: { avatarUrl },
+            update: { avatarUrl },
           },
         },
       },
-      include: {
-        profile: true, // Incluye el perfil actualizado en la respuesta
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        role: true,
+        status: true,
+        isPrivate: true,
+        isTwoFactorEnabled: true,
+        createdAt: true,
+        updatedAt: true,
+        profile: true, // Incluye el perfil actualizado con la nueva avatarUrl
       },
     });
+
+    return updatedUser;
   }
 }

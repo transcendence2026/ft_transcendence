@@ -32,8 +32,6 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgrespassword
       POSTGRES_DB: transcendence
-    ports:
-      - "5432:5432"
     # Keep the database inaccessible from the host by default.
     networks:
       - backend-net
@@ -53,13 +51,12 @@ services:
       context: ./backend
     environment:
       PORT: 3000
-      # Formato: postgresql://USUARIO:CONTRASEÑA@HOST_SERVICIO:PUERTO/NOMBRE_BD?schema=public
       DATABASE_URL: postgresql://postgres:postgrespassword@db:5432/transcendence?schema=public
       JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
       FRONTEND_URL: ${FRONTEND_URL:-https://localhost:8443}
       BACKEND_URL: ${BACKEND_URL:-http://localhost:3000}
-      FORTY_TWO_CLIENT_ID: ${FORTY_TWO_CLIENT_ID:-}
-      FORTY_TWO_CLIENT_SECRET: ${FORTY_TWO_CLIENT_SECRET:-}
+      FORTY_TWO_CLIENT_ID: ${FORTY_TWO_CLIENT_ID:-dummy_id}
+      FORTY_TWO_CLIENT_SECRET: ${FORTY_TWO_CLIENT_SECRET:-dummy_secret}
       FORTY_TWO_REDIRECT_URI: ${FORTY_TWO_REDIRECT_URI:-https://localhost:8443/api/auth/oauth/42/callback}
     networks:
       # The backend can access the database and receive traffic from the proxy.
@@ -79,8 +76,7 @@ services:
       - ./backend:/app
       - backend_node_modules:/app/node_modules
       # Persist uploads and make them available to the Nginx container.
-      #- uploads_data:/app/uploads
-      - ./backend/uploads:/app/uploads
+      - uploads_data:/app/uploads
     depends_on:
       db:
         condition: service_healthy
