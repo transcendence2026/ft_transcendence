@@ -8,8 +8,10 @@ import { Card } from "../components/Card";
 import { Loader } from "../components/Loader";
 import ProtectedRoute from "../components/ProtectedRoute";
 import { useAuth } from "../../context/AuthContext";
+import { useWebSocket } from "@/context/WebSocketContext";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
+const API_BASE_URL = "";
+
 
 interface FeedPost {
   id: string;
@@ -64,8 +66,24 @@ function PostCard({ post }: { post: FeedPost }) {
 }
 
 function DashboardContent() {
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const navigate = useNavigate();
+  const { sendMessage, messages, status } = useWebSocket();
+
+  // Estados para el flujo de activación del 2FA
+  const [show2FaModal, setShow2FaModal] = useState<boolean>(false); //hace que se vea el QR, clave y code de 6
+  const [qrCodeImage, setQrCodeImage] = useState<string | null>(null); //Guarda el string en Base64 de la imagen QR
+  const [secret, setSecret] = useState<string | null>(null); //clave alfanumérica que corresponde a imagen QR
+  const [twoFactorCode, setTwoFactorCode] = useState<string>(""); //guarda los 6 digitos
+  const [errorMessage, setErrorMessage] = useState<string>("");
+  const [isSuccess, setIsSuccess] = useState<boolean>(false); //se pone true cuando se confirma la activación
+  const [loading2Fa, setLoading2Fa] = useState<boolean>(false); //Bloquea el boton para q usuario no haga multiples clics seguidos
+
+  const handleRejoindreSalon = () => {
+    // Ton sendMessage convertit déjà les objets en JSON, c'est parfait !
+    sendMessage({ event: 'joinRoom', roomName: 'general' }); 
+  } 
+
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [posts, setPosts] = useState<FeedPost[]>(placeholderPosts);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -98,7 +116,7 @@ function DashboardContent() {
   }, []);
 
   useEffect(() => {
-    const sentinel = sentinelRef.current;
+	const sentinel = sentinelRef.current;
     if (!sentinel || !hasMore || loading || loadingMore || usingPlaceholder || !cursor) return;
     const observer = new IntersectionObserver(([entry]) => {
       if (!entry.isIntersecting) return;
@@ -112,6 +130,58 @@ function DashboardContent() {
     return () => observer.disconnect();
   }, [cursor, hasMore, loading, loadingMore, usingPlaceholder]);
 
+  useEffect(() => {
+
+    console.log("Messages reçus:", messages);
+  }, [messages]);
+
+  // Paso 1: Pedir el QR a NestJS
+  const handleStart2FA = async () => {
+    setErrorMessage("");
+    setLoading2Fa(true);
+    try {
+      const response = await axios.post<{ secret: string; qrCodeImage: string }>(
+        `${API_BASE_URL}/api/auth/2fa/generate`
+      );
+      setQrCodeImage(response.data.qrCodeImage);
+      setSecret(response.data.secret);
+      setShow2FaModal(true);
+    } catch (err: any) {
+      console.error("Error al generar el 2FA:", err);
+      setErrorMessage("No se pudo generar el código QR. Inténtalo de nuevo.");
+    } finally {
+      setLoading2Fa(false);
+    }
+  };
+
+  // Paso 2: Enviar los 6 dígitos a NestJS para activar
+  const handleConfirm2FA = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage("");
+
+    if (twoFactorCode.length !== 6) {
+      setErrorMessage("Introduce el código de 6 dígitos.");
+      return;
+    }
+
+    try {
+      await axios.post(`${API_BASE_URL}/api/auth/2fa/turn-on`, {
+        code: twoFactorCode,
+      });
+
+      setIsSuccess(true);
+	  await refreshUser(); //Actualiza user.isTwoFactorEnabled en AuthContext
+
+      setTimeout(() => {
+        setShow2FaModal(false);
+        setIsSuccess(false);
+        setTwoFactorCode("");
+      }, 2000);
+    } catch (err: any) {
+      console.error("Error al activar 2FA:", err);
+      setErrorMessage("Código incorrecto. Vuelve a intentarlo.");
+    }
+  };
 
   return (
     <main className="min-h-screen bg-background font-sans text-text">
@@ -174,8 +244,8 @@ function DashboardContent() {
             Log out
           </Button>
         </aside>
-
-        <section className="min-w-0 flex-1 px-4 py-6 sm:px-8 lg:max-w-3xl lg:px-12">
+		//FUSIONAMOS AMBOS BLOQUES
+		<section className="min-w-0 flex-1 px-4 py-6 sm:px-8 lg:max-w-3xl lg:px-12">
           <div className="mb-6 flex items-end justify-between border-b border-border pb-5">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Your feed</p>
@@ -194,6 +264,107 @@ function DashboardContent() {
             {error && <p className="rounded border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary-soft">{error}</p>}
             {!loading && !usingPlaceholder && <div ref={sentinelRef} className="min-h-20">{loadingMore && <Loader label="Loading more posts" />}</div>}
           </div>
+
+          {/* Sección de Seguridad: 2FA */}
+          <div className="mt-10 border-t border-border pt-6 font-sans">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-text-strong">Autenticación en Dos Pasos (2FA)</h3>
+                <p className="mt-1 text-sm text-muted">
+                  {user?.isTwoFactorEnabled 
+                    ? "Tu cuenta está protegida con autenticación de dos factores."
+                    : "Protege tu cuenta exigiendo un código temporal además de la contraseña."}
+                </p>
+              </div>
+              {user?.isTwoFactorEnabled ? (
+                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-400">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400"></span>
+                  Activado
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  disabled={loading2Fa}
+                  onClick={handleStart2FA}
+                  variant="primary"
+                  className="px-4 py-2 text-sm font-semibold"
+                >
+                  {loading2Fa ? "Cargando..." : "Activar 2FA"}
+                </Button>
+              )}
+            </div>
+
+            {show2FaModal && (
+              <div className="mt-6 rounded border border-border bg-surface p-6 shadow-inner">
+                <h4 className="text-base font-semibold text-text-strong">Configura tu aplicación Authenticator</h4>
+                <p className="mt-1 text-xs text-muted">
+                  Escanea el código QR con Google Authenticator o introduce la clave secreta manualmente.
+                </p>
+
+                {errorMessage && (
+                  <div className="mt-3 rounded border border-red-500/30 bg-red-950/40 p-2 text-xs text-red-200">
+                    {errorMessage}
+                  </div>
+                )}
+
+                {isSuccess ? (
+                  <div className="mt-4 rounded border border-green-500/30 bg-green-950/40 p-4 text-center text-sm font-semibold text-green-300">
+                    ¡2FA Activado correctamente!
+                  </div>
+                ) : (
+                  <div className="mt-4 flex flex-col items-center gap-4 sm:flex-row sm:items-start">
+                    {qrCodeImage && (
+                      <div className="rounded bg-white p-2">
+                        <img src={qrCodeImage} alt="Código QR 2FA" className="h-40 w-40" />
+                      </div>
+                    )}
+
+                    <div className="flex-1 space-y-3">
+                      <div>
+                        <span className="text-xs uppercase text-muted">Clave de respaldo:</span>
+                        <p className="select-all font-mono text-xs text-primary-soft">{secret}</p>
+                      </div>
+
+                      <form onSubmit={handleConfirm2FA} className="space-y-3">
+                        <div>
+                          <label className="block text-xs uppercase text-muted">
+                            Código de 6 dígitos:
+                          </label>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={6}
+                            placeholder="123456"
+                            value={twoFactorCode}
+                            onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, ""))}
+                            className="mt-1 w-full rounded border border-border bg-background px-3 py-2 text-center font-mono text-lg tracking-widest text-text-strong focus:border-primary focus:outline-none"
+                          />
+                        </div>
+
+                        <div className="flex gap-2">
+                          <Button
+                            type="submit"
+                            variant="primary"
+                            className="flex-1 py-2 text-sm font-semibold"
+                          >
+                            Confirmar y Activar
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => setShow2FaModal(false)}
+                            className="border border-border px-3 py-2 text-sm text-muted"
+                          >
+                            Cancelar
+                          </Button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </section>
 
         <aside className="hidden w-72 shrink-0 border-l border-border px-6 py-8 xl:block">
@@ -209,6 +380,7 @@ function DashboardContent() {
           </Card>
         </aside>
       </div>
+
     </main>
   );
 }
