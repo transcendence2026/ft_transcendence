@@ -27,7 +27,10 @@ export class TwoFactorController {
 	// y activar definitivamente el sistema en su cuenta.
 	@Post('turn-on')
 	@UseGuards(JwtAuthGuard)
-	async turnOnTwoFactor(@Request() req: any, @Body('code') code: string) {
+	async turnOnTwoFactor(
+		@Request() req: any,
+		@Body('code') code: string
+	) {
 		const userId = req.user.id;
 		await this.twoFactorService.turnOnTwoFactor(userId, code);
 		return { message: 'Two-factor authentication successfully enabled'};
@@ -37,8 +40,24 @@ export class TwoFactorController {
 	// mira y escribe en pantalla el número de 6 dígitos
 	//llega la peticion a esta ruta de autenticación
 	@Post('authenticate')
-	async authenticate2fa(@Body('userId') userId: string, @Body('code') code: string) {
+	async authenticate2fa(
+		@Body('userId') userId: string,
+		@Body('code') code: string
+	) {
     //entra en marcha el servicio de autenticacion (en auth.service)
    	 return this.authService.authenticate2faLogin(userId, code);
+	}
+
+	//frontend hace una peticion HTTP a esta direccion
+	//para desactivar 2FA
+	//JwtService: herramienta para descifrar y validar tokens
+	@Post('turn-off')
+	@UseGuards(JwtAuthGuard)
+	async turnOffTwoFactor(
+		@Request() req: any,
+		@Body('code') code: string
+	) {
+		await this.twoFactorService.turnOffTwoFactor(req.user.id, code);
+		return { message: 'Two-factor authentication successfully disabled'};
 	}
 }
