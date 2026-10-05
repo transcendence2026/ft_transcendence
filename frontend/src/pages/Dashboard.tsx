@@ -201,7 +201,7 @@ function DashboardContent() {
   };
 
   return (
-    <main className="min-h-screen bg-background font-sans text-text">
+    <main className="flex h-screen flex-col overflow-hidden bg-background font-sans text-text">
       <header className="flex h-18 items-center justify-between border-b border-border bg-surface px-5 sm:px-8">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary font-serif text-xl text-background">t</div>
@@ -223,8 +223,8 @@ function DashboardContent() {
         </div>
       </header>
 
-      <div className="mx-auto flex max-w-7xl">
-        <aside className="hidden w-64 shrink-0 border-r border-border px-5 py-8 md:block">
+      <div className="mx-auto flex min-h-0 w-full max-w-[1600px] flex-1 overflow-hidden">
+        <aside className="hidden h-full w-52 shrink-0 overflow-hidden border-r border-border px-4 py-8 md:block">
           <div className="mb-8 flex items-center gap-3 border-b border-border pb-7">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-raised text-sm font-bold text-primary-soft">{username.slice(0, 2).toUpperCase()}</div>
             <div className="min-w-0">
@@ -262,8 +262,8 @@ function DashboardContent() {
           </Button>
         </aside>
 		
-		<section className="min-w-0 flex-1 px-4 py-6 sm:px-8 lg:max-w-3xl lg:px-12">
-          <div className="mb-6 flex items-end justify-between border-b border-border pb-5">
+		<section className="flex min-h-0 min-w-0 flex-1 flex-col px-4 py-6 sm:px-8 lg:px-10">
+          <div className="mb-6 flex shrink-0 items-end justify-between border-b border-border pb-5">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Your feed</p>
               <h1 className="mt-2 font-serif text-4xl tracking-[-0.04em]">Good to see you, {username}.</h1>
@@ -271,7 +271,7 @@ function DashboardContent() {
             <Button type="button" variant="ghost" className="hidden rounded border border-border px-3 py-2 text-xs text-muted hover:border-primary hover:text-primary-soft sm:block">Latest</Button>
           </div>
 
-          <div className="space-y-4">
+          <div className="scrollbar-hidden min-h-0 flex-1 space-y-4 overflow-y-auto pb-8 pr-1">
             <div className="flex gap-3 rounded border border-border bg-surface p-4">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-raised text-xs font-bold text-primary-soft">{username.slice(0, 2).toUpperCase()}</div>
               <div className="flex-1 rounded border border-border px-4 py-3 text-sm text-muted">Share something with the community...</div>
@@ -282,109 +282,60 @@ function DashboardContent() {
             {!loading && !usingPlaceholder && <div ref={sentinelRef} className="min-h-20">{loadingMore && <Loader label="Loading more posts" />}</div>}
           </div>
 
-          {/* Sección de Seguridad: 2FA */}
-          <div className="mt-10 border-t border-border pt-6 font-sans">
-            <div className="flex items-center justify-between">
+        </section>
+
+        <aside className="hidden h-full w-64 shrink-0 overflow-hidden border-l border-border px-4 py-8 lg:block">
+          <div className="border-b border-border pb-6 font-sans">
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <h3 className="text-lg font-semibold text-text-strong">Autenticación en Dos Pasos (2FA)</h3>
-                <p className="mt-1 text-sm text-muted">
-                  {user?.isTwoFactorEnabled 
-                    ? "Tu cuenta está protegida con autenticación de dos factores."
-                    : "Protege tu cuenta exigiendo un código temporal además de la contraseña."}
+                <h3 className="text-lg font-semibold text-text-strong">Two-factor authentication</h3>
+                <p className="mt-1 text-sm leading-relaxed text-muted">
+                  {user?.isTwoFactorEnabled
+                    ? "Your account is protected with two-factor authentication."
+                    : "Add a temporary security code to protect your account."}
                 </p>
               </div>
               {user?.isTwoFactorEnabled ? (
-                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-400">
-                  <span className="h-2 w-2 rounded-full bg-emerald-400"></span>
-                  Activado
-                </div>
+                <span className="inline-flex shrink-0 items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-400">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                  On
+                </span>
               ) : (
-                <Button
-                  type="button"
-                  disabled={loading2Fa}
-                  onClick={handleStart2FA}
-                  variant="primary"
-                  className="px-4 py-2 text-sm font-semibold"
-                >
-                  {loading2Fa ? "Cargando..." : "Activar 2FA"}
+                <Button type="button" disabled={loading2Fa} onClick={handleStart2FA} variant="primary" className="shrink-0 px-3 py-2 text-xs font-semibold">
+                  {loading2Fa ? "Loading..." : "Enable"}
                 </Button>
               )}
             </div>
 
             {show2FaModal && (
-              <div className="mt-6 rounded border border-border bg-surface p-6 shadow-inner">
-                <h4 className="text-base font-semibold text-text-strong">Configura tu aplicación Authenticator</h4>
-                <p className="mt-1 text-xs text-muted">
-                  Escanea el código QR con Google Authenticator o introduce la clave secreta manualmente.
-                </p>
-
-                {errorMessage && (
-                  <div className="mt-3 rounded border border-red-500/30 bg-red-950/40 p-2 text-xs text-red-200">
-                    {errorMessage}
-                  </div>
-                )}
-
+              <div className="mt-5 rounded border border-border bg-surface p-4 shadow-inner">
+                <h4 className="text-sm font-semibold text-text-strong">Set up your authenticator</h4>
+                <p className="mt-1 text-xs leading-relaxed text-muted">Scan the QR code or enter the secret manually.</p>
+                {errorMessage && <div className="mt-3 rounded border border-red-500/30 bg-red-950/40 p-2 text-xs text-red-200">{errorMessage}</div>}
                 {isSuccess ? (
-                  <div className="mt-4 rounded border border-green-500/30 bg-green-950/40 p-4 text-center text-sm font-semibold text-green-300">
-                    ¡2FA Activado correctamente!
-                  </div>
+                  <div className="mt-4 rounded border border-green-500/30 bg-green-950/40 p-3 text-center text-sm font-semibold text-green-300">2FA enabled successfully.</div>
                 ) : (
-                  <div className="mt-4 flex flex-col items-center gap-4 sm:flex-row sm:items-start">
-                    {qrCodeImage && (
-                      <div className="rounded bg-white p-2">
-                        <img src={qrCodeImage} alt="Código QR 2FA" className="h-40 w-40" />
-                      </div>
-                    )}
-
-                    <div className="flex-1 space-y-3">
-                      <div>
-                        <span className="text-xs uppercase text-muted">Clave de respaldo:</span>
-                        <p className="select-all font-mono text-xs text-primary-soft">{secret}</p>
-                      </div>
-
-                      <form onSubmit={handleConfirm2FA} className="space-y-3">
-                        <div>
-                          <label className="block text-xs uppercase text-muted">
-                            Código de 6 dígitos:
-                          </label>
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            maxLength={6}
-                            placeholder="123456"
-                            value={twoFactorCode}
-                            onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, ""))}
-                            className="mt-1 w-full rounded border border-border bg-background px-3 py-2 text-center font-mono text-lg tracking-widest text-text-strong focus:border-primary focus:outline-none"
-                          />
-                        </div>
-
-                        <div className="flex gap-2">
-                          <Button
-                            type="submit"
-                            variant="primary"
-                            className="flex-1 py-2 text-sm font-semibold"
-                          >
-                            Confirmar y Activar
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            onClick={() => setShow2FaModal(false)}
-                            className="border border-border px-3 py-2 text-sm text-muted"
-                          >
-                            Cancelar
-                          </Button>
-                        </div>
-                      </form>
+                  <div className="mt-4 space-y-4">
+                    {qrCodeImage && <div className="mx-auto w-fit rounded bg-white p-2"><img src={qrCodeImage} alt="Two-factor authentication QR code" className="h-36 w-36" /></div>}
+                    <div>
+                      <span className="text-xs uppercase text-muted">Secret key</span>
+                      <p className="select-all break-all font-mono text-xs text-primary-soft">{secret}</p>
                     </div>
+                    <form onSubmit={handleConfirm2FA} className="space-y-3">
+                      <label className="block text-xs uppercase text-muted">
+                        Six-digit code
+                        <input type="text" inputMode="numeric" maxLength={6} placeholder="123456" value={twoFactorCode} onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, ""))} className="mt-1 w-full rounded border border-border bg-background px-3 py-2 text-center font-mono text-lg tracking-widest text-text-strong focus:border-primary focus:outline-none" />
+                      </label>
+                      <div className="flex gap-2">
+                        <Button type="submit" variant="primary" className="flex-1 py-2 text-xs font-semibold">Confirm</Button>
+                        <Button type="button" variant="ghost" onClick={() => setShow2FaModal(false)} className="border border-border px-3 py-2 text-xs text-muted">Cancel</Button>
+                      </div>
+                    </form>
                   </div>
                 )}
               </div>
             )}
           </div>
-        </section>
-
-        <aside className="hidden w-72 shrink-0 border-l border-border px-6 py-8 xl:block">
           <Card tag="Community pulse" title="Learn together." className="max-w-none rounded-none border-0 border-b border-border bg-transparent p-0 pb-6 shadow-none">
             <p className="mt-2 text-sm leading-relaxed text-muted">Share your favourite dishes and drool over the others</p>
           </Card>
