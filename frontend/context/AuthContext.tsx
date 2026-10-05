@@ -1,112 +1,202 @@
 import React, { createContext, useState, useEffect, type ReactNode } from 'react';
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? '';
+
+// La respuesta de login puede requerir 2FA
+export interface LoginResponse {
+	message?: string;
+  	token?: string;
+  	accessToken?: string;
+  	user?: User;
+  	requiresTwoFactor?: boolean;
+  	userId?: string;
+}
 
 interface User {
-  id: string;
-  username: string;
-  email: string;
+  	username: string;
+  	email: string;
+  	isTwoFactorEnabled?: boolean;
 }
 
 interface AuthResponse {
-  token: string;
-  user: User;
+	token: string;
+  	accessToken?: string;
+  	user: User;
 }
 
 interface AuthContextType {
-  token: string | null;
-  user: User | null;
-  login: (email: string, password: string) => Promise<void>;
-  register: (username: string, email: string, password: string) => Promise<void>;
-  oauth42: () => void;
-  completeOAuth: (token: string, user?: User) => void;
-  logout: () => void;
-  loading: boolean;
+  	token: string | null;
+  	user: User | null;
+  	login: (email: string, password: string) => Promise<any>;
+  	register: (username: string, email: string, password: string) => Promise<void>;
+  	oauth42: () => void;
+  	completeOAuth: (token: string, user?: User) => void;
+  	logout: () => void;
+  	loading: boolean;
+  	refreshUser: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/*export const AuthProvider = ({ children }: { children: ReactNode }) => {
+	const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
+	const [user, setUser] = useState<User | null>(() => {
+    	const storedUser = localStorage.getItem('user');
+    	return storedUser ? (JSON.parse(storedUser) as User) : null;
+  	});
+  	const [loading, setLoading] = useState<boolean>(true);*/
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
-  const [user, setUser] = useState<User | null>(() => {
-    const storedUser = localStorage.getItem('user');
-    return storedUser ? (JSON.parse(storedUser) as User) : null;
-  });
-  const [loading, setLoading] = useState<boolean>(true);
+    const [token, setToken] = useState<string | null>(() => {
+        const params = new URLSearchParams(window.location.search);
+        const urlToken = params.get('token');
+        if (urlToken) {
+            localStorage.setItem('token', urlToken);
+            return urlToken;
+        }
+        return localStorage.getItem('token');
+    });
 
-  useEffect(() => {
-    if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      void axios.get<{ user: User }>(`${API_BASE_URL}/api/auth/me`)
-        .then((response) => {
-          const nextUser = response.data.user;
-          localStorage.setItem('user', JSON.stringify(nextUser));
-          setUser(nextUser);
-        })
-        .catch(() => {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          setToken(null);
-          setUser(null);
-        })
-        .finally(() => {
-          setLoading(false);
-        });
-      return;
-    }
+    const [user, setUser] = useState<User | null>(() => {
+        const storedUser = localStorage.getItem('user');
+        return storedUser ? (JSON.parse(storedUser) as User) : null;
+    });
 
-    delete axios.defaults.headers.common['Authorization'];
-    localStorage.removeItem('user');
-    setUser(null);
-    setLoading(false);
-  }, [token]);
+    const [loading, setLoading] = useState<boolean>(true);
 
-  const persistSession = (authToken: string, authUser: User) => {
-    localStorage.setItem('token', authToken);
-    localStorage.setItem('user', JSON.stringify(authUser));
-    setToken(authToken);
-    setUser(authUser);
-  };
+  	// CAPTURAR EL TOKEN DE 42 AL VOLVER DE LA REDIRECCIÓN
+  	useEffect(() => {
+    	const params = new URLSearchParams(window.location.search);
+    	const urlToken = params.get('token');
 
-  const login = async (email: string, password: string) => {
-    const res = await axios.post<AuthResponse>(`${API_BASE_URL}/api/auth/login`, { email, password });
-    persistSession(res.data.token, res.data.user);
-  };
+    	if (urlToken) {
+      		localStorage.setItem('token', urlToken);
+      		setToken(urlToken);
+      		window.history.replaceState({}, document.title, window.location.pathname);
+    	}
+  	}, []);
 
-  const register = async (username: string, email: string, password: string) => {
-    const res = await axios.post<AuthResponse>(`${API_BASE_URL}/api/auth/register`, { username, email, password });
-    persistSession(res.data.token, res.data.user);
-  };
+  	// COMPROBACION DE TOKEN INICIAL
+  	useEffect(() => {
+   		if (token) {
+      		axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      		void axios
+        		//.get<User | { user: User }>(`${API_BASE_URL}/api/auth/me`)
+        		.get<User | { user: User }>('/api/auth/me') // <-- ruta directa
+				.then((response) => {
+					// Si el backend devuelve { user: ... } usa eso; si devuelve el objeto directo, usa response.data
+					const data = response.data as any;
+					const nextUser: User = data.user ? data.user : data;
 
-  const oauth42 = () => {
-    window.location.href = `${API_BASE_URL}/api/auth/oauth/42`;
-  };
+					localStorage.setItem('user', JSON.stringify(nextUser));
+					setUser(nextUser);
 
-  const completeOAuth = (authToken: string, authUser?: User) => {
-    const normalizedUser = authUser ?? { username: '42 User', email: '' };
-    persistSession(authToken, normalizedUser);
-  };
+					// Si el usuario ya está autenticado y entra a /login, redirige a /, 
+					// EXCEPTO si viene con ?userId= para completar el 2FA
+					const params = new URLSearchParams(window.location.search);
+					const isPending2Fa = params.has('userId');
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setToken(null);
-    setUser(null);
-  };
+					if (!isPending2Fa && (window.location.pathname === '/login' || window.location.pathname === '/login/')) {
+						window.location.href = '/';
+					}
+				})
+        		.catch((err) => {
+        			console.error('Error al verificar sesión en /me:', err);
+        			// Solo borramos si el backend rechaza explícitamente el token con 401 Unauthorized
+					if (err.response && err.response.status === 401) {
+						localStorage.removeItem('token');
+						localStorage.removeItem('user');
+						setToken(null);
+						setUser(null);
+					}
+        		})
+        		.finally(() => {
+        			setLoading(false);
+        		});
+			return;
+    	}
 
-  return (
-    <AuthContext.Provider value={{ token, user, login, register, oauth42, completeOAuth, logout, loading }}>
-      {!loading && children}
-    </AuthContext.Provider>
-  );
+		delete axios.defaults.headers.common['Authorization'];
+		localStorage.removeItem('user');
+		setUser(null);
+		setLoading(false);
+	}, [token]);
+
+	const persistSession = (authToken: string, authUser: User) => {
+		localStorage.setItem('token', authToken);
+		localStorage.setItem('user', JSON.stringify(authUser));
+		setToken(authToken);
+		setUser(authUser);
+	};
+
+ 	const login = async (email: string, password: string) => {
+    	const res = await axios.post<LoginResponse>(`${API_BASE_URL}/api/auth/login`, { email, password });
+    
+		// Si requiere 2FA, devolvemos los datos para que LoginRightSide muestre el input de 6 dígitos
+		if (res.data?.requiresTwoFactor) {
+			return res.data;
+		}
+
+		// Si el login es directo (sin 2FA), guardamos sesión y redirigimos como siempre
+		const token = res.data.token || res.data.accessToken;
+		if (token && res.data.user) {
+			persistSession(token, res.data.user);
+			window.location.href = '/';
+		}
+
+    	return res.data;
+  	};
+
+  	const register = async (username: string, email: string, password: string) => {
+		const res = await axios.post<AuthResponse>(`${API_BASE_URL}/api/auth/register`, { username, email, password });
+		persistSession(res.data.token, res.data.user);
+		window.location.href = '/';
+	};
+
+ 	const oauth42 = () => {
+    	window.location.href = `${API_BASE_URL}/api/auth/oauth/42`;
+  	};
+
+	const completeOAuth = (authToken: string, authUser?: User) => {
+		const normalizedUser = authUser ?? { username: '42 User', email: '' };
+		persistSession(authToken, normalizedUser);
+		window.location.href = '/';
+	};
+
+	const logout = () => {
+		localStorage.removeItem('token');
+		localStorage.removeItem('user');
+		setToken(null);
+		setUser(null);
+		window.location.href = '/';
+	};
+
+	const refreshUser = async () => {
+		if (!token) return;
+		try {
+			const response = await axios.get<User | { user: User }>(`${API_BASE_URL}/api/auth/me`);
+			const data = response.data as any;
+			const nextUser: User = data.user ? data.user : data;
+			localStorage.setItem('user', JSON.stringify(nextUser));
+			setUser(nextUser);
+		} catch (err) {
+			console.error('Error al refrescar usuario:', err);
+		}
+	};
+
+	return (
+		<AuthContext.Provider value={{ token, user, login, register, oauth42, completeOAuth, logout, loading, refreshUser }}>
+			{children}
+		</AuthContext.Provider>
+	);
 };
 
 export const useAuth = () => {
-  const context = React.useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+	const context = React.useContext(AuthContext);
+	if (!context) {
+		throw new Error('useAuth must be used within an AuthProvider');
+	}
 
-  return context;
+	return context;
 };

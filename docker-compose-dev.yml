@@ -1,7 +1,6 @@
 services:
   db:
     image: postgres:15-alpine
-    # PostgreSQL is kept on the private backend network.
     build:
       context: ./db
     environment:
@@ -11,15 +10,12 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      # Persist database data across container recreations.
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d transcendence"]
-      # Backend startup waits for PostgreSQL to accept connections.
       interval: 5s
       timeout: 5s
       retries: 10
-
 
   backend:
     build:
