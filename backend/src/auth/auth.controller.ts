@@ -6,7 +6,7 @@ import { LoginUserDto } from './dto/login-user.dto.js';
 import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
 import { UserPayload } from './interfaces/user-payload.interface.js';
 import { AuthGuard } from '@nestjs/passport';
-import type { Request as ExpressRequest } from 'express';
+import { Response } from 'express';
 
 @Controller('api/auth') //Define ruta base (cualquier ruta empezara por /auth)
 //Declara y publica clase relativa a la autenticacion
@@ -18,6 +18,19 @@ export class AuthController {
 		@Inject(ConfigService) private readonly configService: ConfigService,
 	) {}
 
+	//Fumcion para configurar cookies segura
+	private setAuthCookie(res: Response, token: string) {
+		const isProduction = process.env.NODE_ENV === 'production';
+		res.cookie('accessToken', token, {
+			httpOnly: true, // Prohibe a JavaScript leer la cookie (blindaje ante XSS)
+			secure: isProduction, //solo viaje si conexion es cifrada (HTTPS)
+			//evita peticiones maliciosas externas al backend
+			sameSite: 'strict', //Solo se envía si la petición nace dentro de nuestra propia web (blindaje anti-CSRF)
+			maxAge: 15 * 60 * 1000, //15 minuntos calidez AccessToken
+			path: '/', //cookie funciona en toda la app
+		});
+	}
+
 	@Post('register') //Indica que el metodo responde peticiones http con metodo POST  a la url
 	@HttpCode(HttpStatus.CREATED) //codigo de estado que debe devolver la respuesto (201 registro)
 	async register(@Body() registerDto: RegisterUserDto) {
@@ -28,8 +41,34 @@ export class AuthController {
 
 	@Post('login')
 	@HttpCode(HttpStatus.OK) //Codigo HTTP 200 (login)
-	async login(@Body() loginDto: LoginUserDto) {
-		return this.authService.login(loginDto);
+	async login(
+		@Body() loginDto: LoginUserDto,
+		//{ passthrough: true } le avisa a NestJS: "Solo quiero res para meter la cookie; 
+		// passthrough evita que al meter la cookie, NestJS no se apague
+		@Res({ passthrough: true }) res: Response,
+	) {
+		const result = await this.authService.login(loginDto);
+		//si doble factor acativado y no se emite cookie todavía
+		if(result.requiresTwoFactor) {
+			return result;
+		}
+		//si login es sin 2fa o ya completado, metemos token en la cookie
+		if(result.token) {
+			this.setAuthCookie(res, result.token);
+		}
+		return result;
+	}
+
+	@Post('logout')
+	@HttpCode(HttpStatus.OK)
+	async logout(@Res({ passthrough: true }) res: Response) {
+		//Si salimos, borramos la cookie y limpiamos la sesion
+		res.clearCookie('accessToken', {
+			httpOnly: true,
+			sameSite: 'strict',
+			path: '/',
+		});
+		return { message: 'Logged out successfully'};
 	}
 
 	@Get('me')
@@ -69,18 +108,23 @@ export class AuthController {
 		// 1. Guarda al usuario en la BD y genera el token
 		const result = await this.authService.oauthLogin(req.user);
 
-		// 2. Redirige al navegador de vuelta a la página web con el token
-		//return res.redirect(`https://localhost:8443/?token=${result.token}`);
-
 		// 2. Lee la URL del entorno, si no existe usa la estándar por defecto
         const frontendUrl = process.env.FRONTEND_URL || 'https://localhost:8443';
 
+		//AuthService hace dos caminos distintos según el usuario
+		//1.- activado 2fa
 		if (result.requiresTwoFactor) {
             return res.redirect(`${frontendUrl}/login?userId=${result.userId}`);
         }
         
+		// 2.- Si no requiere 2F o el login se completo
+		// entonces entra la funcion setAuthCookie y se crea la cookie segura
+        if (result.token) {
+            this.setAuthCookie(res, result.token);
+        }
+
         // 3. Redirige dinámicamente
-        return res.redirect(`${frontendUrl}/?token=${result.token}`);
+		return res.redirect(`${frontendUrl}/`);
 	}
 
 }

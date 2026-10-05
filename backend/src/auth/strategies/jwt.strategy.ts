@@ -1,7 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
-import { ExtractJwt, Strategy } from 'passport-jwt';
-//import { ConfigService } from '@nestjs/config'; //no es necesario, su uso daba latencia y error
+import { Strategy } from 'passport-jwt';
+import { Request } from 'express'
 import { UserPayload } from '../interfaces/user-payload.interface.js';
 
 @Injectable()
@@ -17,9 +17,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     //constructor(private readonly configService: ConfigService) {
     constructor() {
         super({
-            // ¿Dónde busca el token? En la cabecera HTTP de la petición, 
-        	// buscando la palabra "Bearer <token>" (ej: Authorization: Bearer eyJhbGci...)
-            jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+            //extrae unicamente de la cookie HttpOnly 'accessToken'
+            //el navegador adjunta esta cookie automaticamente en req.cookies
+            jwtFromRequest: (req: Request) => {
+                return req?.cookies?.accessToken || null;
+            }, 
             // ¿Qué pasa si el token ha caducado? No lo ignoramos (false). 
         	// Si expiró, se rechaza la petición automáticamente.
             ignoreExpiration: false,
