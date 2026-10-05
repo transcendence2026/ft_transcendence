@@ -6,11 +6,12 @@ import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
 import { Loader } from "../components/Loader";
+import { SocialPostCard } from "../components/SocialPostCard";
 import ProtectedRoute from "../components/ProtectedRoute";
 import { useAuth } from "../../context/AuthContext";
 import { useWebSocket } from "@/context/WebSocketContext";
 
-const API_BASE_URL = "";
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
 
 interface FeedPost {
@@ -20,6 +21,7 @@ interface FeedPost {
   createdAt: string;
   author: { id: string; username: string; profile?: { avatarUrl: string | null } | null };
   images: { id: string; url: string }[];
+  friendship: { status: string; requestId: string | null };
 }
 
 interface FeedResponse { items: FeedPost[]; nextCursor: string | null; hasMore: boolean; }
@@ -31,6 +33,7 @@ const placeholderPosts: FeedPost[] = [{
   createdAt: new Date().toISOString(),
   author: { id: "placeholder-author", username: "transcendence", profile: null },
   images: [],
+  friendship: { status: "SELF", requestId: null },
 }];
 
 function formatDate(value: string) {
@@ -48,15 +51,29 @@ function imageUrl(url: string) {
 
 function PostCard({ post }: { post: FeedPost }) {
   const [liked, setLiked] = useState(false);
+  const [friendshipStatus, setFriendshipStatus] = useState(post.friendship.status);
+  const [friendshipLoading, setFriendshipLoading] = useState(false);
+  const navigate = useNavigate();
   const isPlaceholder = post.id.startsWith("placeholder-") || post.id === "placeholder-1";
+  const addFriend = async () => {
+    setFriendshipLoading(true);
+    try {
+      await axios.post(`${API_BASE_URL}/api/friends/requests/${post.author.id}`);
+      setFriendshipStatus("PENDING");
+    } finally {
+      setFriendshipLoading(false);
+    }
+  };
   return (
     <article className="feed-post rounded border border-border bg-surface p-5">
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 gap-3">
           <Avatar name={post.author.username} src={post.author.profile?.avatarUrl ? imageUrl(post.author.profile.avatarUrl) : null} size="sm" />
-          <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><p className="truncate text-sm font-semibold text-text-strong">{post.author.username}</p><Badge tone="muted">{isPlaceholder ? "welcome" : post.title.split(" ")[0]}</Badge></div><p className="mt-1 text-xs text-muted">@{post.author.username} <span className="px-1">·</span> {formatDate(post.createdAt)}</p></div>
+          <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><button type="button" className="truncate text-left text-sm font-semibold text-text-strong hover:text-primary-soft" onClick={() => navigate(`/profile/${post.author.id}`)}>{post.author.username}</button><Badge tone="muted">{isPlaceholder ? "welcome" : post.title.split(" ")[0]}</Badge></div><p className="mt-1 text-xs text-muted">@{post.author.username} <span className="px-1">·</span> {formatDate(post.createdAt)}</p></div>
         </div>
-        <Button type="button" variant="ghost" aria-label={`More options for ${post.author.username}`} className="px-2 py-0 text-lg leading-none text-muted">...</Button>
+        {(friendshipStatus === "NONE" || friendshipStatus === "DECLINED") && !isPlaceholder && <Button type="button" variant="ghost" disabled={friendshipLoading} onClick={() => void addFriend()} className="px-2 py-1 text-xs text-primary-soft">{friendshipLoading ? "..." : "+ Friend"}</Button>}
+        {friendshipStatus === "PENDING" && <Badge tone="muted">Request sent</Badge>}
+        {friendshipStatus === "ACCEPTED" && <Badge tone="success">Friends</Badge>}
       </div>
       <div className="mt-5"><h2 className="font-serif text-xl text-text-strong">{post.title}</h2><p className="mt-2 whitespace-pre-line text-sm leading-7 text-text">{post.content}</p></div>
       {post.images.length > 0 && <div className={`mt-5 grid gap-2 ${post.images.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>{post.images.slice(0, 4).map((image) => <img key={image.id} src={imageUrl(image.url)} alt={`Dish shared by ${post.author.username}`} className="aspect-[4/3] w-full rounded object-cover" />)}</div>}
@@ -244,7 +261,7 @@ function DashboardContent() {
             Log out
           </Button>
         </aside>
-		//FUSIONAMOS AMBOS BLOQUES
+		
 		<section className="min-w-0 flex-1 px-4 py-6 sm:px-8 lg:max-w-3xl lg:px-12">
           <div className="mb-6 flex items-end justify-between border-b border-border pb-5">
             <div>
@@ -260,7 +277,7 @@ function DashboardContent() {
               <div className="flex-1 rounded border border-border px-4 py-3 text-sm text-muted">Share something with the community...</div>
             </div>
 
-            {loading ? <Loader label="Loading the community" /> : posts.map((post) => <PostCard key={post.id} post={post} />)}
+            {loading ? <Loader label="Loading the community" /> : posts.map((post) => <SocialPostCard key={post.id} post={post} />)}
             {error && <p className="rounded border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary-soft">{error}</p>}
             {!loading && !usingPlaceholder && <div ref={sentinelRef} className="min-h-20">{loadingMore && <Loader label="Loading more posts" />}</div>}
           </div>

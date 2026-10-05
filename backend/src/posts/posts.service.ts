@@ -19,9 +19,20 @@ export class PostsService {
     });
   }
 
-  async findFeed(cursor?: string, requestedLimit = 8) {
+  async findFeed(viewerId: string, cursor?: string, requestedLimit = 8, authorId?: string) {
     const limit = Math.min(Math.max(requestedLimit, 1), 20);
+    const friendships = await this.prisma.friendship.findMany({
+      where: { OR: [{ senderId: viewerId }, { receiverId: viewerId }] },
+      select: { id: true, senderId: true, receiverId: true, status: true },
+    });
+    const acceptedFriendships = await this.prisma.friendship.findMany({
+      where: { status: 'ACCEPTED', OR: [{ senderId: viewerId }, { receiverId: viewerId }] },
+      select: { senderId: true, receiverId: true },
+    });
+    const friendIds = acceptedFriendships.map((friendship) => friendship.senderId === viewerId ? friendship.receiverId : friendship.senderId);
+    const visiblePosts = { OR: [{ authorId: viewerId }, { author: { isPrivate: false } }, { authorId: { in: friendIds } }] };
     const posts = await this.prisma.post.findMany({
+      where: authorId ? { AND: [visiblePosts, { authorId }] } : visiblePosts,
       ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
       take: limit + 1,
       include: { author: { select: { id: true, username: true, profile: { select: { avatarUrl: true } } } }, images: true },
@@ -29,7 +40,21 @@ export class PostsService {
     });
     const hasMore = posts.length > limit;
     const items = hasMore ? posts.slice(0, limit) : posts;
-    return { items, nextCursor: hasMore ? items[items.length - 1].id : null, hasMore };
+    return {
+      items: items.map((post) => ({
+        ...post,
+        friendship: post.author.id === viewerId
+          ? { status: 'SELF', requestId: null }
+          : friendships.find((friendship) => friendship.senderId === post.author.id || friendship.receiverId === post.author.id)
+            ? {
+              status: friendships.find((friendship) => friendship.senderId === post.author.id || friendship.receiverId === post.author.id)?.status,
+              requestId: friendships.find((friendship) => friendship.senderId === post.author.id || friendship.receiverId === post.author.id)?.id,
+            }
+            : { status: 'NONE', requestId: null },
+      })),
+      nextCursor: hasMore ? items[items.length - 1].id : null,
+      hasMore,
+    };
   }
 
   async findOne(id: string) {
