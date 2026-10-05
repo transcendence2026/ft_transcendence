@@ -52,4 +52,6 @@ clean:
 		rm -rf proxy/certs; \
 		printf "Self-signed certificate deleted\n"; \
 	fi
+	
 	$(COMPOSE) down -v --remove-orphans
+
