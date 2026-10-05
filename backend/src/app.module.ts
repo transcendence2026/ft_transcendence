@@ -4,6 +4,7 @@ import { Module } from '@nestjs/common';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { FilesModule } from './files/files.module';
 import { AuthModule } from './auth/auth.module.js'; //importas la rama
 import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from './database/database.module.js';
@@ -27,6 +28,8 @@ import { SocialModule } from './social/social.module.js';
 		PrismaModule,
 		AuthModule, //Importa el Modulo de Autenticación
 		UsersModule,
+		
+		FilesModule,
 		PostsModule,
 		ReviewsModule,
 		SocialModule,
