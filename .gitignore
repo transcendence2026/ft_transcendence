@@ -101,8 +101,5 @@ postgres-data/
 coverage/
 
 # 9. CERTS
-<<<<<<< HEAD
+
 proxy/certs
-=======
-proxy/certs
->>>>>>> c5321d7f20ed2bfbbb172e975885e536c2edf78e
