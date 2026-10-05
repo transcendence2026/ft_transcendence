@@ -150,8 +150,9 @@ function ProfileContent() {
     data.append('file', file);
 
     try {
-      const response = await axios.post<{ profile?: ProfileData['profile'] }>(`${API_BASE_URL}/api/users/avatar`, data);
-      setProfile((current) => current ? { ...current, profile: response.data.profile ?? current.profile } : current);
+      const response = await axios.post<{ user?: { profile?: ProfileData['profile'] }; profile?: ProfileData['profile'] }>(`${API_BASE_URL}/api/users/avatar`, data);
+      const updatedProfile = response.data.user?.profile ?? response.data.profile;
+      setProfile((current) => current ? { ...current, profile: updatedProfile ?? current.profile } : current);
       setAvatarPreview(null);
       setMessage('Avatar updated.');
       setError(null);
