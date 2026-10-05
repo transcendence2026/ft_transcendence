@@ -284,7 +284,7 @@ function DashboardContent() {
 
         </section>
 
-        <aside className="hidden h-full w-64 shrink-0 overflow-hidden border-l border-border px-4 py-8 lg:block">
+        <aside className="scrollbar-hidden hidden h-full w-64 shrink-0 overflow-y-auto border-l border-border px-4 py-8 lg:block">
           <div className="border-b border-border pb-6 font-sans">
             <div className="flex items-start justify-between gap-3">
               <div>
