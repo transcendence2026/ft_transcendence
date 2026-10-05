@@ -19,9 +19,11 @@ export class AuthController {
 	) {}
 
 	//Fumcion para configurar cookies segura
-	private setAuthCookie(res: Response, token: string) {
+	private setAuthCookie(res: Response, accessToken: string, refreshToken: string) {
 		const isProduction = process.env.NODE_ENV === 'production';
-		res.cookie('accessToken', token, {
+
+		//Cookie 1: AccessToken (15 minutos de vida)
+		res.cookie('accessToken', accessToken, {
 			httpOnly: true, // Prohibe a JavaScript leer la cookie (blindaje ante XSS)
 			secure: isProduction, //solo viaje si conexion es cifrada (HTTPS)
 			//evita peticiones maliciosas externas al backend
@@ -29,6 +31,14 @@ export class AuthController {
 			maxAge: 15 * 60 * 1000, //15 minuntos calidez AccessToken
 			path: '/', //cookie funciona en toda la app
 		});
+		// Cookie 2: RefreshToken (7 días de vida)
+    	res.cookie('refreshToken', refreshToken, {
+			httpOnly: true,
+			secure: isProduction,
+			sameSite: 'strict',
+			maxAge: 7 * 24 * 60 * 60 * 1000, // 7 días
+			path: '/api/auth/refresh',       // Solo se envía al endpoint de refresco
+    });
 	}
 
 	@Post('register') //Indica que el metodo responde peticiones http con metodo POST  a la url
@@ -53,8 +63,8 @@ export class AuthController {
 			return result;
 		}
 		//si login es sin 2fa o ya completado, metemos token en la cookie
-		if(result.token) {
-			this.setAuthCookie(res, result.token);
+		if(result.accessToken && result.refreshToken) {
+			this.setAuthCookie(res, result.accessToken, result.refreshToken);
 		}
 		return result;
 	}
@@ -69,6 +79,19 @@ export class AuthController {
 			path: '/',
 		});
 		return { message: 'Logged out successfully'};
+	}
+
+	@Post('refresh')
+	@HttpCode(HttpStatus.OK)
+	async refresh(
+		@Request() req: any,
+		@Res({ passthrough: true }) res: Response,
+	) {
+		const refreshToken = req.cookies?.refreshToken;
+		const newTokens = await this. authService.refreshTokens(refreshToken);
+		this.setAuthCookie(res, newTokens.accessToken, newTokens.refreshToken);
+		return { message: 'Tokens refreshed successfully'};
+
 	}
 
 	@Get('me')
@@ -120,7 +143,7 @@ export class AuthController {
 		// 2.- Si no requiere 2F o el login se completo
 		// entonces entra la funcion setAuthCookie y se crea la cookie segura
         if (result.token) {
-            this.setAuthCookie(res, result.token);
+            this.setAuthCookie(res, result.accessToken, result.refreshToken);
         }
 
         // 3. Redirige dinámicamente
