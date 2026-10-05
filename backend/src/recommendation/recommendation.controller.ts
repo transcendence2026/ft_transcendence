@@ -2,7 +2,7 @@ import { Controller, Get, Query } from "@nestjs/common";
 import { RatingAggregatorService } from "./rating-aggregator";
 import { resolveObjectURL } from "buffer";
 
-@Controller('recommendation')
+@Controller('api/recommendation')
 export class RecommendationController {
 	// Inject the aggregator so this controller can exposse it over HTTP
 	constructor(private readonly ratingAggregator: RatingAggregatorService) {}

@@ -1,19 +1,23 @@
-//OnModuleInit y OnModuleDestroy: Son interfaces que obligan a tu código a reaccionar 
-//cuando el módulo arranca y cuando se apaga.
+// OnModuleInit and OnModuleDestroy: interfaces that force the class to react
+// when the module starts up and when it shuts down.
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-//Importa la clase principal de Prisma (PrismaClient)
-// que es la que sabe hablar con la base de datos PostgreSQL.
+// Imports the main Prisma class (PrismaClient),
+// which knows how to talk to the PostgreSQL database.
 import { PrismaClient } from '@prisma/client';
-//Clase que sabe hacer todo lo que hace Prisma
-//implements OnModuleInit, OnModuleDestroy: Es una promesa formal de que la clase va a implementar 
-// dos funciones concretas para controlar el ciclo de vida de la conexión.
+// Class that can do everything Prisma does.
+// implements OnModuleInit, OnModuleDestroy: a formal promise that this class
+// will implement two specific functions to control the connection lifecycle.
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+  constructor() {
+    // Log every query to stdout only in development, so production stays quiet
+    super({ log: ['query'] });
+  }
   async onModuleInit() {
-    await this.$connect(); //Ordena a Prisma que abra la conexión con la base datos (se ejecuta automax)
+    await this.$connect(); // Tells Prisma to open the database connection (runs automatically)
   }
 
   async onModuleDestroy() {
-    await this.$disconnect(); //se ejecuta cuando la aplicacion se desconecta
+    await this.$disconnect(); // Runs when the application shuts down
   }
 }
