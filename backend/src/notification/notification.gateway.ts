@@ -1,6 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { OnEvent } from "@nestjs/event-emitter";
-import { PrismaService } from "../database/prisma.service";
+import { PrismaService } from "../prisma/prisma.service";
 import { CreateNotificationDto } from "./dto/createNotifcation.dto";
 import { PresenceService } from "../websocket/websocket.service";
 

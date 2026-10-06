@@ -1,5 +1,5 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../database/prisma.service'; // Ajusta la ruta a tu PrismaService
+import { PrismaService } from '../prisma/prisma.service'; // Ajusta la ruta a tu PrismaService
 import { UpdateProfileDto } from './dto/update-profile.dto';
 
 

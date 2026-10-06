@@ -10,8 +10,7 @@ import { PrismaClient } from '@prisma/client';
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   constructor() {
-    // Log every query to stdout only in development, so production stays quiet
-    super({ log: ['query'] });
+    super({ log: ['error'] });
   }
   async onModuleInit() {
     await this.$connect(); // Tells Prisma to open the database connection (runs automatically)

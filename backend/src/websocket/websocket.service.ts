@@ -1,6 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import WebSocket from "ws";
-import { PrismaService } from "../database/prisma.service";
+import { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
 export class PresenceService {
