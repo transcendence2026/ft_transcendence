@@ -7,7 +7,6 @@ import { join } from 'path';
 import { FilesModule } from './files/files.module';
 import { AuthModule } from './auth/auth.module.js'; //importas la rama
 import { ConfigModule } from '@nestjs/config';
-import { DatabaseModule } from './database/database.module.js';
 import { HealthModule } from './health/health.module.js';
 import { MessagesModule } from './messages/messages.module.js';
 import { WebsocketGateway } from './websocket/websocket.gateway.js';
@@ -25,7 +24,6 @@ import { FriendsModule } from './friends/friends.module.js';
 		ConfigModule.forRoot({
 			isGlobal: true,
 		}),
-		DatabaseModule,
 		PrismaModule,
 		AuthModule, //Importa el Modulo de Autenticación
 		UsersModule,

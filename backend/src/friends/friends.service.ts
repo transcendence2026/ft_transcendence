@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma, FriendshipStatus } from '@prisma/client';
-import { PrismaService } from '../database/prisma.service.js';
+import { PrismaService } from '../prisma/prisma.service.js';
 
 const userSummary = { id: true, username: true, profile: { select: { avatarUrl: true } } } as const;
 
