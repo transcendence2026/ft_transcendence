@@ -4,6 +4,8 @@ import { Card } from '../components/Card';
 import { Input } from '../components/Input';
 import { Loader } from '../components/Loader';
 import { Modal } from '../components/Modal';
+import { ImageDropzone } from '../components/ImageDropzone';
+
 
 const defaultTheme = {
   primary: '#ef6540',
@@ -43,6 +45,7 @@ export default function ComponentPlayground() {
   const [email, setEmail] = useState('tester@example.com');
   const [showModal, setShowModal] = useState(false);
   const [theme, setTheme] = useState<ThemeTokens>(defaultTheme);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
 
   const themeStyle = Object.fromEntries(
     Object.entries(theme).map(([token, value]) => [
@@ -76,7 +79,32 @@ export default function ComponentPlayground() {
               <Button type="button" variant="danger">Danger</Button>
             </div>
           </Card>
+          {/* ------------------------------------- */}
+          <Card tag="Forms" title="Image upload">
+            <ImageDropzone
+              onFileSelect={(file) => setSelectedImage(file)}
+            />
 
+            {selectedImage && (
+              <p className="mt-3 text-xs text-muted">
+                Selected file: {selectedImage.name}
+              </p>
+            )}
+          </Card>
+          {/* ------------------------------------- */}
+          <Card tag="Forms" title="Image upload">
+            <ImageDropzone
+              onFileSelect={(file) => setSelectedImage(file)}
+              variant="avatar"
+            />
+
+            {selectedImage && (
+              <p className="mt-3 text-xs text-muted">
+                Selected file: {selectedImage.name}
+              </p>
+            )}
+          </Card>
+          {/* ------------------------------------- */}
           <Card tag="Forms" title="Input states">
             <div className="space-y-4">
               <Input
