@@ -109,8 +109,8 @@ export const ImageDropzone: React.FC<ImageDropzoneProps> = ({
             onClick={() => fileInputRef.current?.click()}
             className={`relative border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all duration-200 flex flex-col items-center justify-center gap-3 ${
               isDragging
-                ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/20 scale-[1.01]'
-                : 'border-gray-300 dark:border-gray-700 hover:border-indigo-400 bg-white dark:bg-gray-900'
+                ? 'border-primary bg-secondary-50/50 dark:bg-secondary/10 scale-[1.01]'
+                : 'border-border dark:border-border hover:border-secondary bg-white dark:bg-surface'
             }`}
           >
             {previewUrl ? (
@@ -121,8 +121,8 @@ export const ImageDropzone: React.FC<ImageDropzoneProps> = ({
                   alt="Vista previa"
                   className={
                     variant === 'avatar'
-                      ? 'w-28 h-28 rounded-full object-cover shadow-md border-2 border-indigo-500 mx-auto'
-                      : 'w-full h-48 rounded-lg object-cover shadow-md border-2 border-indigo-500 mx-auto'
+                      ? 'w-28 h-28 rounded-full object-cover shadow-md border-2 border-secondary mx-auto'
+                      : 'w-full h-48 rounded-lg object-cover shadow-md border-2 border-secondary mx-auto'
                   }
                 />
                 {selectedFile && !isUploading && (
@@ -141,18 +141,22 @@ export const ImageDropzone: React.FC<ImageDropzoneProps> = ({
               </div>
             ) : (
               /* Muestra Placeholder inicial */
-              <div className="p-4 bg-indigo-50 dark:bg-gray-800 rounded-full text-indigo-600 dark:text-indigo-400">
+              <div
+                className={`rounded-full p-4 text-secondary transition-colors duration-200 ${
+                  isDragging ? 'bg-primary/40' : 'bg-primary/10'
+                }`}
+              >
                 <UploadCloud className="w-8 h-8" />
               </div>
             )}
     
             <div className="space-y-1">
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
+              <p className="text-sm font-medium text-text dark:text-text-soft">
                 {selectedFile
                   ? selectedFile.name
                   : `Arrastra y suelta tu ${variant === 'avatar' ? 'avatar' : 'imagen'} aquí, o haz clic para explorar`}
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <p className="text-xs text-text dark:text-text-soft">
                 PNG o JPG (máx. 2MB)
               </p>
             </div>
@@ -161,13 +165,13 @@ export const ImageDropzone: React.FC<ImageDropzoneProps> = ({
           {/* Indicador / Barra de Progreso */}
           {isUploading && (
             <div className="space-y-2">
-              <div className="flex justify-between text-xs font-semibold text-gray-600 dark:text-gray-300">
+              <div className="flex justify-between text-xs font-semibold text-text dark:text-text-soft">
                 <span>Subiendo archivo...</span>
                 <span>{uploadProgress}%</span>
               </div>
               <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-indigo-600 transition-all duration-150 ease-out"
+                  className="h-full bg-primary transition-all duration-150 ease-out"
                   style={{ width: `${uploadProgress}%` }}
                 />
               </div>
