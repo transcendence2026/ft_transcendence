@@ -30,7 +30,7 @@ interface WebSocketContextValue {
 const WebSocketContext = createContext<WebSocketContextValue | undefined>(undefined);
 
 export function WebSocketProvider({ children }: { children: ReactNode }) {
-  const { token } = useAuth();
+  const { isAuthenticated } = useAuth();
   const socketRef = useRef<WebSocket | null>(null);
   const connectRef = useRef<() => void>(() => undefined);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -48,7 +48,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
 
   const connect = useCallback(() => {
 if (
-      (!token && !ALLOW_ANONYMOUS) || 
+      (!isAuthenticated && !ALLOW_ANONYMOUS) || 
       manuallyClosedRef.current || 
       socketRef.current?.readyState === WebSocket.OPEN ||
       socketRef.current?.readyState === WebSocket.CONNECTING
@@ -58,9 +58,8 @@ if (
 
     clearReconnectTimer();
     setStatus('connecting');
-    console.log(WS_URL)
-    const socket = new WebSocket(WS_URL + '?token=' + encodeURIComponent(token ?? "null"));
-    console.log(WS_URL + '?token=' + encodeURIComponent(token ?? "null"))
+    // Conexión limpia: el navegador envía automáticamente la cookie HttpOnly en el handshake
+    const socket = new WebSocket(WS_URL);
     socketRef.current = socket;
 
     socket.onopen = () => {
@@ -102,7 +101,7 @@ if (
       reconnectAttemptRef.current += 1;
       reconnectTimerRef.current = setTimeout(() => connectRef.current(), delay);
     };
-  }, [clearReconnectTimer, token]);
+  }, [clearReconnectTimer, isAuthenticated]);
 
   connectRef.current = connect;
 
@@ -121,7 +120,7 @@ if (
     manuallyClosedRef.current = false;
     reconnectAttemptRef.current = 0;
 
-    if (token || ALLOW_ANONYMOUS) {
+    if (isAuthenticated || ALLOW_ANONYMOUS) {
         connect();
     } else {
         close();
@@ -129,7 +128,7 @@ if (
     }
 
     return close;
-  }, [close, connect, token]);
+  }, [close, connect, isAuthenticated]);
 
   const sendMessage = useCallback((message: string | Record<string, unknown>) => {
     const socket = socketRef.current;
