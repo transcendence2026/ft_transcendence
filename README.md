@@ -8,7 +8,48 @@ The application uses PostgreSQL with Prisma. Start the development stack with:
 make up
 ```
 
-The application is available at https://localhost:8443. Because the local certificate is self-signed, your browser will show a certificate warning; accept it for local development. HTTP on http://localhost:8080 redirects to HTTPS.
+The Makefile uses `docker-compose-dev.yml` by default. It builds and starts the
+database, backend, and frontend containers in the background. The application
+is available at https://localhost:8443 when using the production proxy stack,
+or at http://localhost:8080 for the development stack.
+
+To use the production Compose configuration instead, pass the file explicitly:
+
+```sh
+make up COMPOSE_FILE=docker-compose-prod.yml
+```
+
+After the backend and database are running, seed the database with:
+
+```sh
+make seed
+```
+
+This is equivalent to:
+
+```sh
+docker compose -f docker-compose-dev.yml exec backend npx prisma db seed
+```
+
+The seed script clears and recreates the seed data, so do not run it against a
+database whose data you need to preserve. For a production Compose stack, use:
+
+```sh
+make seed COMPOSE_FILE=docker-compose-prod.yml
+```
+
+Useful commands while developing:
+
+```sh
+make logs
+make ps
+make down
+```
+
+When using `docker-compose-prod.yml`, the application is available at
+https://localhost:8443. Because the local certificate is self-signed, your
+browser will show a certificate warning; accept it for local development. HTTP
+on http://localhost:8080 redirects to HTTPS.
 Backend and frontend source directories are bind-mounted into their containers, so edits on the host are picked up by `tsx watch` and Vite without rebuilding. Prisma runs `db push` when the backend starts.
 
 Frontend component usage is documented in [`frontend/COMPONENTS.md`](frontend/COMPONENTS.md), including the interactive component playground at `/components`.
@@ -374,4 +415,3 @@ The app currently supports:
 - JWT-based protected routes
 - authenticated dashboard
 - 42 OAuth flow prepared for later production use
-

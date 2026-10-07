@@ -14,6 +14,7 @@ export interface LoginResponse {
 }
 
 interface User {
+	id: string;
   	username: string;
   	email: string;
   	isTwoFactorEnabled?: boolean;
@@ -82,8 +83,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
    		if (token) {
       		axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       		void axios
-        		//.get<User | { user: User }>(`${API_BASE_URL}/api/auth/me`)
-        		.get<User | { user: User }>('/api/auth/me') // <-- ruta directa
+			.get<User | { user: User }>(`${API_BASE_URL}/api/auth/me`)
 				.then((response) => {
 					// Si el backend devuelve { user: ... } usa eso; si devuelve el objeto directo, usa response.data
 					const data = response.data as any;

@@ -7,7 +7,6 @@ import { join } from 'path';
 import { FilesModule } from './files/files.module';
 import { AuthModule } from './auth/auth.module.js'; //importas la rama
 import { ConfigModule } from '@nestjs/config';
-import { DatabaseModule } from './database/database.module.js';
 import { HealthModule } from './health/health.module.js';
 import { MessagesModule } from './messages/messages.module.js';
 import { WebsocketGateway } from './websocket/websocket.gateway.js';
@@ -17,6 +16,7 @@ import { UsersModule } from './users/users.module.js';
 import { PostsModule } from './posts/posts.module.js';
 import { ReviewsModule } from './reviews/reviews.module.js';
 import { SocialModule } from './social/social.module.js';
+import { FriendsModule } from './friends/friends.module.js';
 
 @Module({
 	imports: [
@@ -24,7 +24,6 @@ import { SocialModule } from './social/social.module.js';
 		ConfigModule.forRoot({
 			isGlobal: true,
 		}),
-		DatabaseModule,
 		PrismaModule,
 		AuthModule, //Importa el Modulo de Autenticación
 		UsersModule,
@@ -33,6 +32,7 @@ import { SocialModule } from './social/social.module.js';
 		PostsModule,
 		ReviewsModule,
 		SocialModule,
+		FriendsModule,
 		MessagesModule,
     	HealthModule,
     	EventEmitterModule.forRoot(),
