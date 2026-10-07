@@ -140,7 +140,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             console.error('Error durante el logout:', err);
         } finally {
             setUser(null);
-            window.location.href = '/login';
+            // Reemplazamos la ubicación para no rebotar
+            window.location.replace('/login');
         }
     };
 

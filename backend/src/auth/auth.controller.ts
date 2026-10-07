@@ -78,6 +78,11 @@ export class AuthController {
 			sameSite: 'strict',
 			path: '/',
 		});
+		res.clearCookie('refreshToken', {
+            httpOnly: true,
+            sameSite: 'strict',
+            path: '/api/auth/refresh',
+        });
 		return { message: 'Logged out successfully'};
 	}
 

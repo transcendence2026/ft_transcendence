@@ -146,7 +146,10 @@ function DashboardContent() {
 		{ label: "Notifications", icon: "☆", active: false },
 	];
 
-  	const handleLogout = () => { logout(); navigate("/login"); };
+  	const handleLogout = async () => {
+		console.log("--> CLICK EN LOGOUT EJECUTADO");
+    	await logout();
+	};
 
 	const handleRejoindreSalon = () => {
     	// Ton sendMessage convertit déjà les objets en JSON, c'est parfait !
@@ -354,14 +357,13 @@ function DashboardContent() {
 						))}
 					</nav>
 
-					<Button
+					<button
 						type="button"
 						onClick={handleLogout}
-						variant="danger"
-						className="mt-8 w-fit border-t border-border px-4 pt-6 text-left text-sm"
+						className="relative z-50 mt-8 w-full border-t border-border px-4 pt-6 text-left text-sm font-semibold text-red-500 hover:text-red-400 cursor-pointer"
 					>
 						Log out
-					</Button>
+					</button>
 				</aside>
 				{/*FUSIONAMOS AMBOS BLOQUES*/}
 				<section className="min-w-0 flex-1 px-4 py-6 sm:px-8 lg:max-w-3xl lg:px-12">
