@@ -11,6 +11,7 @@ import { SocialPostCard, type SocialPost } from '../components/SocialPostCard';
 import ProtectedRoute from '../components/ProtectedRoute';
 import { useAuth } from '../../context/AuthContext';
 import { useWebSocket } from '../../context/WebSocketContext';
+import { ImageDropzone } from '../components/ImageDropzone';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
@@ -86,6 +87,7 @@ function ProfileContent() {
   const [profilePostsLoading, setProfilePostsLoading] = useState(false);
   const profilePostsEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isAvatarDropzoneVisible, setIsAvatarDropzoneVisible] = useState(false);
 
   useEffect(() => {
     if (!profileId) return;
@@ -224,9 +226,28 @@ function ProfileContent() {
           <label className="mt-5 block text-xs font-medium text-text-soft">Bio
             <textarea value={form.bio} onChange={(event) => setForm({ ...form, bio: event.target.value })} rows={4} className="mt-1.5 w-full resize-y rounded-control border border-border bg-surface-raised px-4 py-2.5 text-sm text-text focus:border-primary focus:outline-none" />
           </label>
-          <div className="mt-5 flex flex-wrap gap-3">
-            <Button type="button" onClick={() => void saveProfile()}>Save changes</Button>
-            <Button type="button" variant="secondary" onClick={() => fileInputRef.current?.click()}>Change avatar</Button>
+            {isAvatarDropzoneVisible && (
+              <div className="mt-5 max-w-md">
+                <ImageDropzone
+                  currentImageUrl={profileImage(profile.profile?.avatarUrl) ?? undefined}
+                  onFileSelect={(file) => {
+                    setAvatarPreview(URL.createObjectURL(file));
+                    void uploadAvatar(file);
+                  }}
+                  variant="avatar"
+                />
+              </div>
+            )}
+            <div className="mt-5 flex flex-wrap gap-3">
+              <Button type="button" onClick={() => void saveProfile()}>Save changes</Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setIsAvatarDropzoneVisible((current) => !current)}
+              >
+                {isAvatarDropzoneVisible ? 'Close avatar picker' : 'Change avatar'}
+              </Button>
+            {/* <Button type="button" variant="secondary" onClick={() => fileInputRef.current?.click()}>Change avatar</Button> */}
             <input ref={fileInputRef} type="file" accept="image/jpeg,image/png" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) { setAvatarPreview(URL.createObjectURL(file)); void uploadAvatar(file); } }} />
           </div>
         </section>}
