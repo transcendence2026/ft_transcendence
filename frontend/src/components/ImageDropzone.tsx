@@ -133,7 +133,7 @@ export const ImageDropzone: React.FC<ImageDropzoneProps> = ({
                       handleClear();
                     }}
                     className="absolute -top-2 -right-2 p-1.5 bg-red-600 text-white rounded-full hover:bg-red-700 transition shadow"
-                    title="Quitar imagen"
+                    title="Remove image"
                   >
                     <Close />
                   </button>
@@ -154,7 +154,7 @@ export const ImageDropzone: React.FC<ImageDropzoneProps> = ({
               <p className="text-sm font-medium text-text dark:text-text-soft">
                 {selectedFile
                   ? selectedFile.name
-                  : `Arrastra y suelta tu ${variant === 'avatar' ? 'avatar' : 'imagen'} aquí, o haz clic para explorar`}
+                  : `Drag and drop your ${variant === 'avatar' ? 'avatar' : 'imagen'} here, or click to explore`}
               </p>
               <p className="text-xs text-text dark:text-text-soft">
                 PNG o JPG (máx. 2MB)
