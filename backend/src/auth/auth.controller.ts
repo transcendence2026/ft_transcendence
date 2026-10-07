@@ -33,9 +33,9 @@ export class AuthController {
 		});
 		// Cookie 2: RefreshToken (7 días de vida)
     	res.cookie('refreshToken', refreshToken, {
-			httpOnly: true,
-			secure: isProduction,
-			sameSite: 'strict',
+			httpOnly: true, //JavaScripts no puede leerla ni manipularla
+			secure: isProduction, //Solo viaja bajo conexiones HTTPS cifradas
+			sameSite: 'strict', // No se envía desde sitios de terceros (mitiga ataques CSRF)
 			maxAge: 7 * 24 * 60 * 60 * 1000, // 7 días
 			path: '/api/auth/refresh',       // Solo se envía al endpoint de refresco
     });
