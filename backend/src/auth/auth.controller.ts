@@ -43,10 +43,17 @@ export class AuthController {
 
 	@Post('register') //Indica que el metodo responde peticiones http con metodo POST  a la url
 	@HttpCode(HttpStatus.CREATED) //codigo de estado que debe devolver la respuesto (201 registro)
-	async register(@Body() registerDto: RegisterUserDto) {
+	async register(
+		@Body() registerDto: RegisterUserDto,
+		@Res({ passthrough: true }) res: Response,
+	) {
 		//service genera la respuesta pero controller la empaqueta (pone codigo HTTP correcto) y se la da al cliente
 		//controlador es como si tradujera la respuesta al idioma de internet
-		return this.authService.register(registerDto);
+		const result = await this.authService.register(registerDto);
+		if (result.accessToken && result.refreshToken) {
+			this.setAuthCookie(res, result.accessToken, result.refreshToken);
+		}
+		return result;
 	}
 
 	@Post('login')
