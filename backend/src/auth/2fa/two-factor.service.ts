@@ -87,4 +87,35 @@ export class TwoFactorService {
 
         return true;
     }
+
+	//Funcion para poder desactivar el 2FA, pidiendo confirmacion de 6 digitos
+	async turnOffTwoFactor(userId: string, code: string) {
+		const user = await this.prisma.user.findUnique({
+			where: { id:userId},
+		});
+		//comprobamos si hay ese secreto unico aleatorio en BD o ese Usuario
+		if (!user || !user.twoFactorSecret) {
+      		throw new UnauthorizedException('No 2FA secret has been configured previously');
+    	}
+		//Comprobamos si estaba Activado el 2FA
+		if(!user.isTwoFactorEnabled) {
+			throw new UnauthorizedException('2FA is not enabled for this user');
+		}
+		//Comprobamos si es válido ese codigo de 6 digitos, antes de Borrar nada
+		const isCodeValid = verify({
+			token: code, //El token de 2FA: código de 6 dígitos que introdujo el usuario (code)
+			secret: user.twoFactorSecret, //La llave secreta que teníamos guardada en la base de datos
+		});
+		if (!isCodeValid) {
+      		throw new UnauthorizedException('Invalid verification code');
+		}
+		//Si es valido, entonces si apagamos el 2fa y limpiamos el secreto
+		return this.prisma.user.update({
+			where: { id: userId },
+			data: { 
+				isTwoFactorEnabled: false,
+				twoFactorSecret: null,
+			},
+		});
+	}
 }

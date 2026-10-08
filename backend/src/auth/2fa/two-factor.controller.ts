@@ -1,4 +1,5 @@
-import { Controller, Post, Body, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request, Res } from '@nestjs/common';
+import type { Response } from 'express';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard.js'; // Tu guard personalizado
 import { TwoFactorService } from './two-factor.service.js';
 import { AuthService } from '../auth.service.js';
@@ -27,18 +28,59 @@ export class TwoFactorController {
 	// y activar definitivamente el sistema en su cuenta.
 	@Post('turn-on')
 	@UseGuards(JwtAuthGuard)
-	async turnOnTwoFactor(@Request() req: any, @Body('code') code: string) {
+	async turnOnTwoFactor(
+		@Request() req: any,
+		@Body('code') code: string
+	) {
 		const userId = req.user.id;
 		await this.twoFactorService.turnOnTwoFactor(userId, code);
 		return { message: 'Two-factor authentication successfully enabled'};
 	}
 
-	//despues de que el usuario abra Google Authenticator,
-	// mira y escribe en pantalla el número de 6 dígitos
-	//llega la peticion a esta ruta de autenticación
 	@Post('authenticate')
-	async authenticate2fa(@Body('userId') userId: string, @Body('code') code: string) {
-    //entra en marcha el servicio de autenticacion (en auth.service)
-   	 return this.authService.authenticate2faLogin(userId, code);
+  async authenticate2fa(
+    @Body('userId') userId: string,
+    @Body('code') code: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.authenticate2faLogin(userId, code);
+
+    const isProd = process.env.NODE_ENV === 'production';
+    const cookieOptions = {
+      httpOnly: true,
+      secure: isProd || true, // Activo para HTTPS
+      sameSite: 'strict' as const,
+    };
+
+    if (result.accessToken) {
+      res.cookie('accessToken', result.accessToken, {
+        ...cookieOptions,
+        maxAge: 15 * 60 * 1000, // 15 minutos
+        path: '/',
+      });
+    }
+
+    if (result.refreshToken) {
+      res.cookie('refreshToken', result.refreshToken, {
+        ...cookieOptions,
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 días
+        path: '/api/auth/refresh',
+      });
+    }
+
+    return result;
+  }
+
+	//frontend hace una peticion HTTP a esta direccion
+	//para desactivar 2FA
+	//JwtService: herramienta para descifrar y validar tokens
+	@Post('turn-off')
+	@UseGuards(JwtAuthGuard)
+	async turnOffTwoFactor(
+		@Request() req: any,
+		@Body('code') code: string
+	) {
+		await this.twoFactorService.turnOffTwoFactor(req.user.id, code);
+		return { message: 'Two-factor authentication successfully disabled'};
 	}
 }

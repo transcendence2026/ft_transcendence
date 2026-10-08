@@ -1,23 +1,22 @@
 import React, { createContext, useState, useEffect, type ReactNode } from 'react';
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? '';
+// 1. Configuración global: permite que viajen las cookies HttpOnly en todas las peticiones
+axios.defaults.withCredentials = true;
 
-// La respuesta de login puede requerir 2FA
 export interface LoginResponse {
-	message?: string;
-  	token?: string;
-  	accessToken?: string;
-  	user?: User;
-  	requiresTwoFactor?: boolean;
-  	userId?: string;
+    message?: string;
+    requiresTwoFactor?: boolean;
+    userId?: string;
+    user?: User;
 }
 
-interface User {
-	id: string;
-  	username: string;
-  	email: string;
-  	isTwoFactorEnabled?: boolean;
+export interface User {
+    id?: string;
+    username: string;
+    email: string;
+    role?: string;
+    isTwoFactorEnabled?: boolean;
 }
 
 interface AuthResponse {
@@ -27,176 +26,155 @@ interface AuthResponse {
 }
 
 interface AuthContextType {
-  	token: string | null;
-  	user: User | null;
-  	login: (email: string, password: string) => Promise<any>;
-  	register: (username: string, email: string, password: string) => Promise<void>;
-  	oauth42: () => void;
-  	completeOAuth: (token: string, user?: User) => void;
-  	logout: () => void;
-  	loading: boolean;
-  	refreshUser: () => Promise<void>;
+    user: User | null;
+    token: string | null; // Mantenido para evitar errores en componentes que aún lo busquen
+    isAuthenticated: boolean;
+    loading: boolean;
+    login: (email: string, password: string) => Promise<LoginResponse>;
+    register: (username: string, email: string, password: string) => Promise<void>;
+    oauth42: () => void;
+    completeOAuth: () => Promise<void>;
+    logout: () => Promise<void>;
+    refreshUser: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-/*export const AuthProvider = ({ children }: { children: ReactNode }) => {
-	const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
-	const [user, setUser] = useState<User | null>(() => {
-    	const storedUser = localStorage.getItem('user');
-    	return storedUser ? (JSON.parse(storedUser) as User) : null;
-  	});
-  	const [loading, setLoading] = useState<boolean>(true);*/
-
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-    const [token, setToken] = useState<string | null>(() => {
-        const params = new URLSearchParams(window.location.search);
-        const urlToken = params.get('token');
-        if (urlToken) {
-            localStorage.setItem('token', urlToken);
-            return urlToken;
-        }
-        return localStorage.getItem('token');
-    });
-
-    const [user, setUser] = useState<User | null>(() => {
-        const storedUser = localStorage.getItem('user');
-        return storedUser ? (JSON.parse(storedUser) as User) : null;
-    });
-
+    const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
 
-  	// CAPTURAR EL TOKEN DE 42 AL VOLVER DE LA REDIRECCIÓN
-  	useEffect(() => {
-    	const params = new URLSearchParams(window.location.search);
-    	const urlToken = params.get('token');
+    // 2. Interceptor de Axios: renovación transparente mediante cookies (Silent Refresh)
+    useEffect(() => {
+        const interceptor = axios.interceptors.response.use(
+            (response) => response,
+            async (error) => {
+                const originalRequest = error.config;
 
-    	if (urlToken) {
-      		localStorage.setItem('token', urlToken);
-      		setToken(urlToken);
-      		window.history.replaceState({}, document.title, window.location.pathname);
-    	}
-  	}, []);
+                // Si responde 401 y no es una llamada ya en curso de refresh, login o logout
+                if (
+                    error.response?.status === 401 &&
+                    !originalRequest?._retry &&
+                    !originalRequest?.url?.includes('/api/auth/refresh') &&
+                    !originalRequest?.url?.includes('/api/auth/login') &&
+                    !originalRequest?.url?.includes('/api/auth/logout')
+                ) {
+                    originalRequest._retry = true;
 
-  	// COMPROBACION DE TOKEN INICIAL
-  	useEffect(() => {
-   		if (token) {
-      		axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      		void axios
-			.get<User | { user: User }>(`${API_BASE_URL}/api/auth/me`)
-				.then((response) => {
-					// Si el backend devuelve { user: ... } usa eso; si devuelve el objeto directo, usa response.data
-					const data = response.data as any;
-					const nextUser: User = data.user ? data.user : data;
+                    try {
+                        // El navegador envía automáticamente la cookie refreshToken a /api/auth/refresh
+                        await axios.post('/api/auth/refresh');
+                        // Reintentamos la petición original con la cookie accessToken recién renovada
+                        return axios(originalRequest);
+                    } catch (refreshErr) {
+                        // Si el refreshToken también expiró (7 días), la sesión terminó
+                        setUser(null);
+                        return Promise.reject(refreshErr);
+                    }
+                }
 
-					localStorage.setItem('user', JSON.stringify(nextUser));
-					setUser(nextUser);
+                return Promise.reject(error);
+            }
+        );
 
-					// Si el usuario ya está autenticado y entra a /login, redirige a /, 
-					// EXCEPTO si viene con ?userId= para completar el 2FA
-					const params = new URLSearchParams(window.location.search);
-					const isPending2Fa = params.has('userId');
+        return () => {
+            axios.interceptors.response.eject(interceptor);
+        };
+    }, []);
 
-					if (!isPending2Fa && (window.location.pathname === '/login' || window.location.pathname === '/login/')) {
-						window.location.href = '/';
-					}
-				})
-        		.catch((err) => {
-        			console.error('Error al verificar sesión en /me:', err);
-        			// Solo borramos si el backend rechaza explícitamente el token con 401 Unauthorized
-					if (err.response && err.response.status === 401) {
-						localStorage.removeItem('token');
-						localStorage.removeItem('user');
-						setToken(null);
-						setUser(null);
-					}
-        		})
-        		.finally(() => {
-        			setLoading(false);
-        		});
-			return;
-    	}
+    // 3. Comprobación de sesión al arrancar o recargar (F5)
+    const refreshUser = async () => {
+        try {
+            const response = await axios.get<User | { user: User }>('/api/auth/me');
+            const data = response.data as any;
+            const currentUser: User = data.user ? data.user : data;
+            setUser(currentUser);
 
-		delete axios.defaults.headers.common['Authorization'];
-		localStorage.removeItem('user');
-		setUser(null);
-		setLoading(false);
-	}, [token]);
+            // Redirección si ya está autenticado y accede a /login (excepto flujo 2FA)
+            const params = new URLSearchParams(window.location.search);
+            const isPending2Fa = params.has('userId');
+            if (!isPending2Fa && (window.location.pathname === '/login' || window.location.pathname === '/login/')) {
+                window.location.href = '/';
+            }
+        } catch {
+            setUser(null);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-	const persistSession = (authToken: string, authUser: User) => {
-		localStorage.setItem('token', authToken);
-		localStorage.setItem('user', JSON.stringify(authUser));
-		setToken(authToken);
-		setUser(authUser);
-	};
+    useEffect(() => {
+        void refreshUser();
+    }, []);
 
- 	const login = async (email: string, password: string) => {
-    	const res = await axios.post<LoginResponse>(`${API_BASE_URL}/api/auth/login`, { email, password });
-    
-		// Si requiere 2FA, devolvemos los datos para que LoginRightSide muestre el input de 6 dígitos
-		if (res.data?.requiresTwoFactor) {
-			return res.data;
-		}
+    // 4. Iniciar sesión
+    const login = async (email: string, password: string): Promise<LoginResponse> => {
+        const res = await axios.post<LoginResponse>('/api/auth/login', { email, password });
 
-		// Si el login es directo (sin 2FA), guardamos sesión y redirigimos como siempre
-		const token = res.data.token || res.data.accessToken;
-		if (token && res.data.user) {
-			persistSession(token, res.data.user);
-			window.location.href = '/';
-		}
+        if (res.data?.requiresTwoFactor) {
+            return res.data;
+        }
 
-    	return res.data;
-  	};
+        // Si el login fue exitoso, el backend ya inyectó las cookies HttpOnly
+        await refreshUser();
+        window.location.href = '/';
+        return res.data;
+    };
 
-  	const register = async (username: string, email: string, password: string) => {
-		const res = await axios.post<AuthResponse>(`${API_BASE_URL}/api/auth/register`, { username, email, password });
-		persistSession(res.data.token, res.data.user);
-		window.location.href = '/';
-	};
+    // 5. Registro
+    const register = async (username: string, email: string, password: string) => {
+        await axios.post('/api/auth/register', { username, email, password });
+        await refreshUser();
+        window.location.href = '/';
+    };
 
- 	const oauth42 = () => {
-    	window.location.href = `${API_BASE_URL}/api/auth/oauth/42`;
-  	};
+    // 6. OAuth 42: Redirección al endpoint del backend
+    const oauth42 = () => {
+        window.location.href = '/api/auth/oauth/42';
+    };
 
-	const completeOAuth = (authToken: string, authUser?: User) => {
-		const normalizedUser = authUser ?? { username: '42 User', email: '' };
-		persistSession(authToken, normalizedUser);
-		window.location.href = '/';
-	};
+    const completeOAuth = async () => {
+        await refreshUser();
+        window.location.href = '/';
+    };
 
-	const logout = () => {
-		localStorage.removeItem('token');
-		localStorage.removeItem('user');
-		setToken(null);
-		setUser(null);
-		window.location.href = '/';
-	};
+    // 7. Cerrar sesión
+    const logout = async () => {
+        try {
+            await axios.post('/api/auth/logout');
+        } catch (err) {
+            console.error('Error durante el logout:', err);
+        } finally {
+            setUser(null);
+            // Reemplazamos la ubicación para no rebotar
+            window.location.replace('/login');
+        }
+    };
 
-	const refreshUser = async () => {
-		if (!token) return;
-		try {
-			const response = await axios.get<User | { user: User }>(`${API_BASE_URL}/api/auth/me`);
-			const data = response.data as any;
-			const nextUser: User = data.user ? data.user : data;
-			localStorage.setItem('user', JSON.stringify(nextUser));
-			setUser(nextUser);
-		} catch (err) {
-			console.error('Error al refrescar usuario:', err);
-		}
-	};
-
-	return (
-		<AuthContext.Provider value={{ token, user, login, register, oauth42, completeOAuth, logout, loading, refreshUser }}>
-			{children}
-		</AuthContext.Provider>
-	);
+    return (
+        <AuthContext.Provider
+            value={{
+                user,
+                token: user ? 'cookie-session' : null,
+                isAuthenticated: Boolean(user),
+                loading,
+                login,
+                register,
+                oauth42,
+                completeOAuth,
+                logout,
+                refreshUser,
+            }}
+        >
+            {children}
+        </AuthContext.Provider>
+    );
 };
 
 export const useAuth = () => {
-	const context = React.useContext(AuthContext);
-	if (!context) {
-		throw new Error('useAuth must be used within an AuthProvider');
-	}
-
-	return context;
+    const context = React.useContext(AuthContext);
+    if (!context) {
+        throw new Error('useAuth must be used within an AuthProvider');
+    }
+    return context;
 };
