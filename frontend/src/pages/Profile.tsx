@@ -13,7 +13,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useWebSocket } from '../../context/WebSocketContext';
 import { ImageDropzone } from '../components/ImageDropzone';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? '';
 
 interface Dish {
   id: string;
@@ -29,10 +29,21 @@ interface ProfileData {
   email: string;
   status: 'ONLINE' | 'OFFLINE' | 'INGAME';
   createdAt: string;
+  isPrivate?: boolean;
   profile: { avatarUrl?: string | null; bio?: string | null } | null;
   favoriteDishes: Dish[];
   stats: { recipesRated: number; averageRecipeRating: number; favoriteIngredients: string[] };
   friendship: { status: 'SELF' | 'NONE' | 'OUTGOING_PENDING' | 'INCOMING_PENDING' | 'ACCEPTED' | 'DECLINED'; requestId: string | null };
+}
+
+interface BlockedUserItem {
+  blockId: string;
+  user: {
+    id: string;
+    username: string;
+    email: string;
+    avatarUrl: string | null;
+  };
 }
 
 interface FriendRequest {
@@ -88,6 +99,8 @@ function ProfileContent() {
   const profilePostsEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isAvatarDropzoneVisible, setIsAvatarDropzoneVisible] = useState(false);
+  const [isPrivate, setIsPrivate] = useState<boolean>(false);
+  const [blockedUsers, setBlockedUsers] = useState<BlockedUserItem[]>([]);
 
   useEffect(() => {
     if (!profileId) return;
@@ -98,6 +111,7 @@ function ProfileContent() {
 
     void axios.get<ProfileData>(endpoint).then(async ({ data }) => {
       setProfile(data);
+	  setIsPrivate(Boolean(data.isPrivate));
       setFriendship(data.friendship);
       setForm({ username: data.username, email: data.email, bio: data.profile?.bio ?? '' });
       if (isOwnProfile) {
@@ -105,6 +119,13 @@ function ProfileContent() {
         setFriends(friendsResponse.data.friends);
         setIncomingRequests(friendsResponse.data.incomingRequests);
         setOutgoingRequests(friendsResponse.data.outgoingRequests);
+		//carga lista de bloqueados
+		try {
+          const blockedRes = await axios.get<BlockedUserItem[]>(`${API_BASE_URL}/api/users/blocked`);
+          setBlockedUsers(blockedRes.data);
+        } catch {
+			// Ignorar si falla la carga inicial de bloqueos
+		}
       }
     }).catch(() => setError('We could not load this profile.'));
   }, [profileId, isOwnProfile, websocketStatus]);
@@ -182,6 +203,43 @@ function ProfileContent() {
     setMessage('Friend request cancelled.');
   };
 
+  // Alternar privacidad
+  const togglePrivacy = async () => {
+    try {
+      const nextState = !isPrivate;
+      await axios.patch(`${API_BASE_URL}/api/auth/privacy`, { isPrivate: nextState });
+      setIsPrivate(nextState);
+      setMessage(`Profile set to ${nextState ? 'private' : 'public'}.`);
+      setError(null);
+    } catch {
+      setError('Could not update privacy setting.');
+    }
+  };
+
+  // Bloquear usuario ajeno
+  const blockUser = async () => {
+    if (!profileId) return;
+    if (!window.confirm(`Are you sure you want to block ${profile?.username}?`)) return;
+    try {
+      await axios.post(`${API_BASE_URL}/api/users/block/${profileId}`);
+      setMessage(`User ${profile?.username} blocked.`);
+      navigate('/dashboard'); // Redirige fuera del perfil bloqueado
+    } catch {
+      setError('Could not block user.');
+    }
+  };
+
+  // Desbloquear usuario desde la lista
+  const unblockUser = async (targetId: string) => {
+    try {
+      await axios.delete(`${API_BASE_URL}/api/users/block/${targetId}`);
+      setBlockedUsers((current) => current.filter((item) => item.user.id !== targetId));
+      setMessage('User unblocked successfully.');
+    } catch {
+      setError('Could not unblock user.');
+    }
+  };
+
   if (error && !profile) return <main className="min-h-screen bg-background p-8 text-text"><p>{error}</p></main>;
   if (!profile) return <main className="min-h-screen bg-background p-8 text-muted">Loading profile...</main>;
 
@@ -214,6 +272,7 @@ function ProfileContent() {
             {!isOwnProfile && friendship?.status === 'OUTGOING_PENDING' && <Badge tone="muted">Request sent</Badge>}
             {!isOwnProfile && friendship?.status === 'ACCEPTED' && <Badge tone="success">Friends</Badge>}
             {!isOwnProfile && friendship?.status === 'INCOMING_PENDING' && <div className="flex gap-2"><Button type="button" onClick={() => void respondToFriendRequest('accept')}>Accept</Button><Button type="button" variant="ghost" onClick={() => void respondToFriendRequest('reject')}>Reject</Button></div>}
+			{!isOwnProfile && <Button type="button" variant="ghost" className="text-red-400 hover:text-red-300" onClick={() => void blockUser()}>Block user</Button>}
           </div>
           <p className="mt-7 max-w-2xl text-base leading-relaxed text-text-soft">{profile.profile?.bio || 'No bio yet. Tell the community what you are cooking.'}</p>
         </section>
@@ -226,6 +285,29 @@ function ProfileContent() {
           <label className="mt-5 block text-xs font-medium text-text-soft">Bio
             <textarea value={form.bio} onChange={(event) => setForm({ ...form, bio: event.target.value })} rows={4} className="mt-1.5 w-full resize-y rounded-control border border-border bg-surface-raised px-4 py-2.5 text-sm text-text focus:border-primary focus:outline-none" />
           </label>
+		  {/* AQUÍ VA BOTON DE PERFIL PUBLICO/PRIVADO */}
+		  <div className="mt-5 flex items-center justify-between rounded-control border border-border bg-surface-raised p-4">
+            <div>
+              <p className="text-sm font-medium text-text">Private account</p>
+              <p className="text-xs text-muted">Only accepted friends will be able to see your posts and ratings.</p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={isPrivate}
+              onClick={() => void togglePrivacy()}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                isPrivate ? 'bg-primary' : 'bg-border'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-background transition-transform ${
+                  isPrivate ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+
             {isAvatarDropzoneVisible && (
               <div className="mt-5 max-w-md">
                 <ImageDropzone
