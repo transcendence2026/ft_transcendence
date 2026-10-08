@@ -1,4 +1,4 @@
-.PHONY: help build certs up seed down restart logs ps clean
+.PHONY: help build certs up push seed down restart logs ps clean
 
 COMPOSE_FILE ?= docker-compose-dev.yml
 COMPOSE := docker compose -f $(COMPOSE_FILE)
@@ -11,6 +11,7 @@ help:
 	@printf "Available commands:\n"
 	@printf "  make build    Build all service images\n"
 	@printf "  make up       Build and start the development stack\n"
+	@printf "  make push     Push the Prisma schema to the database\n"
 	@printf "  make seed     Seed the database\n"
 	@printf "  make up COMPOSE_FILE=docker-compose-prod.yml  Start the production stack\n"
 	@printf "  make down     Stop and remove containers\n"
@@ -37,6 +38,9 @@ certs:
 
 up: certs
 	$(COMPOSE) up --build -d
+
+push:
+	$(COMPOSE) exec backend npm run db:push
 
 seed:
 	$(COMPOSE) exec backend npx prisma db seed
