@@ -411,6 +411,38 @@ async function seedPosts(users: { id: string; username: string }[]) {
 	return posts.length;
 }
 
+// Seeds reviews: each user reviews a random subset of dishes, respecting the
+// @@unique([authorId, dishId]) constraint (one review per user per dish)
+async function seedReviews(users: { id: string; username: string }[]) {
+	const dishes = await prisma.dish.findMany({ select: { id: true } });
+	let totalReviews = 0;
+
+	for (const user of users) {
+		// Each user reviews 5-10 random dishes
+		const dishesToReview = randomSubset(dishes, randomInt(5, 10));
+
+		for (const dish of dishesToReview) {
+			await prisma.review.create({
+				data: {
+					rating: randomInt(1, 5),
+					comment: randomChoice([
+						'Loved it, will order again.',
+						'Good but a bit pricey.',
+						'Exceeded expectations!',
+						'Decent, nothing special.',
+						null,
+					]),
+					authorId: user.id,
+					dishId: dish.id,
+				},
+			});
+			totalReviews++;
+		}
+	}
+
+	return totalReviews;
+}
+
 // Main orchestrator function that executes the database seeding workflow in order
 async function main() {
 	// Step 1: Wipe existing database records to maintain a clean test environment
@@ -432,6 +464,10 @@ async function main() {
 	// Step 5: Seed social content so the dashboard feed has real examples.
 	console.log('Seeding social posts...');
 	const postCount = await seedPosts(users);
+
+	// Step 6: Seed reviews
+	console.log('Seeding reviews...');
+	const reviewCount = await seedReviews(users);
 
 	// Log a summary of all inserted entities
 	console.log(`Done: ${RESTAURANTS.length} restaurants, ${dishCount} dishes, ${tags.length} tags, ${users.length} users, ${postCount} posts.`);
