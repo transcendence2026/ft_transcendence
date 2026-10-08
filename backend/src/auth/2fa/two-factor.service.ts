@@ -1,5 +1,5 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service.js'; // Ajusta la ruta a tu PrismaService según tu estructura
+import { PrismaService } from '../../prisma/prisma.service.js';
 import { generateSecret, generateURI, verify} from 'otplib';
 import * as qrcode from 'qrcode';
 

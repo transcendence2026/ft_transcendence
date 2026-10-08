@@ -19,6 +19,12 @@ export interface User {
     isTwoFactorEnabled?: boolean;
 }
 
+interface AuthResponse {
+	token: string;
+  	accessToken?: string;
+  	user: User;
+}
+
 interface AuthContextType {
     user: User | null;
     token: string | null; // Mantenido para evitar errores en componentes que aún lo busquen

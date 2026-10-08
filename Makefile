@@ -1,6 +1,7 @@
-.PHONY: help build certs up down restart logs ps clean
+.PHONY: help build certs up seed down restart logs ps clean
 
-COMPOSE := docker compose
+COMPOSE_FILE ?= docker-compose-dev.yml
+COMPOSE := docker compose -f $(COMPOSE_FILE)
 
 CERT_DIR := proxy/certs
 CERT_KEY := $(CERT_DIR)/selfsigned.key
@@ -9,7 +10,9 @@ CERT_CRT := $(CERT_DIR)/selfsigned.crt
 help:
 	@printf "Available commands:\n"
 	@printf "  make build    Build all service images\n"
-		@printf "  make up       Build and start the development stack\n"
+	@printf "  make up       Build and start the development stack\n"
+	@printf "  make seed     Seed the database\n"
+	@printf "  make up COMPOSE_FILE=docker-compose-prod.yml  Start the production stack\n"
 	@printf "  make down     Stop and remove containers\n"
 	@printf "  make restart  Restart all services\n"
 	@printf "  make logs     Follow service logs\n"
@@ -35,6 +38,9 @@ certs:
 up: certs
 	$(COMPOSE) up --build -d
 
+seed:
+	$(COMPOSE) exec backend npx prisma db seed
+
 down:
 	$(COMPOSE) down
 
@@ -54,4 +60,3 @@ clean:
 	fi
 	
 	$(COMPOSE) down -v --remove-orphans
-
