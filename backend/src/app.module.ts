@@ -19,6 +19,7 @@ import { SocialModule } from './social/social.module.js';
 import { PrivacyModule } from './privacy/privacy.module.js';
 import { RecommendationModule } from './recommendation/recommendation.module.js';
 import { FriendsModule } from './friends/friends.module.js';
+import { SearchModule } from './search/search.module';
 
 @Module({
 	imports: [
@@ -39,6 +40,7 @@ import { FriendsModule } from './friends/friends.module.js';
 		FriendsModule,
 		MessagesModule,
     	HealthModule,
+		SearchModule,
     	EventEmitterModule.forRoot(),
 		//Modulos siguientes que importaremos cuando se hagan
 		//UsersModule,  //Modulo para gesrionar perfiles y datos usuarios

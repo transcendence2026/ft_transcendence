@@ -12,7 +12,7 @@ async function bootstrap() {
   //app.setGlobalPrefix('api');
   app.enableCors({ origin: true, credentials: true });
   app.useWebSocketAdapter(new WsAdapter(app));
-  app.useGlobalPipes(new ValidationPipe());
+  app.useGlobalPipes(new ValidationPipe({ transform: true }));
   app.use(cookieParser()); //parsear cookies entrantes
   app.enableCors({
       origin: process.env.FRONTEND_URL || 'http://localhost:8443', //le dice al backend q acepte lo que le llega de ese puerto
