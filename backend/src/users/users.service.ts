@@ -31,11 +31,35 @@ export class UsersService {
         return { status: friendship.status, requestId: friendship.id };
       });
 
+	  //Regla de privacidad: Si es privado y no es él ni un amigo
+	  const isSelf = userId === viewerId;
+	  const isFriend = relationship.status === 'ACCEPTED';
+
+	  // CASO 1: Es privado y no soy yo ni un amigo aceptado
+	  if(user.isPrivate && !isSelf && !isFriend) {
+		return {
+        id: user.id,
+        username: user.username,
+        email: null,                          // Oculto por privacidad
+        status: user.status,
+        isPrivate: true,                      // Indica al frontend que está bloqueado
+        createdAt: user.createdAt,
+        profile: {
+          avatarUrl: user.profile?.avatarUrl ?? null,
+          bio: null,                          // Oculto por privacidad
+        },
+        friendship: relationship,
+        favoriteDishes: [],                   // Vacío
+        stats: null,                          // Nulo para activar el candado en UI
+      };
+	}
+	// CASO 2: Perfil público o consulta propia (return completo)
     return {
       id: user.id,
       username: user.username,
-      email: user.email,
+      email: isSelf ? user.email : null, //Solo visible para el dueño
       status: user.status,
+	  isPrivate: user.isPrivate,
       createdAt: user.createdAt,
       profile: user.profile,
       friendship: relationship,
@@ -66,6 +90,7 @@ export class UsersService {
       },
     };
   }
+
   async updateProfile(userId: string, data: UpdateProfileDto) {
     if (data.username) {
       const existingUser = await this.prisma.user.findFirst({

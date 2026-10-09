@@ -30,9 +30,10 @@ interface ProfileData {
   status: 'ONLINE' | 'OFFLINE' | 'INGAME';
   createdAt: string;
   isPrivate?: boolean;
+  message?: string | null;
   profile: { avatarUrl?: string | null; bio?: string | null } | null;
   favoriteDishes: Dish[];
-  stats: { recipesRated: number; averageRecipeRating: number; favoriteIngredients: string[] };
+  stats: { recipesRated: number; averageRecipeRating: number; favoriteIngredients: string[] | null; } | null;
   friendship: { status: 'SELF' | 'NONE' | 'OUTGOING_PENDING' | 'INCOMING_PENDING' | 'ACCEPTED' | 'DECLINED'; requestId: string | null };
 }
 
@@ -130,18 +131,21 @@ function ProfileContent() {
     }).catch(() => setError('We could not load this profile.'));
   }, [profileId, isOwnProfile, websocketStatus]);
 
+  // Si es un perfil privado bloqueado, no intentamos pedir posts
+  const isLockedPrivateProfile = !isOwnProfile && profile?.isPrivate && !profile?.stats;
+
   useEffect(() => {
-    if (activeTab !== 'posts' || !profileId) return;
+    if (activeTab !== 'posts' || !profileId || isLockedPrivateProfile) return;
     setProfilePostsLoading(true);
     void axios.get<SocialPostsResponse>(`${API_BASE_URL}/api/social/feed?authorId=${profileId}&limit=8`)
       .then(({ data }) => { setProfilePosts(data.items); setProfilePostsCursor(data.nextCursor); setProfilePostsHasMore(data.hasMore); })
       .catch(() => setError('We could not load this user\'s posts.'))
       .finally(() => setProfilePostsLoading(false));
-  }, [activeTab, profileId, websocketStatus]);
+  }, [activeTab, profileId, websocketStatus, isLockedPrivateProfile]);
 
   useEffect(() => {
     const sentinel = profilePostsEndRef.current;
-    if (activeTab !== 'posts' || !sentinel || !profilePostsHasMore || !profilePostsCursor || profilePostsLoading) return;
+    if (activeTab !== 'posts' || !sentinel || !profilePostsHasMore || !profilePostsCursor || profilePostsLoading || isLockedPrivateProfile) return;
     const observer = new IntersectionObserver(([entry]) => {
       if (!entry.isIntersecting || !profileId) return;
       setProfilePostsLoading(true);
@@ -152,7 +156,7 @@ function ProfileContent() {
     }, { rootMargin: '320px' });
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [activeTab, profileId, profilePostsCursor, profilePostsHasMore, profilePostsLoading]);
+  }, [activeTab, profileId, profilePostsCursor, profilePostsHasMore, profilePostsLoading, isLockedPrivateProfile]);
 
   const saveProfile = async () => {
     try {
@@ -262,7 +266,7 @@ function ProfileContent() {
             <div className="flex items-center gap-5">
               <Avatar name={profile.username} src={avatarPreview ?? profileImage(profile.profile?.avatarUrl)} presence={presence} size="xl" />
               <div>
-                <div className="mb-2 flex flex-wrap items-center gap-2"><Badge tone={profile.status === 'ONLINE' ? 'success' : 'muted'}>{profile.status.toLowerCase()}</Badge><Badge>{profile.stats.recipesRated} recipes rated</Badge></div>
+                <div className="mb-2 flex flex-wrap items-center gap-2"><Badge tone={profile.status === 'ONLINE' ? 'success' : 'muted'}>{profile.status.toLowerCase()}</Badge>{profile.stats &&<Badge>{profile.stats.recipesRated} recipes rated</Badge>}</div>
                 <h1 className="font-serif text-4xl tracking-[-0.04em]">{profile.username}</h1>
                 <p className="mt-1 text-sm text-muted">Member since {memberSince}</p>
               </div>
@@ -274,7 +278,7 @@ function ProfileContent() {
             {!isOwnProfile && friendship?.status === 'INCOMING_PENDING' && <div className="flex gap-2"><Button type="button" onClick={() => void respondToFriendRequest('accept')}>Accept</Button><Button type="button" variant="ghost" onClick={() => void respondToFriendRequest('reject')}>Reject</Button></div>}
 			{!isOwnProfile && <Button type="button" variant="ghost" className="text-red-400 hover:text-red-300" onClick={() => void blockUser()}>Block user</Button>}
           </div>
-          <p className="mt-7 max-w-2xl text-base leading-relaxed text-text-soft">{profile.profile?.bio || 'No bio yet. Tell the community what you are cooking.'}</p>
+          <p className="mt-7 max-w-2xl text-base leading-relaxed text-text-soft">{profile.profile?.bio || (isLockedPrivateProfile ? '' : 'No bio yet. Tell the community what you are cooking.')}</p>
         </section>
 
         {isEditing && <section className="my-8 max-w-2xl border-b border-border pb-8">
@@ -330,25 +334,97 @@ function ProfileContent() {
                 {isAvatarDropzoneVisible ? 'Close avatar picker' : 'Change avatar'}
               </Button>
             {/* <Button type="button" variant="secondary" onClick={() => fileInputRef.current?.click()}>Change avatar</Button> */}
-            <input ref={fileInputRef} type="file" accept="image/jpeg,image/png" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) { setAvatarPreview(URL.createObjectURL(file)); void uploadAvatar(file); } }} />
-          </div>
-        </section>}
+              <input ref={fileInputRef} type="file" accept="image/jpeg,image/png" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) { setAvatarPreview(URL.createObjectURL(file)); void uploadAvatar(file); } }} />
+        	</div>
+          </section>}
 
-        {message && <p className="mt-5 text-sm text-emerald-300" role="status">{message}</p>}
-        {error && <p className="mt-5 text-sm text-red-300" role="alert">{error}</p>}
-        {isOwnProfile && <section className="mt-8 max-w-2xl space-y-8 border-y border-border py-6">
-          <div>
-            <div className="flex items-center justify-between"><h2 className="font-serif text-2xl">Friends</h2><Badge tone="success">{friends.length}</Badge></div>
-            <div className="mt-4 space-y-3">{friends.length ? friends.map((friend) => <button key={friend.id} type="button" onClick={() => navigate(`/profile/${friend.id}`)} className="flex w-full items-center gap-3 border border-border bg-surface p-3 text-left hover:border-primary"><Avatar name={friend.username} src={profileImage(friend.profile?.avatarUrl)} size="sm" /><span className="text-sm font-semibold">{friend.username}</span></button>) : <p className="text-sm text-muted">Your accepted friends will appear here.</p>}</div>
-          </div>
-          <div>
-            <div className="flex items-center justify-between"><h2 className="font-serif text-2xl">Friend requests</h2><Badge tone="accent">{incomingRequests.length + outgoingRequests.length} pending</Badge></div>
-            <div className="mt-4 space-y-3">{incomingRequests.map((request) => <div key={request.id} className="flex items-center justify-between gap-3 border border-border bg-surface p-3"><div className="flex items-center gap-3"><Avatar name={request.sender.username} src={profileImage(request.sender.profile?.avatarUrl)} size="sm" /><span className="text-sm font-semibold">{request.sender.username}</span></div><div className="flex gap-2"><Button type="button" onClick={() => void respondToFriendRequest('accept', request.id)} className="px-3 py-1 text-xs">Accept</Button><Button type="button" variant="ghost" onClick={() => void respondToFriendRequest('reject', request.id)} className="px-3 py-1 text-xs">Reject</Button></div></div>)}{outgoingRequests.map((request) => <div key={request.id} className="flex items-center justify-between gap-3 border border-border bg-surface p-3"><div className="flex items-center gap-3"><Avatar name={request.receiver.username} src={profileImage(request.receiver.profile?.avatarUrl)} size="sm" /><span className="text-sm text-muted">Waiting for {request.receiver.username}</span></div><Button type="button" variant="ghost" onClick={() => void cancelFriendRequest(request.id)} className="px-3 py-1 text-xs text-primary-soft">Cancel</Button></div>)}{!incomingRequests.length && !outgoingRequests.length && <p className="text-sm text-muted">No pending requests.</p>}</div>
-          </div>
-        </section>}
-        <section className="mt-8">
-          <Tabs tabs={[{ id: 'overview', label: 'Overview' }, { id: 'favorites', label: 'Favorite dishes' }, { id: 'posts', label: 'Posts' }]} activeTab={activeTab} onChange={setActiveTab} />
-          {activeTab === 'overview' ? <div className="mt-8 grid gap-6 md:grid-cols-3"><div className="border-l-2 border-primary px-5"><p className="text-sm text-muted">Recipes rated</p><p className="mt-2 font-serif text-3xl text-text">{profile.stats.recipesRated}</p></div><div className="border-l-2 border-primary px-5"><p className="text-sm text-muted">Average recipe rating</p><p className="mt-2 font-serif text-3xl text-text">{profile.stats.averageRecipeRating || '--'}<span className="ml-1 text-base text-muted">/ 5</span></p></div><div className="border-l-2 border-primary px-5"><p className="text-sm text-muted">Favourite ingredients</p><div className="mt-2 flex flex-wrap gap-2">{profile.stats.favoriteIngredients.length ? profile.stats.favoriteIngredients.map((ingredient) => <Badge key={ingredient} tone="accent">{ingredient}</Badge>) : <span className="font-serif text-lg text-text">Not rated yet</span>}</div></div></div> : activeTab === 'favorites' ? <div className="mt-8 grid gap-4 md:grid-cols-3">{profile.favoriteDishes.length ? profile.favoriteDishes.map((dish) => <article key={dish.id} className="border border-border bg-surface p-5"><Badge tone="accent">{dish.cuisine}</Badge><h2 className="mt-4 font-serif text-xl">{dish.name}</h2><p className="mt-1 text-sm text-muted">{dish.restaurant}</p><p className="mt-4 text-sm text-secondary">{'*'.repeat(dish.rating)}<span className="text-border">{'*'.repeat(5 - dish.rating)}</span></p></article>) : <p className="text-muted">Favorite dishes will appear after you review a dish.</p>}</div> : <div className="mt-8 space-y-4">{profilePostsLoading && !profilePosts.length ? <Loader label="Loading posts" /> : profilePosts.length ? profilePosts.map((post) => <SocialPostCard key={post.id} post={post} />) : <p className="text-muted">No visible posts yet.</p>}<div ref={profilePostsEndRef} className="min-h-16">{profilePostsLoading && <Loader label="Loading more posts" />}</div></div>}
+          {message && <p className="mt-5 text-sm text-emerald-300" role="status">{message}</p>}
+          {error && <p className="mt-5 text-sm text-red-300" role="alert">{error}</p>}
+          {isOwnProfile && <section className="mt-8 max-w-2xl space-y-8 border-y border-border py-6">
+            <div>
+              <div className="flex items-center justify-between"><h2 className="font-serif text-2xl">Friends</h2><Badge tone="success">{friends.length}</Badge></div>
+              <div className="mt-4 space-y-3">{friends.length ? friends.map((friend) => <button key={friend.id} type="button" onClick={() => navigate(`/profile/${friend.id}`)} className="flex w-full items-center gap-3 border border-border bg-surface p-3 text-left hover:border-primary"><Avatar name={friend.username} src={profileImage(friend.profile?.avatarUrl)} size="sm" /><span className="text-sm font-semibold">{friend.username}</span></button>) : <p className="text-sm text-muted">Your accepted friends will appear here.</p>}</div>
+            </div>
+            <div>
+              <div className="flex items-center justify-between"><h2 className="font-serif text-2xl">Friend requests</h2><Badge tone="accent">{incomingRequests.length + outgoingRequests.length} pending</Badge></div>
+              <div className="mt-4 space-y-3">{incomingRequests.map((request) => <div key={request.id} className="flex items-center justify-between gap-3 border border-border bg-surface p-3"><div className="flex items-center gap-3"><Avatar name={request.sender.username} src={profileImage(request.sender.profile?.avatarUrl)} size="sm" /><span className="text-sm font-semibold">{request.sender.username}</span></div><div className="flex gap-2"><Button type="button" onClick={() => void respondToFriendRequest('accept', request.id)} className="px-3 py-1 text-xs">Accept</Button><Button type="button" variant="ghost" onClick={() => void respondToFriendRequest('reject', request.id)} className="px-3 py-1 text-xs">Reject</Button></div></div>)}{outgoingRequests.map((request) => <div key={request.id} className="flex items-center justify-between gap-3 border border-border bg-surface p-3"><div className="flex items-center gap-3"><Avatar name={request.receiver.username} src={profileImage(request.receiver.profile?.avatarUrl)} size="sm" /><span className="text-sm text-muted">Waiting for {request.receiver.username}</span></div><Button type="button" variant="ghost" onClick={() => void cancelFriendRequest(request.id)} className="px-3 py-1 text-xs text-primary-soft">Cancel</Button></div>)}{!incomingRequests.length && !outgoingRequests.length && <p className="text-sm text-muted">No pending requests.</p>}</div>
+            </div>
+          </section>}
+
+		  {/* CONTENIDO DEL PERFIL: TARJETA DE PRIVACIDAD O TABS */}
+          <section className="mt-8">
+		    {isLockedPrivateProfile ? (
+              <div className="flex flex-col items-center justify-center rounded-control border border-border bg-surface p-12 text-center">
+                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-surface-raised text-2xl border border-border">
+                  🔒
+				</span>
+                <h2 className="mt-4 font-serif text-2xl tracking-tight">This account is private</h2>
+                <p className="mt-2 max-w-md text-sm text-muted">
+                  {profile.message || 'Follow or become friends with this user to see their recipe reviews, ratings, and shared posts.'}
+                </p>
+                {friendship?.status === 'NONE' && (
+                  <div className="mt-6">
+                    <Button type="button" onClick={() => void sendFriendRequest()}>
+                      Send friend request
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+        	    <Tabs tabs={[{ id: 'overview', label: 'Overview' }, { id: 'favorites', label: 'Favorite dishes' }, { id: 'posts', label: 'Posts' }]} activeTab={activeTab} onChange={setActiveTab} />
+          	    {activeTab === 'overview' && profile.stats ? (
+				  <div className="mt-8 grid gap-6 md:grid-cols-3">
+				    <div className="border-l-2 border-primary px-5">
+					  <p className="text-sm text-muted">Recipes rated</p>
+					  <p className="mt-2 font-serif text-3xl text-text">{profile.stats.recipesRated}</p>
+				    </div>
+				    <div className="border-l-2 border-primary px-5">
+				      <p className="text-sm text-muted">Average recipe rating</p>
+					  <p className="mt-2 font-serif text-3xl text-text">{profile.stats.averageRecipeRating || '--'}<span className="ml-1 text-base text-muted">/ 5</span></p>
+				    </div>
+				    <div className="border-l-2 border-primary px-5">
+					  <p className="text-sm text-muted">Favourite ingredients</p>
+				      <div className="mt-2 flex flex-wrap gap-2">
+						{profile.stats.favoriteIngredients?.length ? (
+						  profile.stats.favoriteIngredients.map((ingredient) => <Badge key={ingredient} tone="accent">{ingredient}</Badge>)
+						) : (
+						  <span className="font-serif text-lg text-text">Not rated yet</span>
+					    )}
+					  </div>
+				    </div>
+			      </div>
+		      ) : activeTab === 'favorites' ? (
+			    <div className="mt-8 grid gap-4 md:grid-cols-3">
+				  {profile.favoriteDishes.length ?  (
+				    profile.favoriteDishes.map((dish) => (
+					  <article key={dish.id} className="border border-border bg-surface p-5">
+						<Badge tone="accent">{dish.cuisine}</Badge>
+						<h2 className="mt-4 font-serif text-xl">{dish.name}</h2>
+						<p className="mt-1 text-sm text-muted">{dish.restaurant}</p>
+						<p className="mt-4 text-sm text-secondary">{'*'.repeat(dish.rating)}<span className="text-border">{'*'.repeat(5 - dish.rating)}</span></p>
+					  </article>
+				    ))
+				  ) : (
+				    <p className="text-muted">Favorite dishes will appear after you review a dish.</p>
+				  )}
+			    </div>
+		      ) : ( 
+			    <div className="mt-8 space-y-4">
+				  {profilePostsLoading && !profilePosts.length ? (
+					<Loader label="Loading posts" />
+				  ) : profilePosts.length ? (
+					profilePosts.map((post) => <SocialPostCard key={post.id} post={post} />) 
+				  ) : ( 
+				    <p className="text-muted">No visible posts yet.</p>
+				  )}
+				  <div ref={profilePostsEndRef} className="min-h-16">
+					{profilePostsLoading && <Loader label="Loading more posts" />}
+				  </div>
+			    </div>
+		      )}
+		    </>
+	      )}
         </section>
       </div>
     </main>
