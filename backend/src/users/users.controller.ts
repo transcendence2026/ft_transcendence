@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Patch, Post, Req, UseGuards, UseInterceptors, UploadedFile, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Patch, Post, Req, UseGuards, UseInterceptors, UploadedFile, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { fileTypeFromFile } from 'file-type';
 import { unlink } from 'node:fs/promises';
@@ -11,18 +11,38 @@ import { UsersService } from './users.service';
 @UseGuards(JwtAuthGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
+
   //GET /api/users/me
   @UseGuards(JwtAuthGuard)
   @Get('me')
   getCurrentUser(@Req() req: any) {
     return this.usersService.getProfile(req.user.id);
   }
+
   //PATCH /api/users/me
   @UseGuards(JwtAuthGuard)
   @Patch('me')
   updateCurrentUser(@Req() req: any, @Body() updateProfileDto: UpdateProfileDto) {
     return this.usersService.updateProfile(req.user.id, updateProfileDto);
   }
+  // GET /api/users/blocked (¡DEBE IR ANTES DE :id!)
+  @Get('blocked')
+  getBlockedUsers(@Req() req: any) {
+    return this.usersService.getBlockedUsers(req.user.id);
+  }
+
+  // POST /api/users/block/:id
+  @Post('block/:id')
+  blockUser(@Req() req: any) {
+    return this.usersService.blockUser(req.user.id, req.params.id);
+  }
+
+  // DELETE /api/users/block/:id
+  @Delete('block/:id')
+  unblockUser(@Req() req: any) {
+    return this.usersService.unblockUser(req.user.id, req.params.id);
+  }
+
   //GET /api/users/:id
   @UseGuards(JwtAuthGuard)
   @Get(':id')

@@ -30,6 +30,7 @@ interface ProfileData {
   status: 'ONLINE' | 'OFFLINE' | 'INGAME';
   createdAt: string;
   isPrivate?: boolean;
+  isBlocked?: boolean;
   message?: string | null;
   profile: { avatarUrl?: string | null; bio?: string | null } | null;
   favoriteDishes: Dish[];
@@ -122,17 +123,24 @@ function ProfileContent() {
         setOutgoingRequests(friendsResponse.data.outgoingRequests);
 		//carga lista de bloqueados
 		try {
-          const blockedRes = await axios.get<BlockedUserItem[]>(`${API_BASE_URL}/api/users/blocked`);
-          setBlockedUsers(blockedRes.data);
-        } catch {
-			// Ignorar si falla la carga inicial de bloqueos
-		}
+          const blockedRes = await axios.get<any>(
+			`${API_BASE_URL}/api/users/blocked`,
+			{ withCredentials: true }
+		  );
+		  // Si viene como array lo toma; si viene dentro de una propiedad, extrae la lista
+          const data = blockedRes.data;
+          const list = Array.isArray(data) ? data : (data?.blockedUsers ?? data?.data ?? []);
+          setBlockedUsers(list);
+        } catch (err) {
+          console.error('Error cargando lista de bloqueados:', err);
+		  setBlockedUsers([]);
+        }
       }
     }).catch(() => setError('We could not load this profile.'));
   }, [profileId, isOwnProfile, websocketStatus]);
 
   // Si es un perfil privado bloqueado, no intentamos pedir posts
-  const isLockedPrivateProfile = !isOwnProfile && profile?.isPrivate && !profile?.stats;
+  const isLockedPrivateProfile = !isOwnProfile && Boolean(profile?.isPrivate) && !profile?.stats;
 
   useEffect(() => {
     if (activeTab !== 'posts' || !profileId || isLockedPrivateProfile) return;
@@ -222,33 +230,41 @@ function ProfileContent() {
 
   // Bloquear usuario ajeno
   const blockUser = async () => {
-    if (!profileId) return;
+    if (!profileId || !profile) return;
     if (!window.confirm(`Are you sure you want to block ${profile?.username}?`)) return;
     try {
-      await axios.post(`${API_BASE_URL}/api/users/block/${profileId}`);
+      await axios.post(
+		`${API_BASE_URL}/api/users/block/${profileId}`,
+		{},
+		{ withCredentials: true }
+	  );
       setMessage(`User ${profile?.username} blocked.`);
       navigate('/dashboard'); // Redirige fuera del perfil bloqueado
-    } catch {
-      setError('Could not block user.');
+    } catch (err) {
+		console.error('Error al bloquear:', err);
+      	setError('Could not block user.');
     }
   };
 
-  // Desbloquear usuario desde la lista
+  // Desbloquear usuario desde la lista o desde su perfil
   const unblockUser = async (targetId: string) => {
     try {
-      await axios.delete(`${API_BASE_URL}/api/users/block/${targetId}`);
+      await axios.delete(
+        `${API_BASE_URL}/api/users/block/${targetId}`,
+        { withCredentials: true }
+      );
       setBlockedUsers((current) => current.filter((item) => item.user.id !== targetId));
-      setMessage('User unblocked successfully.');
-    } catch {
+      setProfile((current) => current && current.id === targetId ? { ...current, isBlocked: false } : current); 
+	  setMessage('User unblocked successfully.');
+    } catch (err) {
+      console.error('Error al desbloquear:', err);
       setError('Could not unblock user.');
     }
   };
-
   if (error && !profile) return <main className="min-h-screen bg-background p-8 text-text"><p>{error}</p></main>;
   if (!profile) return <main className="min-h-screen bg-background p-8 text-muted">Loading profile...</main>;
-
-  const presence = profile.status === 'ONLINE' ? 'online' : profile.status === 'INGAME' ? 'ingame' : 'offline';
-  const memberSince = new Date(profile.createdAt).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  const presence = profile?.status === 'ONLINE' ? 'online' : profile?.status === 'INGAME' ? 'ingame' : 'offline';
+  const memberSince = profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) : '';
 
   return (
     <main className="min-h-screen bg-background font-sans text-text">
@@ -276,7 +292,8 @@ function ProfileContent() {
             {!isOwnProfile && friendship?.status === 'OUTGOING_PENDING' && <Badge tone="muted">Request sent</Badge>}
             {!isOwnProfile && friendship?.status === 'ACCEPTED' && <Badge tone="success">Friends</Badge>}
             {!isOwnProfile && friendship?.status === 'INCOMING_PENDING' && <div className="flex gap-2"><Button type="button" onClick={() => void respondToFriendRequest('accept')}>Accept</Button><Button type="button" variant="ghost" onClick={() => void respondToFriendRequest('reject')}>Reject</Button></div>}
-			{!isOwnProfile && <Button type="button" variant="ghost" className="text-red-400 hover:text-red-300" onClick={() => void blockUser()}>Block user</Button>}
+			{/* Botón dinámico: si el usuario está bloqueado muestra "Unblock", de lo contrario "Block" */}
+			{!isOwnProfile && (profile.isBlocked ? <Button type="button" variant="ghost" className="text-amber-400 hover:text-amber-300" onClick={() => void unblockUser(profile.id)}>Unblock user</Button> : <Button type="button" variant="ghost" className="text-red-400 hover:text-red-300" onClick={() => void blockUser()}>Block user</Button>)}
           </div>
           <p className="mt-7 max-w-2xl text-base leading-relaxed text-text-soft">{profile.profile?.bio || (isLockedPrivateProfile ? '' : 'No bio yet. Tell the community what you are cooking.')}</p>
         </section>
@@ -341,13 +358,43 @@ function ProfileContent() {
           {message && <p className="mt-5 text-sm text-emerald-300" role="status">{message}</p>}
           {error && <p className="mt-5 text-sm text-red-300" role="alert">{error}</p>}
           {isOwnProfile && <section className="mt-8 max-w-2xl space-y-8 border-y border-border py-6">
-            <div>
+            {/* 1. Amigos */}
+			<div>
               <div className="flex items-center justify-between"><h2 className="font-serif text-2xl">Friends</h2><Badge tone="success">{friends.length}</Badge></div>
               <div className="mt-4 space-y-3">{friends.length ? friends.map((friend) => <button key={friend.id} type="button" onClick={() => navigate(`/profile/${friend.id}`)} className="flex w-full items-center gap-3 border border-border bg-surface p-3 text-left hover:border-primary"><Avatar name={friend.username} src={profileImage(friend.profile?.avatarUrl)} size="sm" /><span className="text-sm font-semibold">{friend.username}</span></button>) : <p className="text-sm text-muted">Your accepted friends will appear here.</p>}</div>
             </div>
+			{/* 2. Solicitudes */}
             <div>
               <div className="flex items-center justify-between"><h2 className="font-serif text-2xl">Friend requests</h2><Badge tone="accent">{incomingRequests.length + outgoingRequests.length} pending</Badge></div>
               <div className="mt-4 space-y-3">{incomingRequests.map((request) => <div key={request.id} className="flex items-center justify-between gap-3 border border-border bg-surface p-3"><div className="flex items-center gap-3"><Avatar name={request.sender.username} src={profileImage(request.sender.profile?.avatarUrl)} size="sm" /><span className="text-sm font-semibold">{request.sender.username}</span></div><div className="flex gap-2"><Button type="button" onClick={() => void respondToFriendRequest('accept', request.id)} className="px-3 py-1 text-xs">Accept</Button><Button type="button" variant="ghost" onClick={() => void respondToFriendRequest('reject', request.id)} className="px-3 py-1 text-xs">Reject</Button></div></div>)}{outgoingRequests.map((request) => <div key={request.id} className="flex items-center justify-between gap-3 border border-border bg-surface p-3"><div className="flex items-center gap-3"><Avatar name={request.receiver.username} src={profileImage(request.receiver.profile?.avatarUrl)} size="sm" /><span className="text-sm text-muted">Waiting for {request.receiver.username}</span></div><Button type="button" variant="ghost" onClick={() => void cancelFriendRequest(request.id)} className="px-3 py-1 text-xs text-primary-soft">Cancel</Button></div>)}{!incomingRequests.length && !outgoingRequests.length && <p className="text-sm text-muted">No pending requests.</p>}</div>
+            </div>
+			<div>
+              <div className="flex items-center justify-between">
+                <h2 className="font-serif text-2xl">Blocked users</h2>
+                <Badge tone="muted">{blockedUsers.length}</Badge>
+              </div>
+              <div className="mt-4 space-y-3">
+                {blockedUsers.length ? (
+                  blockedUsers.map((item) => (
+                    <div key={item.blockId} className="flex items-center justify-between gap-3 border border-border bg-surface p-3">
+                      <div className="flex items-center gap-3">
+                        <Avatar name={item.user.username} src={profileImage(item.user.avatarUrl)} size="sm" />
+                        <span className="text-sm font-semibold">{item.user.username}</span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => void unblockUser(item.user.id)}
+                        className="px-3 py-1 text-xs text-red-400 hover:text-red-300"
+                      >
+                        Unblock
+                      </Button>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted">No blocked users.</p>
+                )}
+              </div>
             </div>
           </section>}
 

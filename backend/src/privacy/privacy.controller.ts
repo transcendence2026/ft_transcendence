@@ -2,7 +2,6 @@ import { Controller, Patch, Post, Delete, Get, Body, Param, UseGuards, Request }
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { PrivacyService } from './privacy.service.js';
 import { UpdatePrivacyDto } from './dto/update-privacy.dto.js';
-
 @Controller('api')
 @UseGuards(JwtAuthGuard)
 export class PrivacyController {
