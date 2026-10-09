@@ -1,7 +1,13 @@
 import React, { createContext, useState, useEffect, type ReactNode } from 'react';
 import axios from 'axios';
 
-// 1. Configuración global: permite que viajen las cookies HttpOnly en todas las peticiones
+// Si existe la variable de entorno la usa; si no, queda en '' (rutas relativas para Nginx/Docker)
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+
+if (API_BASE_URL) {
+    axios.defaults.baseURL = API_BASE_URL;
+}
+// Permite que viajen las cookies HttpOnly en todas las peticiones
 axios.defaults.withCredentials = true;
 
 export interface LoginResponse {
@@ -130,7 +136,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // 6. OAuth 42: Redirección al endpoint del backend
     const oauth42 = () => {
-        window.location.href = '/api/auth/oauth/42';
+        window.location.href = `${API_BASE_URL}/api/auth/oauth/42`;
     };
 
     const completeOAuth = async () => {
