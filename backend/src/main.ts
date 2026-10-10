@@ -10,7 +10,6 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   // Configura el prefijo global para que todas las rutas respondan bajo /api
   //app.setGlobalPrefix('api');
-  app.enableCors({ origin: true, credentials: true });
   app.useWebSocketAdapter(new WsAdapter(app));
   app.useGlobalPipes(new ValidationPipe());
   app.use(cookieParser()); //parsear cookies entrantes
@@ -19,9 +18,9 @@ async function bootstrap() {
       credentials: true, //aceptas que el navegador guarde cookies y credenciales de sesion.
   });
   
-  await app.listen(Number(process.env.PORT ?? 3000));
-  
-  console.log(`Backend listening on port ${process.env.PORT ?? 3000}`);
+  const port = Number(process.env.PORT ?? 3000);
+  await app.listen(port);
+  console.log(`Backend listening on port ${port}`);
 }
 
 void bootstrap();
