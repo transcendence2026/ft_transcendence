@@ -47,11 +47,10 @@ export class AuthController {
 		@Body() registerDto: RegisterUserDto,
 		@Res({ passthrough: true }) res: Response,
 	) {
-		//service genera la respuesta pero controller la empaqueta (pone codigo HTTP correcto) y se la da al cliente
-		//controlador es como si tradujera la respuesta al idioma de internet
 		const result = await this.authService.register(registerDto);
-		if (result.accessToken && result.refreshToken) {
-			this.setAuthCookie(res, result.accessToken, result.refreshToken);
+
+    	if (result.accessToken && result.refreshToken) {
+        	this.setAuthCookie(res, result.accessToken, result.refreshToken);
 		}
 		return result;
 	}

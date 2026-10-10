@@ -19,6 +19,7 @@ import { SocialModule } from './social/social.module.js';
 import { PrivacyModule } from './privacy/privacy.module.js';
 import { RecommendationModule } from './recommendation/recommendation.module.js';
 import { FriendsModule } from './friends/friends.module.js';
+import { RgpdModule } from './rgpd/rgpd.module.js';
 
 @Module({
 	imports: [
@@ -35,6 +36,7 @@ import { FriendsModule } from './friends/friends.module.js';
 		ReviewsModule,
 		SocialModule,
 		PrivacyModule,
+		RgpdModule,
 		RecommendationModule,
 		FriendsModule,
 		MessagesModule,

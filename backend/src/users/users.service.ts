@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 
@@ -31,11 +31,46 @@ export class UsersService {
         return { status: friendship.status, requestId: friendship.id };
       });
 
+	  // Comprobar si el usuario que mira el perfil (viewerId) tiene bloqueado a este usuario (userId)
+    const isBlockedByViewer = userId !== viewerId
+      ? !!(await this.prisma.block.findUnique({
+          where: {
+            blockerId_blockedId: { blockerId: viewerId, blockedId: userId },
+          },
+        }))
+      : false;
+
+	  //Regla de privacidad: Si es privado y no es él ni un amigo
+	  const isSelf = userId === viewerId;
+	  const isFriend = relationship.status === 'ACCEPTED';
+
+	  // CASO 1: Es privado y no soy yo ni un amigo aceptado
+	  if(user.isPrivate && !isSelf && !isFriend) {
+		return {
+        id: user.id,
+        username: user.username,
+        email: null,                          // Oculto por privacidad
+        status: user.status,
+        isPrivate: true,                      // Indica al frontend que está bloqueado
+        isBlocked: isBlockedByViewer,        //estado de bloqueo
+		createdAt: user.createdAt,
+        profile: {
+          avatarUrl: user.profile?.avatarUrl ?? null,
+          bio: null,                          // Oculto por privacidad
+        },
+        friendship: relationship,
+        favoriteDishes: [],                   // Vacío
+        stats: null,                          // Nulo para activar el candado en UI
+      };
+	}
+	// CASO 2: Perfil público o consulta propia (return completo)
     return {
       id: user.id,
       username: user.username,
-      email: user.email,
+      email: isSelf ? user.email : null, //Solo visible para el dueño
       status: user.status,
+	  isPrivate: user.isPrivate,
+	  isBlocked: isBlockedByViewer,
       createdAt: user.createdAt,
       profile: user.profile,
       friendship: relationship,
@@ -66,6 +101,7 @@ export class UsersService {
       },
     };
   }
+
   async updateProfile(userId: string, data: UpdateProfileDto) {
     if (data.username) {
       const existingUser = await this.prisma.user.findFirst({
@@ -132,5 +168,76 @@ export class UsersService {
     });
 
     return updatedUser;
+  }
+  // Métodos del módulo de bloqueo
+  async getBlockedUsers(userId: string) {
+    const blocks = await this.prisma.block.findMany({
+      where: { blockerId: userId },
+      include: {
+        blocked: {
+          select: {
+            id: true,
+            username: true,
+            email: true,
+            profile: {
+              select: { avatarUrl: true },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return blocks.map((b: any) => ({
+      blockId: b.id,
+      user: {
+        id: b.blocked.id,
+        username: b.blocked.username,
+        email: b.blocked.email,
+        avatarUrl: b.blocked.profile?.avatarUrl ?? null,
+      },
+    }));
+  }
+
+  async blockUser(blockerId: string, blockedId: string) {
+    if (blockerId === blockedId) {
+      throw new BadRequestException('You cannot block yourself');
+    }
+
+    // 1. Si ya está bloqueado, devolvemos respuesta exitosa sin fallar con 409
+    const existing = await this.prisma.block.findUnique({
+      where: {
+        blockerId_blockedId: { blockerId, blockedId },
+      },
+    });
+
+    if (existing) {
+      return { message: 'Already blocked' };
+    }
+	// 2. Si existía una relación de amistad o solicitud pendiente, se elimina
+    await this.prisma.friendship.deleteMany({
+      where: {
+        OR: [
+          { senderId: blockerId, receiverId: blockedId },
+          { senderId: blockedId, receiverId: blockerId },
+        ],
+      },
+    });
+	//3. Creamos el registro en el modelo Block
+    return this.prisma.block.create({
+      data: {
+        blockerId,
+        blockedId,
+      },
+    });
+  }
+
+  async unblockUser(blockerId: string, blockedId: string) {
+    return this.prisma.block.deleteMany({
+      where: {
+        blockerId,
+        blockedId,
+      },
+    });
   }
 }
