@@ -43,30 +43,33 @@ export class PresenceService {
       
       if (userSocket.size === 0) {
         this.activeSockets.delete(userId);
-        await this.prisma.user.update({ where: { id: userId }, data: { status: 'OFFLINE' } });
+		try {
+    	  await this.prisma.user.update({ where: { id: userId }, data: { status: 'OFFLINE' } });
 
-        const friendship = await this.prisma.friendship.findMany({ where: { status: 'ACCEPTED', OR: [ { senderId: userId }, { receiverId: userId } ] } })
+          const friendship = await this.prisma.friendship.findMany({ where: { status: 'ACCEPTED', OR: [ { senderId: userId }, { receiverId: userId } ] } })
 
-        const friendsIds = friendship.map(user => {
-          if (user.senderId == userId)
-            return user.receiverId;
-          else
-            return user.senderId
-        });
+          const friendsIds = friendship.map(user => {
+          	if (user.senderId == userId)
+              return user.receiverId;
+            else
+              return user.senderId
+          });
 
-        friendsIds.forEach((friendId) => {
-          const friendSockets = this.activeSockets.get(friendId);
+          friendsIds.forEach((friendId) => {
+            const friendSockets = this.activeSockets.get(friendId);
 
-          if (friendSockets) {
-            friendSockets.forEach((socket) => {
-              socket.send(JSON.stringify({ event: "user:offline", data: { userId } }))
-            })
-          }
-        })
+            if (friendSockets) {
+              friendSockets.forEach((socket) => {
+                socket.send(JSON.stringify({ event: "user:offline", data: { userId } }))
+              })
+            }
+          })
+        } catch {
+		// Previene error de Prisma si el usuario desconecta por ej al ejercer derecho al olvido
+		}
       }
-    }
+	}
   }
-
   getUserSockets(userId: string) {
     return this.activeSockets.get(userId)
   }

@@ -6,7 +6,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 //Controller: Escucha en la red y asigna la ruta que activa cada accion
 //y delega la ejecución en Service (quien habla con la Base de Datos)
 //rgpd: identifica ambito normativa RGPD
-@Controller('rgpd')
+@Controller('api/rgpd')
 @UseGuards(JwtAuthGuard)
 export class RgpdController {
 	constructor(private readonly rgpdService: RgpdService) {}

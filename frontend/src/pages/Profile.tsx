@@ -12,6 +12,7 @@ import ProtectedRoute from '../components/ProtectedRoute';
 import { useAuth } from '../../context/AuthContext';
 import { useWebSocket } from '../../context/WebSocketContext';
 import { ImageDropzone } from '../components/ImageDropzone';
+import { RgpdSettings } from '../components/RgpdSettings';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? '';
 
@@ -419,7 +420,16 @@ function ProfileContent() {
               </div>
             ) : (
               <>
-        	    <Tabs tabs={[{ id: 'overview', label: 'Overview' }, { id: 'favorites', label: 'Favorite dishes' }, { id: 'posts', label: 'Posts' }]} activeTab={activeTab} onChange={setActiveTab} />
+        	    <Tabs 
+					tabs={[
+						{ id: 'overview', label: 'Overview' }, 
+						{ id: 'favorites', label: 'Favorite dishes' }, 
+						{ id: 'posts', label: 'Posts' },
+						...(isOwnProfile ? [{ id: 'privacy', label: 'Privacy & GDPR' }] : [])
+					]} 
+					activeTab={activeTab} 
+					onChange={setActiveTab} 
+					/>
           	    {activeTab === 'overview' && profile.stats ? (
 				  <div className="mt-8 grid gap-6 md:grid-cols-3">
 				    <div className="border-l-2 border-primary px-5">
@@ -456,7 +466,7 @@ function ProfileContent() {
 				    <p className="text-muted">Favorite dishes will appear after you review a dish.</p>
 				  )}
 			    </div>
-		      ) : ( 
+			  ) : activeTab === 'posts' ? (
 			    <div className="mt-8 space-y-4">
 				  {profilePostsLoading && !profilePosts.length ? (
 					<Loader label="Loading posts" />
@@ -469,7 +479,9 @@ function ProfileContent() {
 					{profilePostsLoading && <Loader label="Loading more posts" />}
 				  </div>
 			    </div>
-		      )}
+		      ) : activeTab === 'privacy' && isOwnProfile ? (
+                <RgpdSettings />
+			  ) : null}
 		    </>
 	      )}
         </section>
