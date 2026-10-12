@@ -3,10 +3,12 @@
 // Safe to re-run: it wipes the relevant tables before inserting fresh data
 
 import { PrismaClient, Prisma, Cuisine } from '@prisma/client';
-import { createHash } from 'node:crypto';
-
+import * as bcrypt from 'bcrypt'; // same library as auth.service.ts
 
 const prisma = new PrismaClient();
+
+// Must match the salt rounds used in auth.service.ts
+const SALT_ROUNDS = 10;
 
 // ---- Helpers ----
 
@@ -35,14 +37,6 @@ function randomSubset<T>(arr: T[], count: number): T[] {
 	// Ensure we don't request more elements tha available, then extract the slice
 	const safeCount = Math.min(count, arr.length);
 	return shuffled.slice(0, safeCount);
-}
-
-// Generates a fast SHA-256 hash for a given password string
-// Note: Intented for testing or mock data, not secure production password storage
-// Placeholder hash for seed-only accounts (never use this in real auth flows)
-function fakeHash(password: string): string {
-	// Create a SHA-256 hash instance, feed the password, and return as hex
-	return createHash('sha256').update(password).digest('hex');
 }
 
 // ---- Static data pools ----
@@ -252,8 +246,9 @@ async function seedRestaurantsAndDishes(tags: { id: string; name: string }[]) {
 
 // Seeds the database with mock user records and nested profile data
 async function seedUsers() {
-	// Generate a SHA-256 password hash to reuse across all seeded users
-	const passwordHash = fakeHash('Password123!');
+	// Hash once with bcrypt (same algorithm used by bcrypt.compare in auth.service.ts)
+	// and reuse the result for all seeded users
+	const passwordHash = await bcrypt.hash('Password123!', SALT_ROUNDS);
 	const cuisineNames = Object.keys(DISH_POLL) as Cuisine[];
 
 	for (let i = 0; i < 10; i++) {
