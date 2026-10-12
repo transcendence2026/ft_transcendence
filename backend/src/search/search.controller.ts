@@ -2,7 +2,7 @@ import { Controller, Get, Query } from '@nestjs/common';
 import { SearchService } from './search.service';
 import { SearchQueryDto } from './dto/search-query.dto';
 
-@Controller('search') // final route: GET /api/search (if main.ts has setGlobalPrefix('api'))
+@Controller('api/search') // final route: GET /api/search (if main.ts has setGlobalPrefix('api'))
 export class SearchController {
   constructor(private readonly searchService: SearchService) {}
 
