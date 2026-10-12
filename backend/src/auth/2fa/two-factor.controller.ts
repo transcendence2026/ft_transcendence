@@ -48,8 +48,8 @@ export class TwoFactorController {
     const isProd = process.env.NODE_ENV === 'production';
     const cookieOptions = {
       httpOnly: true,
-      secure: isProd || true, // Activo para HTTPS
-      sameSite: 'strict' as const,
+      secure: isProd, // Activo para HTTPS
+      sameSite: 'lax' as const,
     };
 
     if (result.accessToken) {

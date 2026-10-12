@@ -27,7 +27,7 @@ export class AuthController {
 			httpOnly: true, // Prohibe a JavaScript leer la cookie (blindaje ante XSS)
 			secure: isProduction, //solo viaje si conexion es cifrada (HTTPS)
 			//evita peticiones maliciosas externas al backend
-			sameSite: 'strict', //Solo se envía si la petición nace dentro de nuestra propia web (blindaje anti-CSRF)
+			sameSite: 'lax', //Solo se envía si la petición nace dentro de nuestra propia web (blindaje anti-CSRF)
 			maxAge: 15 * 60 * 1000, //15 minuntos calidez AccessToken
 			path: '/', //cookie funciona en toda la app
 		});
@@ -35,7 +35,7 @@ export class AuthController {
     	res.cookie('refreshToken', refreshToken, {
 			httpOnly: true, //JavaScripts no puede leerla ni manipularla
 			secure: isProduction, //Solo viaja bajo conexiones HTTPS cifradas
-			sameSite: 'strict', // No se envía desde sitios de terceros (mitiga ataques CSRF)
+			sameSite: 'lax', // No se envía desde sitios de terceros (mitiga ataques CSRF)
 			maxAge: 7 * 24 * 60 * 60 * 1000, // 7 días
 			path: '/api/auth/refresh',       // Solo se envía al endpoint de refresco
     });
