@@ -45,6 +45,9 @@ push:
 seed:
 	$(COMPOSE) exec backend npx prisma db seed
 
+users:
+	@$(COMPOSE) exec db psql -U postgres -d transcendence -c "SELECT email, username FROM \"User\";"
+
 down:
 	$(COMPOSE) down
 
