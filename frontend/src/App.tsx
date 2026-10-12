@@ -4,6 +4,9 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import ComponentPlayground from "./pages/ComponentPlayground";
 import Profile from "./pages/Profile";
+import { TermsOfService } from "./pages/TermsOfService";
+import { PrivacyPolicy } from "./pages/PrivacyPolicy";
+import { Footer } from "./components/Footer";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { WebSocketProvider } from "../context/WebSocketContext";
 import { NotificationProvider } from "../context/NotificationContext";
@@ -28,58 +31,69 @@ export default function App() {
       <WebSocketProvider>
         <NotificationProvider>
           <BrowserRouter>
-            <Routes>
-{/* Rutas exclusivas para invitados */}
-              <Route
-                path="/login"
-                element={
-                  <PublicOnlyRoute>
-                    <Login />
-                  </PublicOnlyRoute>
-                }
-              />
-              <Route
-                path="/register"
-                element={
-                  <PublicOnlyRoute>
-                    <Register />
-                  </PublicOnlyRoute>
-                }
-              />
+		  <div className="min-h-screen flex flex-col bg-gray-950 text-white">
+            <main className="flex-1">
+              <Routes>
+              {/* Rutas exclusivas para invitados */}
+               <Route
+                  path="/login"
+                  element={
+                    <PublicOnlyRoute>
+                      <Login />
+                    </PublicOnlyRoute>
+                  }
+                />
+                <Route
+                  path="/register"
+                  element={
+                    <PublicOnlyRoute>
+                      <Register />
+                    </PublicOnlyRoute>
+                  }
+                />
 
-              {/* Rutas protegidas para usuarios logueados */}
-              <Route
-                path="/dashboard"
-                element={
-                  <PrivateRoute>
-                    <Dashboard />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/profile"
-                element={
-                  <PrivateRoute>
-                    <Profile />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/profile/:id"
-                element={
-                  <PrivateRoute>
-                    <Profile />
-                  </PrivateRoute>
-                }
-              />
+                {/* Rutas protegidas para usuarios logueados */}
+                <Route
+                  path="/dashboard"
+                  element={
+                    <PrivateRoute>
+                      <Dashboard />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/profile"
+                  element={
+                    <PrivateRoute>
+                      <Profile />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/profile/:id"
+                  element={
+                    <PrivateRoute>
+                      <Profile />
+                    </PrivateRoute>
+                  }
+                />
 
-              {/* Playground de componentes del equipo */}
-              <Route path="/components" element={<ComponentPlayground />} />
+			    {/* Páginas institucionales públicas */}
+                <Route path="/terms" element={<TermsOfService />} />
+                <Route path="/privacy" element={<PrivacyPolicy />} />
 
-              {/* Cualquier otra URL va al dashboard */}
-              <Route path="*" element={<Navigate to="/dashboard" replace />} />
-            </Routes>
-          </BrowserRouter>
+                {/* Playground de componentes del equipo */}
+                <Route path="/components" element={<ComponentPlayground />} />
+
+                {/* Cualquier otra URL va al dashboard */}
+                <Route path="*" element={<Navigate to="/dashboard" replace />} />
+              </Routes>
+            </main>
+
+		    {/* Pie de página accesible en todas las vistas */}
+            <Footer />
+		    </div>
+		  </BrowserRouter>
         </NotificationProvider>
       </WebSocketProvider>
     </AuthProvider>

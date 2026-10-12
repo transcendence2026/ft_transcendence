@@ -39,7 +39,7 @@ export default function LoginRightSide() {
       // Si el backend avisa que requiere 2FA
       if (response && response.requiresTwoFactor) {
         setRequiresTwoFactor(true);
-        setUserId(response.userId);
+        setUserId(response.userId || "");
         return;
       }
 
@@ -234,11 +234,11 @@ export default function LoginRightSide() {
       </div>
 
       <footer className="mt-auto flex items-center justify-center gap-4 pt-4 font-sans text-[11px] text-muted">
-        <Link to="#" className="hover:text-text-soft">
+        <Link to="/terms" className="hover:text-text-soft">
           Términos de servicio
         </Link>
         <span className="h-1 w-1 rounded-full bg-border"></span>
-        <Link to="#" className="hover:text-text-soft">
+        <Link to="/privacy" className="hover:text-text-soft">
           Política de privacidad
         </Link>
       </footer>
