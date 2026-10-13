@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router-dom'; /* Link permite navegacion sin refrescar la pagina*/
 
 export const TermsOfService: React.FC = () => {
+  {/*por defecto en español */}
   const [lang, setLang] = useState<'es' | 'en'>('es');
 
   return (
@@ -23,6 +24,7 @@ export const TermsOfService: React.FC = () => {
         {/* Botones de cambio de idioma */}
         <div className="flex items-center space-x-2 bg-gray-800 p-1 rounded-lg border border-gray-700 self-start sm:self-auto">
           <button
+		  /* boton para español*/
             onClick={() => setLang('es')}
             className={`px-3 py-1 text-xs font-semibold rounded ${
               lang === 'es' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white'
@@ -31,6 +33,7 @@ export const TermsOfService: React.FC = () => {
             ES
           </button>
           <button
+		  /*boton para ingles*/
             onClick={() => setLang('en')}
             className={`px-3 py-1 text-xs font-semibold rounded ${
               lang === 'en' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white'
@@ -41,9 +44,11 @@ export const TermsOfService: React.FC = () => {
         </div>
       </div>
 
-      {/* Contenido en Español */}
+      {/* CONTENIDO EN ESPAÑOL */}
       {lang === 'es' ? (
         <div className="space-y-6 text-sm leading-relaxed">
+
+		  {/* Aceptacion de los terminos */}
           <section className="bg-gray-800/60 p-5 rounded-lg border border-gray-700">
             <h2 className="text-lg font-semibold text-white mb-2">1. Aceptación de los Términos</h2>
             <p>
@@ -53,6 +58,7 @@ export const TermsOfService: React.FC = () => {
             </p>
           </section>
 
+		  {/*Cuentas y Seguridad */}
           <section className="bg-gray-800/60 p-5 rounded-lg border border-gray-700">
             <h2 className="text-lg font-semibold text-white mb-2">2. Cuentas y Seguridad</h2>
             <p>
@@ -61,7 +67,8 @@ export const TermsOfService: React.FC = () => {
               suplantar identidades de otros participantes o eludir los controles técnicos de sesión.
             </p>
           </section>
-
+		  
+		  {/* Reglas de Conducta*/}
           <section className="bg-gray-800/60 p-5 rounded-lg border border-gray-700">
             <h2 className="text-lg font-semibold text-white mb-2">3. Reglas de Conducta y Chat en Tiempo Real</h2>
             <p>
@@ -71,7 +78,8 @@ export const TermsOfService: React.FC = () => {
               derecho de suspender cuentas que vulneren estas directrices.
             </p>
           </section>
-
+		  
+		  {/* Disponibilidad y Limitación de la Responsabilidad */}
           <section className="bg-gray-800/60 p-5 rounded-lg border border-gray-700">
             <h2 className="text-lg font-semibold text-white mb-2">4. Disponibilidad y Limitación de Responsabilidad</h2>
             <p>
@@ -82,7 +90,8 @@ export const TermsOfService: React.FC = () => {
           </section>
         </div>
       ) : (
-        /* Contenido en Inglés */
+
+        /* CONTENIDO EN INGLES */
         <div className="space-y-6 text-sm leading-relaxed">
           <section className="bg-gray-800/60 p-5 rounded-lg border border-gray-700">
             <h2 className="text-lg font-semibold text-white mb-2">1. Acceptance of Terms</h2>

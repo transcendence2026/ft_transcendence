@@ -1,6 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
+//para pintar el Pie de Pagina y permitir navegar a Terminos y Privacidad
+//sin recargar la pagina completa gracias a Link
 export const Footer: React.FC = () => {
   return (
     <footer className="w-full py-4 text-center text-xs text-gray-400 border-t border-gray-800 bg-gray-950/80 mt-auto">

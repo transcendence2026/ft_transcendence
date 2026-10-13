@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 export const PrivacyPolicy: React.FC = () => {
+  /* Por defecto, arranca en español */
   const [lang, setLang] = useState<'es' | 'en'>('es');
 
   return (
@@ -10,7 +11,9 @@ export const PrivacyPolicy: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 pb-4 border-b border-gray-800">
         <div>
           <Link to="/" className="text-sm text-indigo-400 hover:text-indigo-300">
-            &larr; {lang === 'es' ? 'Volver al inicio' : 'Back to home'}
+            {/* dibuja una flecha hacia la izquierda (←) y condicion para idioma
+			 y condicional para español o ingles */}
+			&larr; {lang === 'es' ? 'Volver al inicio' : 'Back to home'}
           </Link>
           <h1 className="text-3xl font-bold mt-2 text-white">
             {lang === 'es' ? 'Política de Privacidad' : 'Privacy Policy'}
@@ -25,6 +28,7 @@ export const PrivacyPolicy: React.FC = () => {
         {/* Botones de cambio de idioma */}
         <div className="flex items-center space-x-2 bg-gray-800 p-1 rounded-lg border border-gray-700 self-start sm:self-auto">
           <button
+		    /* boton español*/
             onClick={() => setLang('es')}
             className={`px-3 py-1 text-xs font-semibold rounded ${
               lang === 'es' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white'
@@ -33,6 +37,7 @@ export const PrivacyPolicy: React.FC = () => {
             ES
           </button>
           <button
+		    /* boton ingles */
             onClick={() => setLang('en')}
             className={`px-3 py-1 text-xs font-semibold rounded ${
               lang === 'en' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white'
@@ -43,9 +48,11 @@ export const PrivacyPolicy: React.FC = () => {
         </div>
       </div>
 
-      {/* Contenido en Español */}
+      {/* CONTENIDO EN ESPAÑOL */}
       {lang === 'es' ? (
         <div className="space-y-6 text-sm leading-relaxed">
+
+		  {/* Seccion 1: Responsable y Finalidad */}
           <section className="bg-gray-800/60 p-5 rounded-lg border border-gray-700">
             <h2 className="text-lg font-semibold text-white mb-2">1. Responsable y Finalidad del Tratamiento</h2>
             <p>
@@ -54,7 +61,8 @@ export const PrivacyPolicy: React.FC = () => {
               ejecución del servicio solicitado por el propio usuario.
             </p>
           </section>
-
+		  
+		  {/* Datos recopilados*/}
           <section className="bg-gray-800/60 p-5 rounded-lg border border-gray-700">
             <h2 className="text-lg font-semibold text-white mb-2">2. Datos Recopilados</h2>
             <ul className="list-disc list-inside space-y-1 text-gray-300">
@@ -65,6 +73,7 @@ export const PrivacyPolicy: React.FC = () => {
             </ul>
           </section>
 
+		  {/* Politica de cookies*/}
           <section className="bg-gray-800/60 p-5 rounded-lg border border-gray-700">
             <h2 className="text-lg font-semibold text-white mb-2">3. Política de Cookies</h2>
             <p>
@@ -79,6 +88,7 @@ export const PrivacyPolicy: React.FC = () => {
             </p>
           </section>
 
+		  {/* Derechos del Interesado (ARCO/GDPR) */}
           <section className="bg-gray-800/60 p-5 rounded-lg border border-gray-700">
             <h2 className="text-lg font-semibold text-white mb-2">4. Derechos del Interesado (ARCO)</h2>
             <p>
@@ -89,7 +99,8 @@ export const PrivacyPolicy: React.FC = () => {
           </section>
         </div>
       ) : (
-        /* Contenido en Inglés */
+
+       	/* CONTENIDO EN INGLES */
         <div className="space-y-6 text-sm leading-relaxed">
           <section className="bg-gray-800/60 p-5 rounded-lg border border-gray-700">
             <h2 className="text-lg font-semibold text-white mb-2">1. Data Controller & Purpose</h2>
