@@ -88,6 +88,8 @@ model Preference {
 
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
+
+  @@index([favoriteCuisines], type: Gin)
 }
 
 // SOCIAL AND RELATIONS
@@ -109,6 +111,8 @@ model Friendship {
   updatedAt  DateTime         @updatedAt
 
   @@unique([senderId, receiverId])
+  @@index([senderId])
+  @@index([receiverId])
 }
 
 model Block {
@@ -120,6 +124,8 @@ model Block {
   createdAt DateTime @default(now())
 
   @@unique([blockerId, blockedId])
+  @@index([blockerId])
+  @@index([blockedId])
 }
 
 // CONTENT, RESTAURANTS, DISHES, REVIEWS 
@@ -133,6 +139,8 @@ model Post {
   images    PostImage[]
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
+
+  @@index([authorId, createdAt])
 }
 
 model PostImage {
@@ -167,6 +175,7 @@ model Dish {
 
   reviews Review[]
   tags    Tag[]    @relation("DishTags")
+  @@index([restaurantId])
 }
 
 model Tag {
@@ -186,6 +195,8 @@ model Review {
   createdAt DateTime @default(now())
 
   @@unique([authorId, dishId]) // One review per user for each dish
+  @@index([authorId])
+  @@index([dishId])
 }
 
 // CHAT AND MESSAGING
@@ -198,4 +209,7 @@ model Message {
   receiverId String
   receiver   User     @relation("UserReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
   createdAt  DateTime @default(now())
+
+  @@index([senderId])
+  @@index([receiverId])
 }

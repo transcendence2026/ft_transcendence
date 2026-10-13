@@ -1,4 +1,4 @@
-import { IsArray, IsOptional, IsString, IsUrl, MaxLength, MinLength } from 'class-validator';
+import { IsArray, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 
 export class CreatePostDto {
   @IsString()
@@ -13,6 +13,9 @@ export class CreatePostDto {
 
   @IsOptional()
   @IsArray()
-  @IsUrl({}, { each: true })
+  @Matches(/^\/uploads\/posts\/[A-Za-z0-9._-]+$/, {
+    each: true,
+    message: 'Each image URL must be a local post upload path',
+  })
   imageUrls?: string[];
 }

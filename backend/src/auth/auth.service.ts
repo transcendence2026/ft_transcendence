@@ -19,6 +19,27 @@ export class AuthService {
 		private readonly twoFactorService: TwoFactorService,
 	) {}
 
+    //Generamos tokens: AccessToken y RefreshToken con sus duraciones y secretos
+    async generateTokens(user: { id: string; email: string; username: string; role?: string }) {
+        const payload = {
+            id: user.id,
+            email: user.email,
+            username: user.username,
+            role: user.role,
+        };
+        const [accessToken, refreshToken] = await Promise.all([
+            this.jwtService.signAsync(payload, {
+                secret: process.env.JWT_SECRET || 'super-secret',
+                expiresIn: '15m', //vida corta
+            }),
+            this.jwtService.signAsync(payload, {
+                secret: process.env.JWT_REFRESH_SECRET || 'super-refresh-secret',
+                expiresIn: '7d', //vida larga
+            }),
+        ]);
+        return { accessToken, refreshToken};
+    }
+
 	//REGISTER: Recibe los datos validados del registro
 	async register(registerDto: RegisterUserDto) {
 		const { email, username, password } = registerDto;
@@ -52,22 +73,14 @@ export class AuthService {
 				}
             },
         });
-
-		// 1. Creamos el payload para el nuevo usuario (igual que en el login)
-        const payload = { 
-            email: user.email, 
-            id: user.id,
-            username: user.username, 
-            role: user.role 
-        };
-        
-        // 2. Firmamos el token con el JwtService
-        const accessToken = await this.jwtService.signAsync(payload);
+        // Si todo es correcto, generamos y devolvemos el token JWT
+        const tokens = await this.generateTokens(user);
 		//Una vez el usuario esta guardado, devuelve respuesta al controlador para q sepa quien se acaba de registrar
 		return {
 			message: 'User registered successfully',
-			token:accessToken,
-			accessToken: accessToken,
+			token:tokens.accessToken,
+			accessToken: tokens.accessToken,
+            refreshToken: tokens.refreshToken,
 			user: {
 				id: user.id,
 				username: user.username,
@@ -105,18 +118,13 @@ export class AuthService {
 		
 		// Si NO tiene 2FA, generamos el token normal como hasta ahora
 		//3. Si todo es correcto, generamos y devolvemos el token JWT
-		//se crea un payload con datos que viajan y el wtService.signAsync firma digitalmente el token
-		const payload = { 
-			email: user.email, 
-			id: user.id,
-			username: user.username, 
-		    role: user.role
- 		};
-		const accessToken = await this.jwtService.signAsync(payload);
+		const tokens = await this.generateTokens(user);
+
 		return {
 			message: 'Login successful',
-			token: accessToken, //yo tenia accesToken perohay otra configuracion y esta dando problemas
-			accessToken: accessToken,
+			token: tokens.accessToken, //yo tenia accesToken perohay otra configuracion y esta dando problemas
+			accessToken: tokens.accessToken,
+            refreshToken: tokens.refreshToken,
 			user: {
 				id: user.id,
 				username: user.username,
@@ -207,23 +215,16 @@ export class AuthService {
                 message: 'Please provide your 2FA code',
             };
         }
-
-        // 3. Creamos el payload exactamente igual que en el login o registro normal
-        const payload = { 
-            email: user.email, 
-            id: user.id,
-            username: user.username, 
-            role: user.role 
-        };
-
-        // 4. Firmamos el token JWT con el JwtService
-        const accessToken = await this.jwtService.signAsync(payload);
+        //3. Si todo es correcto, generamos y devolvemos el token JWT
+        const tokens = await this.generateTokens(user);
+       
 
         // 5. Devolvemos el token y los datos del usuario al cliente
         return {
             message: 'OAuth login successful',
-            token: accessToken,
-			accessToken: accessToken,
+            token: tokens.accessToken,
+			accessToken: tokens.accessToken,
+            refreshToken: tokens.refreshToken,
             user: {
 				id: user.id,
                 username: user.username,
@@ -250,18 +251,13 @@ export class AuthService {
         }
 
         // 3. Generamos el token JWT definitivo
-        const payload = { 
-            email: user.email, 
-            id: user.id,
-            username: user.username, 
-            role: user.role 
-        };
-        const accessToken = await this.jwtService.signAsync(payload);
+        const tokens = await this.generateTokens(user);
 
         return {
             message: 'Login with 2FA successful',
-            token: accessToken,
-            accessToken: accessToken,
+            token: tokens.accessToken,
+            accessToken: tokens.accessToken,
+            refreshToken: tokens.refreshToken,
             user: {
                 id: user.id,
                 username: user.username,
@@ -269,5 +265,24 @@ export class AuthService {
 				isTwoFactorEnabled: user.isTwoFactorEnabled,
             },
         };
+    }
+
+    //REFRESH: valida el refreshToken y emite un nuevo par de tokens
+    async refreshTokens(refreshToken: string) {
+        if(!refreshToken) {
+            throw new UnauthorizedException('Refresh token missing');
+        }
+        try {
+            const payload = await this.jwtService.verifyAsync(refreshToken, {
+                secret:process.env.JWT_REFRESH_SECRET || 'super-refresh-secret',
+            });
+            const user = await this.prisma.user.findUnique({ where: { id:payload.id } });
+            if(!user) {
+                throw new UnauthorizedException('User no longer exists');
+            }
+            return await this.generateTokens(user);
+        } catch {
+            throw new UnauthorizedException('Invalid or expired refresh token');
+        }
     }
 }

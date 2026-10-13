@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { PostsService } from '../posts/posts.service.js';
 
@@ -8,8 +8,8 @@ export class SocialController {
 
   @UseGuards(JwtAuthGuard)
   @Get('feed')
-  feed(@Query('cursor') cursor?: string, @Query('limit') limit?: string) {
+  feed(@Req() req: any, @Query('cursor') cursor?: string, @Query('limit') limit?: string, @Query('authorId') authorId?: string) {
     const parsedLimit = limit ? Number.parseInt(limit, 10) : 8;
-    return this.postsService.findFeed(cursor, Number.isNaN(parsedLimit) ? 8 : parsedLimit);
+    return this.postsService.findFeed(req.user.id, cursor, Number.isNaN(parsedLimit) ? 8 : parsedLimit, authorId);
   }
 }

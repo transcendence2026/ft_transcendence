@@ -20,34 +20,53 @@ export class WebsocketGateway {
   private readonly logger = new Logger(WebsocketGateway.name);
 
   handleConnection(client: ConnectedClient, request: any) {
-    const token = request.url.split('token=')[1];
+	console.log('>>> [WS CONNECT] Petición recibida en URL:', request?.url);
+    // 1. Extraemos el token de la cookie HttpOnly
+    let token: string | undefined;
 
-    console.log(token)
+    const cookieHeader = request.headers?.cookie;
+    if (cookieHeader) {
+      const match = cookieHeader
+        .split(';')
+        .map((c: string) => c.trim())
+        .find((c: string) => c.startsWith('accessToken='));
+      if (match) {
+        token = match.split('=')[1];
+      }
+    }
+
+    // 2. Soporte opcional para query param si viniera por URL
+    if (!token && request.url?.includes('token=')) {
+      token = request.url.split('token=')[1]?.split('&')[0];
+    }
+
     if (!token) {
-      client.close(1008, "Token manquant")
+      this.logger.warn('WebSocket: Token ausente en cookies o URL');
+      client.close(1008, 'Token manquant');
       return;
     }
-    
+
     try {
       const payload = jwt.verify(token, process.env.JWT_SECRET as string);
-      
+
       if (typeof payload === 'string' || (!payload.id && !payload.sub)) {
-        client.close(1008, "Token manquant")
-        throw new Error('Token invalido');
+        client.close(1008, 'Token invalido');
+        return;
       }
 
       const userId = String(payload.id ?? payload.sub);
-      
+
       client.userId = userId;
       this.presenceService.addClient(userId, client);
-      this.logger.log('Un nuevo cliente se ha conectado.');
+      this.logger.log(`Cliente WebSocket autenticado: ${userId}`);
 
       client.send('Bienvenido al WebSocket !');
     } catch {
+      this.logger.warn('WebSocket: Token inválido o expirado');
       client.close(1008, 'Token invalido');
     }
   }
-  
+
   handleDisconnect(client: ConnectedClient) {
     if (!client.userId) {
       return;

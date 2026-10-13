@@ -6,9 +6,12 @@ import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { Tabs } from '../components/Tabs';
+import { Loader } from '../components/Loader';
+import { SocialPostCard, type SocialPost } from '../components/SocialPostCard';
 import ProtectedRoute from '../components/ProtectedRoute';
 import { useAuth } from '../../context/AuthContext';
 import { useWebSocket } from '../../context/WebSocketContext';
+import { ImageDropzone } from '../components/ImageDropzone';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
@@ -29,6 +32,30 @@ interface ProfileData {
   profile: { avatarUrl?: string | null; bio?: string | null } | null;
   favoriteDishes: Dish[];
   stats: { recipesRated: number; averageRecipeRating: number; favoriteIngredients: string[] };
+  friendship: { status: 'SELF' | 'NONE' | 'OUTGOING_PENDING' | 'INCOMING_PENDING' | 'ACCEPTED' | 'DECLINED'; requestId: string | null };
+}
+
+interface FriendRequest {
+  id: string;
+  sender: { id: string; username: string; profile?: { avatarUrl: string | null } | null };
+}
+
+interface FriendSummary {
+  id: string;
+  username: string;
+  profile?: { avatarUrl: string | null } | null;
+}
+
+interface FriendListResponse {
+  friends: FriendSummary[];
+  incomingRequests: FriendRequest[];
+  outgoingRequests: { id: string; receiver: FriendSummary }[];
+}
+
+interface SocialPostsResponse {
+  items: SocialPost[];
+  nextCursor: string | null;
+  hasMore: boolean;
 }
 
 function profileImage(url?: string | null) {
@@ -50,7 +77,17 @@ function ProfileContent() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [friendship, setFriendship] = useState<ProfileData['friendship'] | null>(null);
+  const [incomingRequests, setIncomingRequests] = useState<FriendRequest[]>([]);
+  const [friends, setFriends] = useState<FriendSummary[]>([]);
+  const [outgoingRequests, setOutgoingRequests] = useState<FriendListResponse['outgoingRequests']>([]);
+  const [profilePosts, setProfilePosts] = useState<SocialPost[]>([]);
+  const [profilePostsCursor, setProfilePostsCursor] = useState<string | null>(null);
+  const [profilePostsHasMore, setProfilePostsHasMore] = useState(true);
+  const [profilePostsLoading, setProfilePostsLoading] = useState(false);
+  const profilePostsEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isAvatarDropzoneVisible, setIsAvatarDropzoneVisible] = useState(false);
 
   useEffect(() => {
     if (!profileId) return;
@@ -59,11 +96,42 @@ function ProfileContent() {
       ? `${API_BASE_URL}/api/users/me`
       : `${API_BASE_URL}/api/users/${profileId}`;
 
-    void axios.get<ProfileData>(endpoint).then(({ data }) => {
+    void axios.get<ProfileData>(endpoint).then(async ({ data }) => {
       setProfile(data);
+      setFriendship(data.friendship);
       setForm({ username: data.username, email: data.email, bio: data.profile?.bio ?? '' });
+      if (isOwnProfile) {
+        const friendsResponse = await axios.get<FriendListResponse>(`${API_BASE_URL}/api/friends`);
+        setFriends(friendsResponse.data.friends);
+        setIncomingRequests(friendsResponse.data.incomingRequests);
+        setOutgoingRequests(friendsResponse.data.outgoingRequests);
+      }
     }).catch(() => setError('We could not load this profile.'));
   }, [profileId, isOwnProfile, websocketStatus]);
+
+  useEffect(() => {
+    if (activeTab !== 'posts' || !profileId) return;
+    setProfilePostsLoading(true);
+    void axios.get<SocialPostsResponse>(`${API_BASE_URL}/api/social/feed?authorId=${profileId}&limit=8`)
+      .then(({ data }) => { setProfilePosts(data.items); setProfilePostsCursor(data.nextCursor); setProfilePostsHasMore(data.hasMore); })
+      .catch(() => setError('We could not load this user\'s posts.'))
+      .finally(() => setProfilePostsLoading(false));
+  }, [activeTab, profileId, websocketStatus]);
+
+  useEffect(() => {
+    const sentinel = profilePostsEndRef.current;
+    if (activeTab !== 'posts' || !sentinel || !profilePostsHasMore || !profilePostsCursor || profilePostsLoading) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting || !profileId) return;
+      setProfilePostsLoading(true);
+      void axios.get<SocialPostsResponse>(`${API_BASE_URL}/api/social/feed?authorId=${profileId}&limit=8&cursor=${encodeURIComponent(profilePostsCursor)}`)
+        .then(({ data }) => { setProfilePosts((current) => [...current, ...data.items]); setProfilePostsCursor(data.nextCursor); setProfilePostsHasMore(data.hasMore); })
+        .catch(() => setError('More posts could not be loaded.'))
+        .finally(() => setProfilePostsLoading(false));
+    }, { rootMargin: '320px' });
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [activeTab, profileId, profilePostsCursor, profilePostsHasMore, profilePostsLoading]);
 
   const saveProfile = async () => {
     try {
@@ -84,14 +152,34 @@ function ProfileContent() {
     data.append('file', file);
 
     try {
-      const response = await axios.post<{ profile?: ProfileData['profile'] }>(`${API_BASE_URL}/api/users/avatar`, data);
-      setProfile((current) => current ? { ...current, profile: response.data.profile ?? current.profile } : current);
+      const response = await axios.post<{ user?: { profile?: ProfileData['profile'] }; profile?: ProfileData['profile'] }>(`${API_BASE_URL}/api/users/avatar`, data);
+      const updatedProfile = response.data.user?.profile ?? response.data.profile;
+      setProfile((current) => current ? { ...current, profile: updatedProfile ?? current.profile } : current);
       setAvatarPreview(null);
       setMessage('Avatar updated.');
       setError(null);
     } catch {
       setError('Avatar could not be uploaded.');
     }
+  };
+
+  const sendFriendRequest = async () => {
+    if (!profileId) return;
+    await axios.post(`${API_BASE_URL}/api/friends/requests/${profileId}`);
+    setFriendship({ status: 'OUTGOING_PENDING', requestId: null });
+    setMessage('Friend request sent.');
+  };
+
+  const respondToFriendRequest = async (action: 'accept' | 'reject', requestId = friendship?.requestId) => {
+    if (!requestId) return;
+    await axios.patch(`${API_BASE_URL}/api/friends/requests/${requestId}/${action}`);
+    navigate('/dashboard');
+  };
+
+  const cancelFriendRequest = async (requestId: string) => {
+    await axios.delete(`${API_BASE_URL}/api/friends/requests/${requestId}`);
+    setOutgoingRequests((current) => current.filter((request) => request.id !== requestId));
+    setMessage('Friend request cancelled.');
   };
 
   if (error && !profile) return <main className="min-h-screen bg-background p-8 text-text"><p>{error}</p></main>;
@@ -122,6 +210,10 @@ function ProfileContent() {
               </div>
             </div>
             {isOwnProfile && <Button type="button" onClick={() => setIsEditing((current) => !current)}>{isEditing ? 'Close editor' : 'Edit profile'}</Button>}
+            {!isOwnProfile && (friendship?.status === 'NONE' || friendship?.status === 'DECLINED') && <Button type="button" onClick={() => void sendFriendRequest()}>+ Add friend</Button>}
+            {!isOwnProfile && friendship?.status === 'OUTGOING_PENDING' && <Badge tone="muted">Request sent</Badge>}
+            {!isOwnProfile && friendship?.status === 'ACCEPTED' && <Badge tone="success">Friends</Badge>}
+            {!isOwnProfile && friendship?.status === 'INCOMING_PENDING' && <div className="flex gap-2"><Button type="button" onClick={() => void respondToFriendRequest('accept')}>Accept</Button><Button type="button" variant="ghost" onClick={() => void respondToFriendRequest('reject')}>Reject</Button></div>}
           </div>
           <p className="mt-7 max-w-2xl text-base leading-relaxed text-text-soft">{profile.profile?.bio || 'No bio yet. Tell the community what you are cooking.'}</p>
         </section>
@@ -134,18 +226,47 @@ function ProfileContent() {
           <label className="mt-5 block text-xs font-medium text-text-soft">Bio
             <textarea value={form.bio} onChange={(event) => setForm({ ...form, bio: event.target.value })} rows={4} className="mt-1.5 w-full resize-y rounded-control border border-border bg-surface-raised px-4 py-2.5 text-sm text-text focus:border-primary focus:outline-none" />
           </label>
-          <div className="mt-5 flex flex-wrap gap-3">
-            <Button type="button" onClick={() => void saveProfile()}>Save changes</Button>
-            <Button type="button" variant="secondary" onClick={() => fileInputRef.current?.click()}>Change avatar</Button>
+            {isAvatarDropzoneVisible && (
+              <div className="mt-5 max-w-md">
+                <ImageDropzone
+                  currentImageUrl={profileImage(profile.profile?.avatarUrl) ?? undefined}
+                  onFileSelect={(file) => {
+                    setAvatarPreview(URL.createObjectURL(file));
+                    void uploadAvatar(file);
+                  }}
+                  variant="avatar"
+                />
+              </div>
+            )}
+            <div className="mt-5 flex flex-wrap gap-3">
+              <Button type="button" onClick={() => void saveProfile()}>Save changes</Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setIsAvatarDropzoneVisible((current) => !current)}
+              >
+                {isAvatarDropzoneVisible ? 'Close avatar picker' : 'Change avatar'}
+              </Button>
+            {/* <Button type="button" variant="secondary" onClick={() => fileInputRef.current?.click()}>Change avatar</Button> */}
             <input ref={fileInputRef} type="file" accept="image/jpeg,image/png" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) { setAvatarPreview(URL.createObjectURL(file)); void uploadAvatar(file); } }} />
           </div>
         </section>}
 
         {message && <p className="mt-5 text-sm text-emerald-300" role="status">{message}</p>}
         {error && <p className="mt-5 text-sm text-red-300" role="alert">{error}</p>}
+        {isOwnProfile && <section className="mt-8 max-w-2xl space-y-8 border-y border-border py-6">
+          <div>
+            <div className="flex items-center justify-between"><h2 className="font-serif text-2xl">Friends</h2><Badge tone="success">{friends.length}</Badge></div>
+            <div className="mt-4 space-y-3">{friends.length ? friends.map((friend) => <button key={friend.id} type="button" onClick={() => navigate(`/profile/${friend.id}`)} className="flex w-full items-center gap-3 border border-border bg-surface p-3 text-left hover:border-primary"><Avatar name={friend.username} src={profileImage(friend.profile?.avatarUrl)} size="sm" /><span className="text-sm font-semibold">{friend.username}</span></button>) : <p className="text-sm text-muted">Your accepted friends will appear here.</p>}</div>
+          </div>
+          <div>
+            <div className="flex items-center justify-between"><h2 className="font-serif text-2xl">Friend requests</h2><Badge tone="accent">{incomingRequests.length + outgoingRequests.length} pending</Badge></div>
+            <div className="mt-4 space-y-3">{incomingRequests.map((request) => <div key={request.id} className="flex items-center justify-between gap-3 border border-border bg-surface p-3"><div className="flex items-center gap-3"><Avatar name={request.sender.username} src={profileImage(request.sender.profile?.avatarUrl)} size="sm" /><span className="text-sm font-semibold">{request.sender.username}</span></div><div className="flex gap-2"><Button type="button" onClick={() => void respondToFriendRequest('accept', request.id)} className="px-3 py-1 text-xs">Accept</Button><Button type="button" variant="ghost" onClick={() => void respondToFriendRequest('reject', request.id)} className="px-3 py-1 text-xs">Reject</Button></div></div>)}{outgoingRequests.map((request) => <div key={request.id} className="flex items-center justify-between gap-3 border border-border bg-surface p-3"><div className="flex items-center gap-3"><Avatar name={request.receiver.username} src={profileImage(request.receiver.profile?.avatarUrl)} size="sm" /><span className="text-sm text-muted">Waiting for {request.receiver.username}</span></div><Button type="button" variant="ghost" onClick={() => void cancelFriendRequest(request.id)} className="px-3 py-1 text-xs text-primary-soft">Cancel</Button></div>)}{!incomingRequests.length && !outgoingRequests.length && <p className="text-sm text-muted">No pending requests.</p>}</div>
+          </div>
+        </section>}
         <section className="mt-8">
-          <Tabs tabs={[{ id: 'overview', label: 'Overview' }, { id: 'favorites', label: 'Favorite dishes' }]} activeTab={activeTab} onChange={setActiveTab} />
-          {activeTab === 'overview' ? <div className="mt-8 grid gap-6 md:grid-cols-3"><div className="border-l-2 border-primary px-5"><p className="text-sm text-muted">Recipes rated</p><p className="mt-2 font-serif text-3xl text-text">{profile.stats.recipesRated}</p></div><div className="border-l-2 border-primary px-5"><p className="text-sm text-muted">Average recipe rating</p><p className="mt-2 font-serif text-3xl text-text">{profile.stats.averageRecipeRating || '--'}<span className="ml-1 text-base text-muted">/ 5</span></p></div><div className="border-l-2 border-primary px-5"><p className="text-sm text-muted">Favourite ingredients</p><div className="mt-2 flex flex-wrap gap-2">{profile.stats.favoriteIngredients.length ? profile.stats.favoriteIngredients.map((ingredient) => <Badge key={ingredient} tone="accent">{ingredient}</Badge>) : <span className="font-serif text-lg text-text">Not rated yet</span>}</div></div></div> : <div className="mt-8 grid gap-4 md:grid-cols-3">{profile.favoriteDishes.length ? profile.favoriteDishes.map((dish) => <article key={dish.id} className="border border-border bg-surface p-5"><Badge tone="accent">{dish.cuisine}</Badge><h2 className="mt-4 font-serif text-xl">{dish.name}</h2><p className="mt-1 text-sm text-muted">{dish.restaurant}</p><p className="mt-4 text-sm text-secondary">{'*'.repeat(dish.rating)}<span className="text-border">{'*'.repeat(5 - dish.rating)}</span></p></article>) : <p className="text-muted">Favorite dishes will appear after you review a dish.</p>}</div>}
+          <Tabs tabs={[{ id: 'overview', label: 'Overview' }, { id: 'favorites', label: 'Favorite dishes' }, { id: 'posts', label: 'Posts' }]} activeTab={activeTab} onChange={setActiveTab} />
+          {activeTab === 'overview' ? <div className="mt-8 grid gap-6 md:grid-cols-3"><div className="border-l-2 border-primary px-5"><p className="text-sm text-muted">Recipes rated</p><p className="mt-2 font-serif text-3xl text-text">{profile.stats.recipesRated}</p></div><div className="border-l-2 border-primary px-5"><p className="text-sm text-muted">Average recipe rating</p><p className="mt-2 font-serif text-3xl text-text">{profile.stats.averageRecipeRating || '--'}<span className="ml-1 text-base text-muted">/ 5</span></p></div><div className="border-l-2 border-primary px-5"><p className="text-sm text-muted">Favourite ingredients</p><div className="mt-2 flex flex-wrap gap-2">{profile.stats.favoriteIngredients.length ? profile.stats.favoriteIngredients.map((ingredient) => <Badge key={ingredient} tone="accent">{ingredient}</Badge>) : <span className="font-serif text-lg text-text">Not rated yet</span>}</div></div></div> : activeTab === 'favorites' ? <div className="mt-8 grid gap-4 md:grid-cols-3">{profile.favoriteDishes.length ? profile.favoriteDishes.map((dish) => <article key={dish.id} className="border border-border bg-surface p-5"><Badge tone="accent">{dish.cuisine}</Badge><h2 className="mt-4 font-serif text-xl">{dish.name}</h2><p className="mt-1 text-sm text-muted">{dish.restaurant}</p><p className="mt-4 text-sm text-secondary">{'*'.repeat(dish.rating)}<span className="text-border">{'*'.repeat(5 - dish.rating)}</span></p></article>) : <p className="text-muted">Favorite dishes will appear after you review a dish.</p>}</div> : <div className="mt-8 space-y-4">{profilePostsLoading && !profilePosts.length ? <Loader label="Loading posts" /> : profilePosts.length ? profilePosts.map((post) => <SocialPostCard key={post.id} post={post} />) : <p className="text-muted">No visible posts yet.</p>}<div ref={profilePostsEndRef} className="min-h-16">{profilePostsLoading && <Loader label="Loading more posts" />}</div></div>}
         </section>
       </div>
     </main>

@@ -36,7 +36,12 @@ import { TwoFactorService } from './2fa/two-factor.service.js';     // El nuevo 
 	],
 	//Registras el controler y el service para que NestJS sepa de su existencia
 	controllers: [AuthController, TwoFactorController],
-	providers: [AuthService, JwtStrategy, FortyTwoStrategy, TwoFactorService], // Registramos el servicio y la estrategia de Passport
+	providers: [
+		AuthService, 
+		JwtStrategy, 
+		FortyTwoStrategy,
+		TwoFactorService, // Registramos el servicio y la estrategia de Passport
+	],
 	exports: [JwtModule, PassportModule],
 })
 export class AuthModule {}
