@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service'; // adjust to your path
 import { SearchQueryDto } from './dto/search-query.dto';
@@ -17,7 +17,7 @@ export class SearchService {
   constructor(private readonly prisma: PrismaService) {}
 
   async search(query: SearchQueryDto) {
-    const { cuisine, price, rating, q } = query;
+    const { cuisine, price, rating, q, cursor, limit } = query;
     const conditions: Prisma.Sql[] = [];
 
     if (cuisine) {
@@ -43,6 +43,22 @@ export class SearchService {
       )`);
     }
 
+    if (cursor) {
+      // Reject unknown cursors with a 400 instead of silently returning nothing 
+      const exists = await this.prisma.restaurant.findUnique({
+        where: { id: cursor },
+        select: { id: true },
+      });
+      if (!exists) {
+        throw new BadRequestException('Invalid cursor');
+      }
+      // Keyset pagination: everything strictly after the cursor row in the
+      // order (createdAt DESC, id DESC). id breaks ties between equal createdAt
+      conditions.push(Prisma.sql`(r."createdAt", r.id) < (
+        SELECT c."createdAt", c.id FROM "Restaurant" c WHERE c.id = ${cursor}
+        )`);
+    }
+
     const where = conditions.length
       ? Prisma.sql`WHERE ${Prisma.join(conditions, ' AND ')}`
       : Prisma.empty;
@@ -53,7 +69,8 @@ export class SearchService {
         ? Prisma.sql`HAVING AVG(rev.rating) >= ${rating}`
         : Prisma.empty;
 
-    const results = await this.prisma.$queryRaw<RestaurantRating[]>(Prisma.sql`
+    // Fetch one extra row to know if there is a next page
+    const rows = await this.prisma.$queryRaw<RestaurantRating[]>(Prisma.sql`
       SELECT
         r.id,
         r.name,
@@ -68,8 +85,13 @@ export class SearchService {
       GROUP BY r.id
       ${having}
       ORDER BY r."createdAt" DESC, r.id DESC
+      LIMIT ${limit + 1}
     `);
 
-    return { results, nextCursor: null }; // cursor comes next
+    const hasMore = rows.length > limit;
+    const results = hasMore ? rows.slice(0, limit) : rows;
+    const nextCursor = hasMore ? results[results.length - 1].id : null;
+
+    return { results, nextCursor };
   }
 }
