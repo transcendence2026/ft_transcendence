@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Patch, Post, Req, UseGuards, UseInterceptors, UploadedFile, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { Body, Controller, Get, Header, Patch, Post, Req, StreamableFile, UseGuards, UseInterceptors, UploadedFile, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { fileTypeFromFile } from 'file-type';
 import { unlink } from 'node:fs/promises';
@@ -6,16 +6,28 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { createMulterOptions } from '../files/multer-opts-builder';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UsersService } from './users.service';
+import { GastronomicJournalService } from './gastronomic-journal.service.js';
 
 @Controller('api/users')
 @UseGuards(JwtAuthGuard)
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly gastronomicJournalService: GastronomicJournalService,
+  ) {}
   //GET /api/users/me
   @UseGuards(JwtAuthGuard)
   @Get('me')
   getCurrentUser(@Req() req: any) {
     return this.usersService.getProfile(req.user.id);
+  }
+
+  @Get('export/pdf')
+  @Header('Content-Type', 'application/pdf')
+  @Header('Content-Disposition', 'attachment; filename="diario-gastronomico.pdf"')
+  async exportJournal(@Req() req: any): Promise<StreamableFile> {
+    const pdf = await this.gastronomicJournalService.generatePdf(req.user.id);
+    return new StreamableFile(pdf);
   }
   //PATCH /api/users/me
   @UseGuards(JwtAuthGuard)

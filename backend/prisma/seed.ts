@@ -3,6 +3,7 @@
 // Safe to re-run: it wipes the relevant tables before inserting fresh data
 
 import { PrismaClient, Prisma, Cuisine } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
 import { createHash } from 'node:crypto';
 
 
@@ -296,6 +297,134 @@ async function seedUsers() {
 	return prisma.user.findMany({ select: { id: true, username: true } });
 }
 
+async function seedJournalUser() {
+	const passwordHash = await bcrypt.hash('a1234567A', 10);
+
+	return prisma.user.create({
+		data: {
+			email: 'ancanale@tastesync.dev',
+			username: 'ancanale',
+			passwordHash,
+			role: 'USER',
+			status: 'OFFLINE',
+			profile: {
+				create: {
+					firstName: 'Anca',
+					lastName: 'Nale',
+					bio: 'Exploring ramen, handmade pasta and memorable meals.',
+				},
+			},
+			preference: {
+				create: {
+					favoriteCuisines: [Cuisine.JAPANESE, Cuisine.ITALIAN, Cuisine.MEXICAN],
+					spicyLevel: 3,
+					preferredPriceMin: 1,
+					preferredPriceMax: 4,
+				},
+			},
+		},
+	});
+}
+
+async function seedJournalPosts(authorId: string) {
+	const posts = [
+		{
+			title: 'A perfect bowl of tonkotsu ramen',
+			content: 'Rich broth, springy noodles and a soft egg. The kind of meal that deserves a slow evening.',
+			imageUrl: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=1200&q=80',
+		},
+		{
+			title: 'Fresh pasta Sunday',
+			content: 'Hand-cut tagliatelle with wild mushrooms, parmesan and plenty of black pepper.',
+			imageUrl: 'https://images.unsplash.com/photo-1473093295043-cdd812d0e601?auto=format&fit=crop&w=1200&q=80',
+		},
+		{
+			title: 'Tacos worth sharing',
+			content: 'Smoky salsa, bright lime and warm tortillas made this a favourite dinner with friends.',
+			imageUrl: 'https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?auto=format&fit=crop&w=1200&q=80',
+		},
+		{
+			title: 'A sweet finish',
+			content: 'A delicate crème brûlée with a perfectly crisp caramel top to close the journal.',
+			imageUrl: 'https://images.unsplash.com/photo-1551024506-0bccd828d307?auto=format&fit=crop&w=1200&q=80',
+		},
+		{
+			title: 'A table full of colour',
+			content: 'Roasted vegetables, bright herbs and a sharp dressing made a simple lunch feel like a celebration.',
+			imageUrl: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=1200&q=80',
+		},
+		{
+			title: 'Market morning ingredients',
+			content: 'Fresh tomatoes, basil and citrus came home from the market with a plan for dinner already in mind.',
+			imageUrl: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=80',
+		},
+		{
+			title: 'Pizza night notes',
+			content: 'A blistered crust, good mozzarella and just enough basil made this the kind of pizza worth repeating.',
+			imageUrl: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=1200&q=80',
+		},
+		{
+			title: 'Cooking with friends',
+			content: 'Everyone brought one ingredient and somehow the result tasted like we had planned it all along.',
+			imageUrl: 'https://images.unsplash.com/photo-1556911220-bff31c812dba?auto=format&fit=crop&w=1200&q=80',
+		},
+	];
+
+	for (const [index, post] of posts.entries()) {
+		await prisma.post.create({
+			data: {
+				title: post.title,
+				content: post.content,
+				authorId,
+				createdAt: new Date(Date.now() - index * 24 * 60 * 60 * 1000),
+				images: { create: [{ url: post.imageUrl }] },
+			},
+		});
+	}
+
+	return posts.length;
+}
+
+async function seedJournalReviews(authorId: string) {
+	const dishes = await prisma.dish.findMany({
+		where: {
+			name: {
+				in: [
+					'Tonkotsu Ramen',
+					'Salmon Nigiri',
+					'Margherita Pizza',
+					'Spaghetti Carbonara',
+					'Tacos al Pastor',
+					'Crème Brûlée',
+				],
+			},
+		},
+		select: { id: true, name: true },
+	});
+
+	const ratings: Record<string, number> = {
+		'Tonkotsu Ramen': 5,
+		'Salmon Nigiri': 4,
+		'Margherita Pizza': 5,
+		'Spaghetti Carbonara': 4,
+		'Tacos al Pastor': 5,
+		'Crème Brûlée': 4,
+	};
+
+	for (const dish of dishes) {
+		await prisma.review.create({
+			data: {
+				authorId,
+				dishId: dish.id,
+				rating: ratings[dish.name] ?? 4,
+				comment: 'A memorable dish that belongs in my gastronomic journal.',
+			},
+		});
+	}
+
+	return dishes.length;
+}
+
 async function seedPosts(users: { id: string; username: string }[]) {
 	const posts = [
 		{
@@ -461,6 +590,12 @@ async function main() {
 	console.log('Seeding test users...');
 	const users = await seedUsers();
 
+	// Add a real bcrypt-backed account with deterministic journal content for PDF testing.
+	console.log('Seeding ancanale journal fixture...');
+	const journalUser = await seedJournalUser();
+	const journalPostCount = await seedJournalPosts(journalUser.id);
+	const journalReviewCount = await seedJournalReviews(journalUser.id);
+
 	// Step 5: Seed social content so the dashboard feed has real examples.
 	console.log('Seeding social posts...');
 	const postCount = await seedPosts(users);
@@ -470,7 +605,7 @@ async function main() {
 	const reviewCount = await seedReviews(users);
 
 	// Log a summary of all inserted entities
-	console.log(`Done: ${RESTAURANTS.length} restaurants, ${dishCount} dishes, ${tags.length} tags, ${users.length} users, ${postCount} posts.`);
+	console.log(`Done: ${RESTAURANTS.length} restaurants, ${dishCount} dishes, ${tags.length} tags, ${users.length + 1} users, ${postCount + journalPostCount} posts, ${reviewCount + journalReviewCount} reviews.`);
 }
 
 // Execute the main seeding flow with error handling and cleanup logic
