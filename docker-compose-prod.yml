@@ -2,7 +2,7 @@ services:
   nginx:
     # Public entry point for HTTPS traffic and optional HTTP-to-HTTPS redirects.
     build:
-      context: ./proxy
+      context: ./frontend
     ports:
       - "${HTTPS_PORT:-8443}:443"
       - "${HTTP_PORT:-8080}:80"   # Redirects HTTP traffic to HTTPS locally.
@@ -17,8 +17,6 @@ services:
       - proxy-net
     # Start the proxy after the application services are available.
     depends_on:
-      frontend:
-        condition: service_started
       backend:
         condition: service_healthy
     # Restart the proxy automatically unless it is stopped explicitly.
@@ -65,42 +63,39 @@ services:
     expose:
       # Expose port 3000 only to other services, not directly to the host.
       - "3000"
-    command: sh -c "npm install --include=dev && npm run db:push && npm run start:dev"
+    # command: sh -c "npm install --include=dev && npm run db:push && npm run start:dev"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
       interval: 5s
       timeout: 3s
       retries: 12
     volumes:
-      # Mount source code for live development and keep dependencies in a named volume.
-      - ./backend:/app
-      - backend_node_modules:/app/node_modules
       # Persist uploads and make them available to the Nginx container.
       - uploads_data:/app/uploads
     depends_on:
       db:
         condition: service_healthy
 
-  frontend:
-    # Vite development server for the client application.
-    build:
-      context: ./frontend
-      args:
-        VITE_API_URL: ${VITE_API_URL:-https://localhost:8443}
-    networks:
-      - proxy-net
-    expose:
-      # The frontend is reachable internally through the proxy network.
-      - "5173"
-    environment:
-      VITE_API_URL: ${VITE_API_URL:-https://localhost:8443}
-    command: npm run dev -- --host 0.0.0.0
-    volumes:
-      # Mount source code for hot reloading while preserving installed packages.
-      - ./frontend:/app
-      - frontend_node_modules:/app/node_modules
-    depends_on:
-      - backend
+  # frontend:
+  #   # Vite development server for the client application.
+  #   build:
+  #     context: ./frontend
+  #     args:
+  #       VITE_API_URL: ${VITE_API_URL:-https://localhost:8443}
+  #   networks:
+  #     - proxy-net
+  #   expose:
+  #     # The frontend is reachable internally through the proxy network.
+  #     - "5173"
+  #   environment:
+  #     VITE_API_URL: ${VITE_API_URL:-https://localhost:8443}
+  #   command: npm run dev -- --host 0.0.0.0
+  #   volumes:
+  #     # Mount source code for hot reloading while preserving installed packages.
+  #     - ./frontend:/app
+  #     - frontend_node_modules:/app/node_modules
+  #   depends_on:
+  #     - backend
 
 networks:
   # Frontend and Nginx communication network.
@@ -114,6 +109,4 @@ networks:
 volumes:
   # Named volumes preserve state and dependencies between container restarts.
   postgres_data:
-  backend_node_modules:
-  frontend_node_modules:
   uploads_data:
