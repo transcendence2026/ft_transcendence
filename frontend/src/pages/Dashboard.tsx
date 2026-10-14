@@ -11,7 +11,7 @@ import ProtectedRoute from "../components/ProtectedRoute";
 import { useAuth } from "../../context/AuthContext";
 import { useWebSocket } from "@/context/WebSocketContext";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? '';
 
 interface FeedPost {
   id: string;
