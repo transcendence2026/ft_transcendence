@@ -11,9 +11,11 @@ import {
 } from 'class-validator';
 import { Cuisine } from '@prisma/client';
 
+const DEFAULT_LIMIT = 10;
+
 // "?cuisine=" arrives as '' and would fail validation, so treat it as "not provided"
 const emptyToUndefined = () =>
-  Transform(({ value }) => (value === '' ? undefined : value));
+  Transform(({ value, obj, key  }) => (obj[key] === '' ? undefined : value));
 
 export class SearchQueryDto {
   @IsOptional()
@@ -52,11 +54,12 @@ export class SearchQueryDto {
   @IsString()
   cursor?: string;
 
+  // "?limit=" falls back to the default instead of becoming undefined
   @IsOptional()
-  @emptyToUndefined()
+  @Transform(({ value, obj, key }) => (obj[key] === '' ? DEFAULT_LIMIT : value))
   @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(50)
-  limit: number = 10;
+  limit: number = DEFAULT_LIMIT;
 }
