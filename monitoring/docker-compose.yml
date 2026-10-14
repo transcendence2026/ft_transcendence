@@ -1,0 +1,50 @@
+services:
+  cadvisor:
+      image: gcr.io/cadvisor/cadvisor:v0.49.1
+      container_name: cadvisor
+      hostname: cadvisor
+      restart: unless-stopped
+# cAdvisor needs access to the host's system directories (:ro) 
+# to monitor container and system-wide performance metrics (CPU, memory, disk, network) via the Linux kernel.
+      volumes:
+        #Mounts the host's entire root filesystem as a virtual directory
+        - "/:/rootfs:ro"
+        #The directory containing the Docker daemon socket (docker.sock) and other system processes.
+        - "/var/run:/var/run:ro"
+        # cAdvisor reads the exact CPU, memory, and I/O usage assigned by the kernel cgroups to each process and container from here.
+        - "/sys:/sys:ro"
+        # Directory containing Docker's data and metadata, including container images, layers, and configuration files.
+        - "/var/lib/docker/:/var/lib/docker:ro"
+        #Information about physical disks and partitions connected to the operating system
+        - "/dev/disk/:/dev/disk:ro"
+      ports:
+        - "8081:8080"
+        #"127.0.0.1:8081:8080"
+      networks:
+      - monitoring-net
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    volumes:
+    - ./prometheus-config.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - monitoring-net
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    environment:
+      #- GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER}
+      #- GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      - GF_SECURITY_ADMIN_USER=grafana #temporal
+      - GF_SECURITY_ADMIN_PASSWORD=password #tamporal
+      # esto no me funciona
+    ports:
+      - "9000:3000" 
+    networks:
+      - monitoring-net
+
+networks:
+  monitoring-net:
+    driver: bridge
