@@ -34,6 +34,10 @@ services:
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
+    volumes:
+      - ./grafana-config.yml:/etc/grafana/provisioning/datasources/datasource.yml
+      - ./cadvisor-dashboard.json:/var/lib/grafana/dashboards/cadvisor-dashboard.json
+      - ./provisioning-dashboards.yml:/etc/grafana/provisioning/dashboards/provisioning-dashboards.yml
     environment:
       #- GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER}
       #- GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
@@ -47,4 +51,3 @@ services:
 
 networks:
   monitoring-net:
-    driver: bridge
