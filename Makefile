@@ -1,6 +1,6 @@
 .PHONY: help build certs up push seed down restart logs ps clean
 
-COMPOSE_FILE ?= docker-compose-dev.yml
+COMPOSE_FILE ?= docker-compose-prod.yml
 COMPOSE := docker compose -f $(COMPOSE_FILE)
 
 CERT_DIR := proxy/certs
@@ -31,7 +31,8 @@ certs:
 			-newkey rsa:2048 \
 			-keyout $(CERT_KEY) \
 			-out $(CERT_CRT) \
-			-subj "/CN=localhost"; \
+			-subj "/CN=localhost" \
+			-addext "subjectAltName=DNS:localhost,IP:127.0.0.1"; \
 	else \
 		echo "Certificate already exists; skipping."; \
 	fi
