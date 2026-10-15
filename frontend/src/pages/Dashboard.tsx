@@ -323,11 +323,11 @@ function DashboardContent() {
   };
 
   return (
-    <main className="flex h-screen flex-col overflow-hidden bg-background font-sans text-text">
-      <header className="flex h-18 items-center justify-between border-b border-border bg-surface px-5 sm:px-8">
+    <main className="culinary-dashboard flex h-screen flex-col overflow-hidden bg-background font-sans text-text">
+      <header className="dashboard-header flex h-18 items-center justify-between border-b border-border bg-surface px-5 sm:px-8">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary font-serif text-xl text-background">t</div>
-          <span className="font-serif text-xl tracking-[-0.03em]">transcendence</span>
+          <div className="dashboard-mark flex h-9 w-9 items-center justify-center rounded-full bg-primary font-serif text-xl text-background">t</div>
+          <span className="font-serif text-xl tracking-[-0.03em]">transcendence<span className="dashboard-wordmark-dot">.</span></span>
         </div>
         <div className="flex items-center gap-4">
           <Button
@@ -345,8 +345,8 @@ function DashboardContent() {
         </div>
       </header>
 
-      <div className="mx-auto flex min-h-0 w-full max-w-[1600px] flex-1 overflow-hidden">
-        <aside className="hidden h-full w-52 shrink-0 overflow-hidden border-r border-border px-4 py-8 md:block">
+      <div className="dashboard-layout mx-auto flex min-h-0 w-full max-w-[1600px] flex-1 overflow-hidden">
+        <aside className="dashboard-sidebar hidden h-full w-52 shrink-0 overflow-hidden border-r border-border px-4 py-8 md:block">
           <div className="mb-8 flex items-center gap-3 border-b border-border pb-7">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-raised text-sm font-bold text-primary-soft">{username.slice(0, 2).toUpperCase()}</div>
             <div className="min-w-0">
@@ -360,7 +360,7 @@ function DashboardContent() {
                 key={item.label}
                 type="button"
                 variant={item.active ? "primary" : "ghost"}
-                className={`flex w-full !justify-start items-center gap-4 rounded px-4 py-3 text-left text-sm ${
+                className={`dashboard-nav-item flex w-full !justify-start items-center gap-4 rounded px-4 py-3 text-left text-sm ${
                   item.active 
                     ? "font-semibold" 
                     : "text-muted hover:bg-surface-raised hover:text-text"
@@ -384,17 +384,17 @@ function DashboardContent() {
           </Button>
         </aside>
         
-        <section className="flex min-h-0 min-w-0 flex-1 flex-col px-4 py-6 sm:px-8 lg:px-10">
+        <section className="dashboard-content flex min-h-0 min-w-0 flex-1 flex-col px-4 py-6 sm:px-8 lg:px-10">
           <div className="mb-6 flex shrink-0 items-end justify-between border-b border-border pb-5">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Your feed</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">The social table</p>
               <h1 className="mt-2 font-serif text-4xl tracking-[-0.04em]">Good to see you, {username}.</h1>
             </div>
             <Button type="button" variant="ghost" className="hidden rounded border border-border px-3 py-2 text-xs text-muted hover:border-primary hover:text-primary-soft sm:block">Latest</Button>
           </div>
 
-          <div className="scrollbar-hidden min-h-0 flex-1 space-y-4 overflow-y-auto pb-8 pr-1">
-            <div className="flex gap-3 rounded border border-border bg-surface p-4">
+          <div className="dashboard-feed scrollbar-hidden min-h-0 flex-1 space-y-4 overflow-y-auto pb-8 pr-1">
+            <div className="composer flex gap-3 rounded border border-border bg-surface p-4">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-raised text-xs font-bold text-primary-soft">{username.slice(0, 2).toUpperCase()}</div>
               <div className="flex-1 rounded border border-border px-4 py-3 text-sm text-muted">Share something with the community...</div>
             </div>
@@ -405,8 +405,8 @@ function DashboardContent() {
           </div>
         </section>
 
-        <aside className="scrollbar-hidden hidden h-full w-80 shrink-0 overflow-y-auto border-l border-border px-4 py-8 lg:block">
-          <div className="border-b border-border pb-6 font-sans">
+        <aside className="dashboard-rail scrollbar-hidden hidden h-full w-80 shrink-0 overflow-y-auto border-l border-border px-4 py-8 lg:block">
+          <div className="rail-panel border-b border-border pb-6 font-sans">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-lg font-semibold text-text-strong">Autenticación en Dos Pasos (2FA)</h3>

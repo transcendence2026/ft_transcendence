@@ -10,3 +10,13 @@ export class MessagePayloadDto {
     @IsNotEmpty()
     readonly message!: string
 }
+
+export class DirectMessageDto {
+    @IsString()
+    @IsNotEmpty()
+    readonly receiverId!: string
+
+    @IsString()
+    @IsNotEmpty()
+    readonly text!: string
+}

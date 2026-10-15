@@ -70,6 +70,7 @@ export class PresenceService {
   getUserSockets(userId: string) {
     return this.activeSockets.get(userId)
   }
+
 }
 
 @Injectable()

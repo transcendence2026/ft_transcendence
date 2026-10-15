@@ -70,3 +70,116 @@ button {
 .scrollbar-hidden::-webkit-scrollbar {
   display: none;
 }
+
+.culinary-dashboard {
+  background:
+    radial-gradient(circle at 50% -20%, rgb(103 61 25 / 14%), transparent 38%),
+    var(--color-background-deep);
+}
+
+.dashboard-header {
+  background: rgb(15 14 13 / 94%);
+  border-color: #29231d;
+}
+
+.dashboard-mark {
+  box-shadow: 0 0 0 1px rgb(250 188 77 / 35%), 0 0 20px rgb(250 188 77 / 12%);
+}
+
+.dashboard-wordmark-dot {
+  color: var(--color-secondary);
+}
+
+.dashboard-sidebar,
+.dashboard-rail {
+  border-color: #29231d;
+  background: rgb(15 14 13 / 72%);
+}
+
+.dashboard-sidebar .border-b,
+.dashboard-content .border-b,
+.dashboard-rail .border-b {
+  border-color: #30271e;
+}
+
+.dashboard-nav-item {
+  border-left: 2px solid transparent;
+  color: #9d8977;
+  letter-spacing: 0.01em;
+}
+
+.dashboard-nav-item.bg-primary {
+  border-left-color: var(--color-secondary);
+  background: linear-gradient(90deg, rgb(118 73 28 / 42%), transparent);
+  color: #f3c66e;
+  box-shadow: none;
+}
+
+.dashboard-content {
+  background: rgb(20 17 14 / 52%);
+}
+
+.dashboard-feed {
+  max-width: 720px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.composer {
+  border-color: #3b2e22;
+  background: linear-gradient(115deg, rgb(39 29 21 / 86%), rgb(25 22 19 / 92%));
+}
+
+.composer > div:last-child {
+  border-color: #493624;
+  background: rgb(12 11 10 / 42%);
+  font-family: var(--font-serif);
+  font-style: italic;
+}
+
+.feed-post {
+  border-color: #3a2e24;
+  background: linear-gradient(145deg, rgb(32 27 23 / 96%), rgb(23 21 19 / 98%));
+  box-shadow: 0 16px 34px rgb(0 0 0 / 14%);
+}
+
+.feed-post:hover {
+  border-color: #5b4229;
+}
+
+.feed-post .post-copy h2 {
+  color: #f2e5d2;
+}
+
+.feed-post .post-gallery img {
+  border: 1px solid #463323;
+  filter: saturate(0.88) contrast(1.04);
+}
+
+.feed-post .post-actions {
+  border-color: #3b2e22;
+}
+
+.dashboard-rail .rail-panel {
+  border-color: #3a2e24;
+}
+
+.dashboard-rail .rail-panel > div:first-child h3 {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  color: #f0dfc8;
+}
+
+@media (max-width: 767px) {
+  .dashboard-header {
+    height: 4.25rem;
+  }
+
+  .dashboard-content {
+    padding: 1.25rem 1rem;
+  }
+
+  .dashboard-content h1 {
+    font-size: 2.15rem;
+  }
+}

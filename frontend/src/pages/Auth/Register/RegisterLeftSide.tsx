@@ -7,27 +7,56 @@ import Lock from "@/src/components/Elements/Lock";
 import Arrow from "@/src/components/Elements/Arrow";
 import EyeOpen from "@/src/components/Elements/EyeOpen";
 import EyeClose from "@/src/components/Elements/EyeClose";
+import AuthErrorAlert from "@/src/components/AuthErrorAlert";
+
+function getAuthErrorMessage(error: unknown): string {
+  if (!axios.isAxiosError(error)) {
+    return "No se ha podido crear la cuenta.";
+  }
+
+  if (!error.response) {
+    return "No se puede conectar con el servidor. Comprueba que el backend esté iniciado.";
+  }
+
+  const message = error.response.data?.message;
+  if (Array.isArray(message)) {
+    return message.join(" ");
+  }
+  if (typeof message === "string" && message.length > 0) {
+    if (message === "Email already registered") {
+      return "Este correo electrónico ya está registrado.";
+    }
+    if (message === "Username already taken") {
+      return "Este nombre de usuario ya está ocupado.";
+    }
+    return message;
+  }
+
+  return `El servidor ha rechazado la solicitud (${error.response.status}).`;
+}
 
 export default function RegisterLeftSide() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { register, oauth42 } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setErrorMessage(null);
+    setIsSubmitting(true);
     try {
       await register(username, email, password);
       navigate("/dashboard");
     } catch (err) {
-      if (axios.isAxiosError(err)) {
-        alert(err.response?.data?.message ?? "Error al crear la cuenta");
-      } else {
-        alert("Ha ocurrido un error inesperado");
-      }
+      setErrorMessage(getAuthErrorMessage(err));
+    } finally {
+      setIsSubmitting(false);
     }
   };
   return (
@@ -64,6 +93,7 @@ export default function RegisterLeftSide() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3.5">
+          {errorMessage && <AuthErrorAlert message={errorMessage} />}
           <label className="auth-label">
             <span className="mb-1 block">Nombre de usuario</span>
             <div className="auth-input-shell">
@@ -117,9 +147,10 @@ export default function RegisterLeftSide() {
 
           <button
             type="submit"
+            disabled={isSubmitting}
             className="auth-button mt-2"
           >
-            Crear cuenta
+            {isSubmitting ? "Creando cuenta..." : "Crear cuenta"}
             <Arrow />
           </button>
         </form>

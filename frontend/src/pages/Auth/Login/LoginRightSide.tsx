@@ -7,12 +7,39 @@ import Lock from "@/src/components/Elements/Lock";
 import EyeOpen from "@/src/components/Elements/EyeOpen";
 import EyeClose from "@/src/components/Elements/EyeClose";
 import Arrow from "@/src/components/Elements/Arrow";
+import AuthErrorAlert from "@/src/components/AuthErrorAlert";
+
+function getAuthErrorMessage(error: unknown, fallback: string): string {
+  if (!axios.isAxiosError(error)) {
+    return fallback;
+  }
+
+  if (!error.response) {
+    return "No se puede conectar con el servidor. Comprueba que el backend esté iniciado.";
+  }
+
+  const message = error.response.data?.message;
+  if (Array.isArray(message)) {
+    return message.join(" ");
+  }
+
+  if (typeof message === "string" && message.length > 0) {
+    if (message === "Invalid credentials") {
+      return "El correo o la contraseña no son correctos.";
+    }
+    return message;
+  }
+
+  return `El servidor ha rechazado la solicitud (${error.response.status}).`;
+}
 
 export default function LoginRightSide() {
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [remember, setRemember] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   //Estados para 2FA
   const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
@@ -33,6 +60,8 @@ export default function LoginRightSide() {
   //Enviar credenciales
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setErrorMessage(null);
+    setIsSubmitting(true);
     try {
       const response = await login(email, password);
 
@@ -45,17 +74,17 @@ export default function LoginRightSide() {
 
       navigate("/dashboard");
     } catch (err) {
-      if (axios.isAxiosError(err)) {
-        alert(err.response?.data?.message ?? "Error al iniciar sesión");
-      } else {
-        alert("Ha ocurrido un error inesperado");
-      }
+      setErrorMessage(getAuthErrorMessage(err, "No se ha podido iniciar sesión."));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   // Paso 2: Enviar userId y code al endpoint de verificación
   const handleVerify2Fa = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setErrorMessage(null);
+    setIsSubmitting(true);
     try {
       const res = await axios.post("/api/auth/2fa/authenticate", {
         userId,
@@ -69,11 +98,9 @@ export default function LoginRightSide() {
         window.location.reload();
       }
     } catch (err) {
-      if (axios.isAxiosError(err)) {
-        alert(err.response?.data?.message ?? "Código 2FA incorrecto o expirado");
-      } else {
-        alert("Error al verificar código 2FA");
-      }
+      setErrorMessage(getAuthErrorMessage(err, "El código 2FA no es válido o ha expirado."));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -100,7 +127,6 @@ export default function LoginRightSide() {
                 type="button"
                 //onClick={oauth42}
 				onClick={() => {
-					window.alert("Click");
 					oauth42();
     			}}
                 className="auth-secondary-button"
@@ -119,6 +145,7 @@ export default function LoginRightSide() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-3.5">
+              {errorMessage && <AuthErrorAlert message={errorMessage} />}
               <label className="auth-label">
                 <span className="mb-1 block">Correo electrónico</span>
                 <div className="auth-input-shell">
@@ -176,9 +203,10 @@ export default function LoginRightSide() {
 
               <button
                 type="submit"
+                disabled={isSubmitting}
                 className="auth-button mt-2"
               >
-                Iniciar sesión
+                {isSubmitting ? "Conectando..." : "Iniciar sesión"}
                 <Arrow />
               </button>
             </form>
@@ -193,6 +221,7 @@ export default function LoginRightSide() {
         ) : (
           /* SI PIDE 2FA: Mostramos solo la cajita para los 6 números */
           <form onSubmit={handleVerify2Fa} className="mt-6 space-y-4">
+            {errorMessage && <AuthErrorAlert message={errorMessage} />}
             <label className="auth-label">
               <span className="mb-1 block">Código de seguridad</span>
               <div className="auth-input-shell">
@@ -212,7 +241,7 @@ export default function LoginRightSide() {
 
             <button
               type="submit"
-              disabled={code.length !== 6}
+              disabled={code.length !== 6 || isSubmitting}
               className="auth-button mt-2 w-full disabled:opacity-50"
             >
               Verificar e ingresar
