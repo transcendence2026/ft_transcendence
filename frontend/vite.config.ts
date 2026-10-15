@@ -9,8 +9,9 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
+	  disable: true, // Desactiva el Service Worker y su registro para evitar el fallo con SSL autofirmado
       registerType: "autoUpdate",
-	  devOptions: { enabled: true },
+	  //devOptions: { enabled: false },
       includeAssets: [],
       manifest: {
         name: "TasteSync",
@@ -34,6 +35,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
+		navigateFallbackDenylist: [/^\/api/],
       },
     }),
   ],

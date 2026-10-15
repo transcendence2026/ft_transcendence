@@ -136,7 +136,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // 6. OAuth 42: Redirección al endpoint del backend
     const oauth42 = () => {
-        window.location.href = `${API_BASE_URL}/api/auth/oauth/42`;
+        window.location.href = '/api/auth/oauth/42';
     };
 
     const completeOAuth = async () => {

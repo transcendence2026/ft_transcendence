@@ -153,7 +153,7 @@ export class AuthController {
         
 		// 2.- Si no requiere 2F o el login se completo
 		// entonces entra la funcion setAuthCookie y se crea la cookie segura
-        if (result.token) {
+        if (result.accessToken && result.refreshToken) {
             this.setAuthCookie(res, result.accessToken, result.refreshToken);
         }
 
