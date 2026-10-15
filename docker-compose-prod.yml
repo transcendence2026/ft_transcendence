@@ -9,8 +9,8 @@ services:
     volumes:
       # Certificates are mounted read-only so they can be replaced without rebuilding.
       - ./proxy/certs:/etc/nginx/certs:ro
-      # Share uploaded files with the backend while serving them read-only through Nginx.
       - ./frontend/nginx.conf:/etc/nginx/nginx.conf:ro
+      # Share uploaded files with the backend while serving them read-only through Nginx.
       - uploads_data:/usr/share/nginx/uploads:ro
     networks:
       # The edge network is reserved for a future public-facing layer.
