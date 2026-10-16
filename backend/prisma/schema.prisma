@@ -161,6 +161,8 @@ model Restaurant {
   updatedAt    DateTime   @updatedAt
 
   dishes Dish[]
+  @@index ([cuisine, priceRange])
+  @@index([createdAt, id])
 }
 
 model Dish {
@@ -196,7 +198,7 @@ model Review {
 
   @@unique([authorId, dishId]) // One review per user for each dish
   @@index([authorId])
-  @@index([dishId])
+  @@index([dishId, rating])
 }
 
 // CHAT AND MESSAGING
