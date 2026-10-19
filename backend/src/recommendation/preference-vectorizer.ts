@@ -27,6 +27,8 @@ const PRICE_MAX = 4;
 // Matches Preference.spicyLevel (1-5)
 const SPICY_LEVEL_MIN = 1;
 const SPICY_LEVEL_MAX = 5;
+// Tag that marks a dish as spicy (assigned by the seed via SPICY_DISHES)
+export const SPICY_TAG = "Spicy";
 
 // Minimal shape needed to build the vector — avoids importing Prisma's
 // generated Preference type directly, so this stays easy to unit test
@@ -35,6 +37,14 @@ export interface PreferenceInput {
 	spicyLevel: number;
 	preferredPriceMin: number;
 	preferredPriceMax: number;
+}
+
+// Minimal shape needed to build a dish vector (cuisine and priceRange come 
+// from Dish.restaurant, tags from Dish.tags)
+export interface DishInput {
+  cuisine: Cuisine;
+  priceRange: number;
+  tags: { name: string }[];
 }
 
 export class PreferenceVectorizer {
@@ -70,7 +80,26 @@ export class PreferenceVectorizer {
       PRICE_MIN,
       PRICE_MAX
     );
- 
+    return vector;
+  }
+  /** Converts a Dish into a vector in the same space as toVector() */
+  static toDishVector(dish: DishInput): number[] {
+    const vector = new Array<number>(this.VECTOR_LENGTH).fill(0);
+
+    // 1. One-hot of the dish's cuisine (inherited from its restaurant)
+    const idx = ORDERED_CUISINES.indexOf(dish.cuisine);
+    if (idx !== -1) vector[idx] = 1;
+
+    const cuisineBlockLength = ORDERED_CUISINES.length;
+
+    // 2. Spicy: 1 if the dish has the "Spicy" tag, 0 otherwise
+    vector[cuisineBlockLength + 1] = dish.tags.some((t) => t.name === SPICY_TAG) ? 1 : 0;
+
+    // 3. A dish has a single price, so it fills both the min and max slots
+    const price = this.normalize(dish.priceRange, PRICE_MIN, PRICE_MAX);
+    vector[cuisineBlockLength + 1] = price;
+    vector[cuisineBlockLength + 2] = price;
+    
     return vector;
   }
  

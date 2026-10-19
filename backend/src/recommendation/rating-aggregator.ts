@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { PrismaService } from '../prisma/prisma.service.js';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class RatingAggregatorService {
@@ -24,7 +24,7 @@ export class RatingAggregatorService {
   async getRestaurantRatings(restaurantIds?: string[])
   {
     return this.prisma.$queryRaw<
-      { restaurantId: string; avgRating: number; reviewCount: bigint }[]
+      { restaurantId: string; avgRating: number; reviewCount: number }[]
     >`
       SELECT d."restaurantId",
              AVG(rv.rating)::float AS "avgRating",

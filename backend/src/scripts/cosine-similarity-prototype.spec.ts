@@ -1,4 +1,4 @@
-import { cosineSimilarity } from './cosine-similarity-prototype';
+import { cosineSimilarity } from '../recommendation/cosine-similarity';
 
 describe('cosineSimilarity', () => {
   test('vectores idénticos → similitud 1', () => {

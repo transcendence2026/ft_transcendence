@@ -1,11 +1,23 @@
-import { Controller, Get, Query } from "@nestjs/common";
+import { Controller, Get, Query, Req, UseGuards } from "@nestjs/common";
 import { RatingAggregatorService } from "./rating-aggregator";
-import { resolveObjectURL } from "buffer";
+import { RecommendationService } from "./recommendation.service";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 
-@Controller('api/recommendation')
+@Controller('api/recommendations')
 export class RecommendationController {
 	// Inject the aggregator so this controller can exposse it over HTTP
-	constructor(private readonly ratingAggregator: RatingAggregatorService) {}
+	constructor(
+		private readonly ratingAggregator: RatingAggregatorService,
+		private readonly recommendation: RecommendationService
+	) {}
+
+	@Get('dishes')
+	@UseGuards(JwtAuthGuard) // use the real guard from Patricia's auth module
+	getDishRecommendations(@Req() req: any, @Query('limit') limit?: string) {
+		// Clamp the limit to 1..50 and default to 10
+		const parsed = Math.min(Math.max(parseInt(limit ?? '10', 10) || 10, 1), 50);
+		return this.recommendation.getDishRecommendations(req.user.id, parsed);
+	}
 
 	@Get('dish-ratings')
 	getDishRatings(@Query('dishIds') dishIds?: string) {
