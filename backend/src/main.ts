@@ -5,9 +5,17 @@ import { WsAdapter } from '@nestjs/platform-ws';
 import { AppModule } from './app.module.js';
 import { ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  // Aplicar Helmet a nivel de servidor HTTP
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+      contentSecurityPolicy: false,
+    }),
+  );
   // Configura el prefijo global para que todas las rutas respondan bajo /api
   //app.setGlobalPrefix('api');
   app.useWebSocketAdapter(new WsAdapter(app));
