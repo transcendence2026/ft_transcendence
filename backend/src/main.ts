@@ -11,7 +11,13 @@ async function bootstrap() {
   // Configura el prefijo global para que todas las rutas respondan bajo /api
   //app.setGlobalPrefix('api');
   app.useWebSocketAdapter(new WsAdapter(app));
-  app.useGlobalPipes(new ValidationPipe());
+  app.useGlobalPipes(
+	new ValidationPipe({
+	  whitelist: true,´//solo admite campos q estan declarados en el DTO
+      forbidNonWhitelisted: true, //Aborta peticion (400) si alguien intenta colar un campo no predeterminado
+      transform: true, //evita que el servidor interprete números o booleanos como simples palabras, previniendo errores de lógica y validación.
+	}),
+  );
   app.use(cookieParser()); //parsear cookies entrantes
   app.enableCors({
       origin: process.env.FRONTEND_URL || 'https://localhost:8443', //le dice al backend q acepte lo que le llega de ese puerto
