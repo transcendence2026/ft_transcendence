@@ -13,7 +13,7 @@ async function bootstrap() {
   app.useWebSocketAdapter(new WsAdapter(app));
   app.useGlobalPipes(
 	new ValidationPipe({
-	  whitelist: true,´//solo admite campos q estan declarados en el DTO
+	  whitelist: true,//solo admite campos q estan declarados en el DTO
       forbidNonWhitelisted: true, //Aborta peticion (400) si alguien intenta colar un campo no predeterminado
       transform: true, //evita que el servidor interprete números o booleanos como simples palabras, previniendo errores de lógica y validación.
 	}),
