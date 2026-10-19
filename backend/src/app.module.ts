@@ -1,6 +1,8 @@
 //metemos AuthModule dentro de la AppModule, así cuando arranque la aplicacion,
 //enciende tambien el modulo de autenticacion
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
@@ -27,6 +29,13 @@ import { RgpdModule } from './rgpd/rgpd.module.js';
 		ConfigModule.forRoot({
 			isGlobal: true,
 		}),
+		// Regla de Rate Limiting: maximo 100 peticiones cada 60 segundos por IP
+		ThrottlerModule.forRoot([
+		{
+			ttl: 60000, // ventana de tiempo en milisegundos (1 minuto)
+			limit: 100, // tope de llamadas permitidas dentro de ese minuto
+		},
+		]),
 		PrismaModule,
 		AuthModule, //Importa el Modulo de Autenticación
 		UsersModule,
@@ -52,6 +61,14 @@ import { RgpdModule } from './rgpd/rgpd.module.js';
 		}), 
 	],
 	controllers: [],
-	providers: [WebsocketGateway, PresenceService, RoomService],
+	providers: [
+		WebsocketGateway,
+		PresenceService,
+		RoomService,
+		{
+		provide: APP_GUARD,
+		useClass: ThrottlerGuard,
+		},
+	],
 })
 export class AppModule {}
