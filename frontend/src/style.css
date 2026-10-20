@@ -1,5 +1,15 @@
 @import "tailwindcss";
 
+@keyframes toast-progress {
+  from {
+    transform: scaleX(1);
+  }
+
+  to {
+    transform: scaleX(0);
+  }
+}
+
 @theme {
   --color-primary: #ef6540;
   --color-primary-hover: #ff7955;

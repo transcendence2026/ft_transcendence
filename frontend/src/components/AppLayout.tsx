@@ -1,7 +1,8 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Bell,
+  X,
   Bookmark,
   ChefHat,
   Compass,
@@ -9,17 +10,17 @@ import {
   MessageCircle,
   Search,
   UserRound,
-  Utensils,
   Wine,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useNotification } from "../../context/NotificationContext";
 
 const NAV_ITEMS = [
   { id: "flux", label: "INICIO", icon: Compass, href: "/dashboard" },
   { id: "curiosities", label: "EXPLORAR", icon: Search, href: "/discover" },
   { id: "cave", label: "RESERVAS Y BODEGA", icon: Wine, href: "/reservations" },
   { id: "salons", label: "MENSAJES", icon: MessageCircle, href: "/chat" },
-  { id: "atelier", label: "COCINA Y MENÚS", icon: Utensils, href: "/notifications" },
+  { id: "atelier", label: "NOTIFICACIONES", icon: Bell, href: "/notifications" },
 ];
 
 interface AppLayoutProps {
@@ -27,7 +28,6 @@ interface AppLayoutProps {
   sidebarFooter?: ReactNode;
   isSaved?: boolean;
   onToggleSaved?: () => void;
-  onNotify?: () => void;
 }
 
 export default function AppLayout({
@@ -35,15 +35,79 @@ export default function AppLayout({
   sidebarFooter,
   isSaved = false,
   onToggleSaved,
-  onNotify,
 }: AppLayoutProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const username = user?.username ?? "Usuario";
+  const { notification, markAllAsRead, markAsRead } = useNotification();
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [toastNotification, setToastNotification] = useState<typeof notification[number]>();
+  const unreadNotifications = notification.filter((item) => !item.read);
+
+  useEffect(() => {
+    const latestNotification = notification.at(-1);
+    if (!latestNotification || sessionStorage.getItem(`notification-toast:${latestNotification.id}`)) {
+      return;
+    }
+
+    sessionStorage.setItem(`notification-toast:${latestNotification.id}`, "shown");
+    setToastNotification(latestNotification);
+    const timeoutId = window.setTimeout(() => setToastNotification(undefined), 6000);
+    return () => window.clearTimeout(timeoutId);
+  }, [notification]);
+
+  useEffect(() => {
+    if (!isNotificationOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsNotificationOpen(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [isNotificationOpen]);
 
   return (
     <div className="relative flex min-h-screen w-full bg-[#141312] pl-[288px] font-['Liberation_Serif',serif] text-[#e6e1df]">
+      {toastNotification && (
+        <div
+          role="status"
+          className="fixed top-5 right-6 z-50 w-[min(360px,calc(100vw-3rem))] border border-[#fabc4d]/30 bg-[#211f1e] p-4 shadow-2xl shadow-black/40"
+        >
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center border border-[#fabc4d]/30 bg-[#2b2a28] text-[#fabc4d]">
+              <Bell aria-hidden="true" className="size-4" strokeWidth={1.5} />
+            </div>
+            <button
+              type="button"
+              className="min-w-0 flex-1 text-left"
+              onClick={() => {
+                markAsRead(toastNotification.id);
+                setToastNotification(undefined);
+                navigate("/notifications");
+              }}
+            >
+              <p className="text-[10px] font-bold tracking-[1.8px] text-[#fabc4d] uppercase">
+                Nueva notificación
+              </p>
+              <p className="mt-1 text-sm leading-5 text-[#e6e1df]">{toastNotification.data.message}</p>
+              <p className="mt-2 text-[10px] tracking-[1px] text-[#a88a83] uppercase">
+                Ver centro de avisos
+              </p>
+            </button>
+            <button
+              type="button"
+              aria-label="Cerrar notificación"
+              onClick={() => setToastNotification(undefined)}
+              className="text-[#a88a83] transition-colors hover:text-[#e6e1df]"
+            >
+              <X aria-hidden="true" className="size-4" strokeWidth={1.5} />
+            </button>
+          </div>
+          <div className="mt-3 h-px overflow-hidden bg-white/5">
+            <div className="h-full w-full origin-left animate-[toast-progress_6s_linear_forwards] bg-[#fabc4d]/60" />
+          </div>
+        </div>
+      )}
       <aside className="fixed inset-y-0 left-0 z-20 flex w-[288px] flex-col justify-between border-r border-white/5 bg-[#0f0e0d]">
         <div>
           <div className="flex h-[80px] items-center justify-between border-b border-white/5 px-6">
@@ -123,13 +187,72 @@ export default function AppLayout({
               </button>
               <button
                 type="button"
-                onClick={onNotify ?? (() => navigate("/notifications"))}
+                onClick={() => setIsNotificationOpen((current) => !current)}
                 aria-label="Notificaciones"
+                aria-expanded={isNotificationOpen}
                 className="relative flex size-9 items-center justify-center hover:bg-white/5"
               >
                 <Bell aria-hidden="true" className="h-4 w-4" strokeWidth={1.5} />
-                <span className="absolute top-2 right-2 size-1.5 rounded-full bg-[#ffb4a1]" />
+                {unreadNotifications.length > 0 && (
+                  <span className="absolute top-1.5 right-1.5 flex min-h-1.5 min-w-1.5 items-center justify-center rounded-full bg-[#ffb4a1] px-1 text-[8px] text-[#611300]">
+                    {unreadNotifications.length > 9 ? "9+" : unreadNotifications.length}
+                  </span>
+                )}
               </button>
+              {isNotificationOpen && (
+                <div
+                  role="dialog"
+                  aria-label="Aperçu des notifications"
+                  className="absolute top-[68px] right-[116px] z-30 w-[320px] border border-white/10 bg-[#211f1e] p-4 text-left shadow-2xl shadow-black/40"
+                >
+                  <div className="flex items-start justify-between gap-4 border-b border-white/5 pb-3">
+                    <div>
+                      <p className="text-[11px] font-bold tracking-[2px] text-[#fabc4d] uppercase">
+                        CENTRO DE AVISOS
+                      </p>
+                      <h2 className="mt-1 text-[20px] text-[#e6e1df]">Notificaciones</h2>
+                    </div>
+                    {unreadNotifications.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => markAllAsRead()}
+                        className="text-[10px] tracking-[0.5px] text-[#a88a83] uppercase hover:text-[#fabc4d]"
+                      >
+                        Marcar leídas
+                      </button>
+                    )}
+                  </div>
+                  <div className="max-h-64 overflow-y-auto py-2">
+                    {notification.length === 0 ? (
+                      <p className="py-5 text-center text-[12px] text-[#a88a83]">
+                        No tienes notificaciones nuevas.
+                      </p>
+                    ) : (
+                      notification.slice(-5).reverse().map((item) => (
+                        <div
+                          key={item.id}
+                          className={`border-b border-white/5 px-1 py-3 last:border-0 ${item.read ? "opacity-60" : ""}`}
+                        >
+                          <p className="text-[12px] leading-5 text-[#e6e1df]">{item.data.message}</p>
+                          <p className="mt-1 text-[10px] tracking-[0.6px] text-[#a88a83] uppercase">
+                            {item.data.type}
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsNotificationOpen(false);
+                      navigate("/notifications");
+                    }}
+                    className="mt-2 w-full border border-[#fabc4d]/30 bg-[#2b2a28] px-3 py-2 text-[11px] font-bold tracking-[1px] text-[#fabc4d] uppercase transition-colors hover:bg-[#fabc4d]/10"
+                  >
+                    Ver todas las notificaciones
+                  </button>
+                </div>
+              )}
             </div>
 
             <button

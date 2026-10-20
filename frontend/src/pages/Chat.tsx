@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, useMemo, useRef, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Archive,
@@ -16,6 +16,9 @@ import {
   Wine,
 } from "lucide-react";
 import AppLayout from "../components/AppLayout";
+
+import { useWebSocket } from "../../context/WebSocketContext";
+import { useAuth } from "@/context/AuthContext";
 
 export interface SalonThread {
   id: string;
@@ -106,19 +109,6 @@ export interface SalonDossier {
 }
 
 const salonApi = {
-  async sendMessage(salonId: string, content: string): Promise<ChatMessage> {
-    void salonId;
-    return {
-      id: crypto.randomUUID(),
-      senderName: "Tú",
-      senderInitials: "TU",
-      senderRole: "CLIENTE",
-      isOwn: true,
-      timestamp: new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }),
-      text: content,
-    };
-  },
-
   async confirmDish(salonId: string, dishId: string): Promise<void> {
     void salonId;
     void dishId;
@@ -144,7 +134,9 @@ const INITIAL_THREADS: SalonThread[] = [];
 const INITIAL_MESSAGES: ChatMessage[] = [];
 
 export default function EpicureSalonWorkspace() {
-  const navigate = useNavigate();
+  const { status, messages: wsMessages, sendMessage, reconnect } = useWebSocket();
+  const { user } = useAuth();
+
   const [threads, setThreads] = useState<SalonThread[]>(INITIAL_THREADS);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(
     INITIAL_THREADS[0]?.id ?? null
@@ -161,6 +153,59 @@ export default function EpicureSalonWorkspace() {
 
   const [draft, setDraft] = useState("");
   const [isSending, setIsSending] = useState(false);
+
+
+  useEffect(() => {
+    const fetchThreads = async () => {
+      try {
+        const SalonThreads: SalonThread[] = await fetch("/api/salon/threads").then((res) => res.json());
+
+        if (SalonThreads.length > 0) {
+          setThreads(SalonThreads);
+          setActiveThreadId(SalonThreads[0].id);
+        } else {
+          setThreads([]);
+          setActiveThreadId(null);
+        }
+      } catch (error) {
+        console.error("Error al recuperar las conversaciones", error);
+      }
+    };
+
+    fetchThreads();
+  }, []);
+
+  useEffect(() => {
+    const fetchMessages = async () => {
+      if (!activeThreadId) {
+        setMessages([]);
+        return;
+      }
+
+      try {
+        const SalonMessages: ChatMessage[] = await fetch(`/api/salon/threads/${activeThreadId}/messages`).then((res) => res.json());
+        setMessages(SalonMessages);
+      } catch (error) {
+        console.error("Error al recuperar los mensajes", error);
+      }
+    };
+
+    fetchMessages();
+  }, [activeThreadId]);
+
+  useEffect(() => {
+    if (status != 'open' || wsMessages.length <= 0) return;
+
+    try {
+      const lastMessage: { type: string; data: any } = JSON.parse(wsMessages.slice(-1)[0].data);
+
+      if (lastMessage.type === 'chat:message' && lastMessage.data.receiverId === activeThreadId) {
+        setMessages(prev => [...prev, lastMessage.data]);
+      }
+    } catch (err) {
+      console.error("Error al procesar el mensaje entrante", err);
+    }
+  }, [wsMessages, status])
 
   const activeThread = useMemo(() => {
     return threads.find((thread) => thread.id === activeThreadId) ?? null;
@@ -185,8 +230,7 @@ export default function EpicureSalonWorkspace() {
 
     setIsSending(true);
     try {
-      const newMessage = await salonApi.sendMessage(activeThreadId, content);
-      setMessages((prev) => [...prev, newMessage]);
+      sendMessage(JSON.stringify({ type: "chat:message", data: { receiverId: activeThreadId, text: content } }));
       setDraft("");
     } catch (error) {
       console.error("Error al enviar el mensaje:", error);
@@ -280,7 +324,6 @@ export default function EpicureSalonWorkspace() {
         setIsSaved((current) => !current);
         setNotice(isSaved ? "Eliminado de guardados" : "Guardado");
       }}
-      onNotify={() => setNotice("No tienes notificaciones nuevas")}
     >
         {notice && (
           <div
@@ -299,7 +342,6 @@ export default function EpicureSalonWorkspace() {
         )}
 
         <main className="grid flex-1 grid-cols-12 bg-[#0f0e0d]">
-          {/* COLONNE GAUCHE : LISTE DES CHATS */}
           <section className="col-span-3 flex flex-col justify-between border-r border-white/5 bg-[#1d1b1a]/95">
             <div className="flex h-full flex-col">
               <div className="flex flex-col gap-2 border-b border-white/5 p-4">
@@ -341,7 +383,6 @@ export default function EpicureSalonWorkspace() {
                 </div>
               </div>
 
-              {/* LISTE OU ÉTAT VIDE DES CONVERSATIONS */}
               {filteredThreads.length === 0 ? (
                 <div className="flex flex-1 flex-col items-center justify-center px-6 py-12 text-center">
                   <div className="mb-3 flex size-10 items-center justify-center rounded-full border border-white/10 bg-[#211f1e] text-[#fabc4d]">
@@ -436,7 +477,6 @@ export default function EpicureSalonWorkspace() {
             </div>
           </section>
 
-          {/* COLONNE DROITE : ZONE DE CHAT OU ÉTAT VIDE */}
           <section className="col-span-9 flex flex-col justify-between bg-[#141312]">
             {!activeThread ? (
               /* ÉTAT VIDE : AUCUNE CONVERSATION SÉLECTIONNÉE */
@@ -458,7 +498,6 @@ export default function EpicureSalonWorkspace() {
             ) : (
               /* CONVERSATION SÉLECTIONNÉE */
               <>
-                {/* En-tête du chat actif */}
                 <div className="flex items-start justify-between border-b border-white/5 bg-[#141312]/90 p-4 backdrop-blur-sm">
                   <div className="flex items-start gap-3">
                     <div className="mt-0.5 flex h-[40px] w-[24px] items-center justify-center border border-[#fabc4d]/30 bg-[#211f1e]">
@@ -525,7 +564,6 @@ export default function EpicureSalonWorkspace() {
                   </div>
                 )}
 
-                {/* Liste des messages ou État vide des messages */}
                 <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-6">
                   {messages.length === 0 ? (
                     <div className="my-auto flex flex-col items-center justify-center py-12 text-center">
@@ -793,7 +831,6 @@ export default function EpicureSalonWorkspace() {
                   )}
                 </div>
 
-                {/* Zone de saisie de message */}
                 <form
                   onSubmit={(e) => void handleSendMessage(e)}
                   className="border-t border-white/5 bg-[#0f0e0d]/90 p-4 backdrop-blur-sm"

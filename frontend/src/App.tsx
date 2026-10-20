@@ -5,6 +5,7 @@ import Dashboard from "./pages/Dashboard";
 import ComponentPlayground from "./pages/ComponentPlayground";
 import Profile from "./pages/Profile";
 import Chat from "./pages/Chat";
+import Notifications from "./pages/Notifications";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { WebSocketProvider } from "../context/WebSocketContext";
 import { NotificationProvider } from "../context/NotificationContext";
@@ -78,6 +79,14 @@ export default function App() {
                 element={
                   <PrivateRoute>
                     <Chat />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/notifications"
+                element={
+                  <PrivateRoute>
+                    <Notifications />
                   </PrivateRoute>
                 }
               />

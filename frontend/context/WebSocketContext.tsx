@@ -58,7 +58,6 @@ if (
 
     clearReconnectTimer();
     setStatus('connecting');
-    // Conexión limpia: el navegador envía automáticamente la cookie HttpOnly en el handshake
     const socket = new WebSocket(WS_URL);
     socketRef.current = socket;
 
