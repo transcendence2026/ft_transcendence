@@ -14,6 +14,7 @@ type NotificationType = {
     type: string;
     message: string;
     senderId: string;
+    requestId?: string;
   }
   read: boolean;
 }

@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { PrismaService } from '../prisma/prisma.service'; // adjust to your path
-import { SearchQueryDto } from './dto/search-query.dto';
+import { PrismaService } from '../prisma/prisma.service.js'; // adjust to your path
+import { SearchQueryDto } from './dto/search-query.dto.js';
 
 export interface RestaurantRating {
   id: string;

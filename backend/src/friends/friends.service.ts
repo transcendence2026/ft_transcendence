@@ -6,12 +6,16 @@ import {
 } from '@nestjs/common';
 import { Prisma, FriendshipStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 const userSummary = { id: true, username: true, profile: { select: { avatarUrl: true } } } as const;
 
 @Injectable()
 export class FriendsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   async sendRequest(senderId: string, receiverId: string) {
     if (senderId === receiverId) throw new ConflictException('You cannot add yourself');
@@ -25,17 +29,28 @@ export class FriendsService {
     if (existing?.status === FriendshipStatus.PENDING) throw new ConflictException('A friendship request already exists');
 
     try {
+      let friendship;
       if (existing) {
-        return await this.prisma.friendship.update({
+        friendship = await this.prisma.friendship.update({
           where: { id: existing.id },
           data: { senderId, receiverId, status: FriendshipStatus.PENDING },
           include: { receiver: { select: userSummary } },
         });
+      } else {
+        friendship = await this.prisma.friendship.create({
+          data: { senderId, receiverId },
+          include: { receiver: { select: userSummary } },
+        });
       }
-      return await this.prisma.friendship.create({
-        data: { senderId, receiverId },
-        include: { receiver: { select: userSummary } },
+
+      this.eventEmitter.emit('notification.create', {
+        senderId,
+        receiverId,
+        type: 'friend_request',
+        message: 'Has recibido una nueva solicitud de amistad.',
+        requestId: friendship.id,
       });
+      return friendship;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         throw new ConflictException('A friendship request already exists');

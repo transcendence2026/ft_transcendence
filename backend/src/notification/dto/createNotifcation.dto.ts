@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsNumber, IsString } from "class-validator";
+import { IsNotEmpty, IsOptional, IsString } from "class-validator";
 
 export class CreateNotificationDto {
 
@@ -17,4 +17,9 @@ export class CreateNotificationDto {
     @IsString()
     @IsNotEmpty()
     readonly message!: string
+
+    @IsString()
+    @IsOptional()
+    @IsNotEmpty()
+    readonly requestId?: string
 }
