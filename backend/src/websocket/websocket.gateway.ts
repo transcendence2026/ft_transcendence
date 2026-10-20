@@ -3,7 +3,7 @@ import { ConnectedSocket, MessageBody, SubscribeMessage, WebSocketGateway } from
 import WebSocket from 'ws';
 import { PresenceService, RoomService } from './websocket.service.js';
 import jwt from 'jsonwebtoken';
-import { DirectMessageDto, MessagePayloadDto } from './dto/messagePayload.dto.js';
+import { DirectMessageDto, JoinRoomDto, MessagePayloadDto, TypingDto } from './dto/messagePayload.dto.js';
 import { MessagesService } from '../messages/messages.service.js';
 
 export type Client = {
@@ -90,12 +90,17 @@ export class WebsocketGateway {
   }
 
   @SubscribeMessage('joinRoom')
-  handleJoinRoom(@MessageBody() data: MessagePayloadDto, @ConnectedSocket() client: Client) {
+  handleJoinRoom(@MessageBody() data: JoinRoomDto, @ConnectedSocket() client: Client) {
     if (!client.userId) {
       return;
     }
 
-    this.roomService.joinRoom(client.userId, data.roomName)
+    this.roomService.joinRoom(client.userId, data.roomName);
+
+    return {
+      event: 'room:joined',
+      data: { roomName: data.roomName },
+    };
   }
 
   @SubscribeMessage('chat:message')
@@ -115,7 +120,25 @@ export class WebsocketGateway {
 
     senderId?.forEach((user) => {
       user.send(JSON.stringify({ event: 'chat:receive', data: savedMessage }));
+      if (receiver && receiver.size > 0) {
+        user.send(JSON.stringify({ event: 'chat:delivered', data: { messageId: savedMessage.id } }));
+      }
     })
+  }
 
+  @SubscribeMessage('chat:typing')
+  handleTyping(@MessageBody() data: TypingDto, @ConnectedSocket() client: Client) {
+    if (!client.userId || !data?.receiverId) {
+      return;
+    }
+
+    const receiver = this.presenceService.getUserSockets(data.receiverId);
+
+    receiver?.forEach((user) => {
+      user.send(JSON.stringify({
+        event: 'chat:typing',
+        data: { senderId: client.userId, isTyping: data.isTyping === true },
+      }));
+    });
   }
 }

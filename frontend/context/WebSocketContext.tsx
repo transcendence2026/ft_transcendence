@@ -9,7 +9,8 @@ import React, {
 } from 'react';
 import { useAuth } from './AuthContext';
 
-const WS_URL = "wss://localhost:8443/ws/";
+const WS_URL = import.meta.env.VITE_WS_URL
+  ?? `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/ws/`;
 const MAX_RECONNECT_DELAY = 10_000;
 const ALLOW_ANONYMOUS = import.meta.env.VITE_WS_ALLOW_ANONYMOUS === "true";
 

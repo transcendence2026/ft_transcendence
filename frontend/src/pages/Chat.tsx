@@ -36,6 +36,13 @@ export interface SalonThread {
   unreadCount?: number;
 }
 
+interface FriendsResponse {
+  friends: {
+    id: string;
+    username: string;
+  }[];
+}
+
 export type MessageAttachment =
   | {
       type: "dish_card";
@@ -78,9 +85,42 @@ export interface ChatMessage {
   isChefVerified?: boolean;
   isSommelier?: boolean;
   isOwn?: boolean;
+  deliveryStatus?: "sent" | "delivered";
   timestamp: string;
   text?: string;
   attachment?: MessageAttachment;
+}
+
+interface BackendChatMessage {
+  id: string;
+  senderId: string;
+  receiverId: string;
+  text: string;
+  createdAt?: string;
+  created_at?: string;
+}
+
+function toChatMessage(
+  message: BackendChatMessage,
+  currentUserId: string | undefined,
+  peerName: string,
+  currentUserName: string,
+): ChatMessage {
+  const isOwn = message.senderId === currentUserId;
+  const senderName = isOwn ? currentUserName : peerName;
+
+  return {
+    id: message.id,
+    senderName,
+    senderInitials: senderName.slice(0, 2).toUpperCase(),
+    isOwn,
+    deliveryStatus: isOwn ? "sent" : undefined,
+    timestamp: new Date(message.createdAt ?? message.created_at ?? Date.now()).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+    text: message.text,
+  };
 }
 
 export interface SalonDossier {
@@ -153,16 +193,38 @@ export default function EpicureSalonWorkspace() {
 
   const [draft, setDraft] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const stopTypingIndicator = () => {
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
+    setIsTyping(false);
+  };
 
   useEffect(() => {
     const fetchThreads = async () => {
       try {
-        const SalonThreads: SalonThread[] = await fetch("/api/salon/threads").then((res) => res.json());
+        const response = await fetch("/api/friends");
+        if (!response.ok) {
+          throw new Error(`Unable to load friends: ${response.status}`);
+        }
 
-        if (SalonThreads.length > 0) {
-          setThreads(SalonThreads);
-          setActiveThreadId(SalonThreads[0].id);
+        const friendsResponse: FriendsResponse = await response.json();
+        const salonThreads: SalonThread[] = friendsResponse.friends.map((friend) => ({
+          id: friend.id,
+          category: "CONVERSACIÓN",
+          timestamp: "AHORA",
+          title: friend.username,
+          participants: friend.username,
+          preview: "Inicia una conversación",
+        }));
+
+        if (salonThreads.length > 0) {
+          setThreads(salonThreads);
+          setActiveThreadId(salonThreads[0].id);
         } else {
           setThreads([]);
           setActiveThreadId(null);
@@ -183,29 +245,79 @@ export default function EpicureSalonWorkspace() {
       }
 
       try {
-        const SalonMessages: ChatMessage[] = await fetch(`/api/salon/threads/${activeThreadId}/messages`).then((res) => res.json());
-        setMessages(SalonMessages);
+        const response = await fetch(`/api/message/${activeThreadId}`);
+        if (!response.ok) {
+          throw new Error(`Unable to load messages: ${response.status}`);
+        }
+
+        const backendMessages: BackendChatMessage[] = await response.json();
+        const peerName = threads.find((thread) => thread.id === activeThreadId)?.title ?? "Usuario";
+        setMessages(backendMessages.map((message) => (
+          toChatMessage(message, user?.id, peerName, user?.username ?? "Tú")
+        )));
       } catch (error) {
         console.error("Error al recuperar los mensajes", error);
       }
     };
 
     fetchMessages();
-  }, [activeThreadId]);
+  }, [activeThreadId, threads, user?.id, user?.username]);
 
   useEffect(() => {
-    if (status != 'open' || wsMessages.length <= 0) return;
+    if (status !== 'open' || wsMessages.length <= 0) return;
 
     try {
-      const lastMessage: { type: string; data: any } = JSON.parse(wsMessages.slice(-1)[0].data);
+      const lastMessage: {
+        event: string;
+        data?: BackendChatMessage & { isTyping?: boolean; messageId?: string };
+      } = JSON.parse(wsMessages[wsMessages.length - 1].data);
 
-      if (lastMessage.type === 'chat:message' && lastMessage.data.receiverId === activeThreadId) {
-        setMessages(prev => [...prev, lastMessage.data]);
+      if (lastMessage.event === 'chat:delivered' && lastMessage.data?.messageId) {
+        setMessages((prev) => prev.map((message) => (
+          message.id === lastMessage.data?.messageId
+            ? { ...message, deliveryStatus: "delivered" }
+            : message
+        )));
+      }
+
+      if (
+        lastMessage.event === 'chat:receive' &&
+        lastMessage.data &&
+        ((lastMessage.data.senderId === activeThreadId && lastMessage.data.receiverId === user?.id) ||
+          (lastMessage.data.senderId === user?.id && lastMessage.data.receiverId === activeThreadId))
+      ) {
+        const peerName = threads.find((thread) => thread.id === activeThreadId)?.title ?? "Usuario";
+        setMessages((prev) => [
+          ...prev,
+          toChatMessage(lastMessage.data!, user?.id, peerName, user?.username ?? "Tú"),
+        ]);
+      }
+
+      if (lastMessage.event === 'chat:typing' && lastMessage.data?.senderId === activeThreadId) {
+        const currentlyTyping = lastMessage.data.isTyping === true;
+        setIsTyping(currentlyTyping);
+
+        if (typingTimeoutRef.current) {
+          clearTimeout(typingTimeoutRef.current);
+          typingTimeoutRef.current = null;
+        }
+
+        if (currentlyTyping) {
+          typingTimeoutRef.current = setTimeout(() => {
+            setIsTyping(false);
+            typingTimeoutRef.current = null;
+          }, 3000);
+        }
       }
     } catch (err) {
       console.error("Error al procesar el mensaje entrante", err);
     }
-  }, [wsMessages, status])
+  }, [wsMessages, status, activeThreadId, threads, user?.id, user?.username]);
+
+  useEffect(() => {
+    stopTypingIndicator();
+    return stopTypingIndicator;
+  }, [activeThreadId]);
 
   const activeThread = useMemo(() => {
     return threads.find((thread) => thread.id === activeThreadId) ?? null;
@@ -230,10 +342,16 @@ export default function EpicureSalonWorkspace() {
 
     setIsSending(true);
     try {
-      sendMessage(JSON.stringify({ type: "chat:message", data: { receiverId: activeThreadId, text: content } }));
+      sendMessage({ event: "chat:typing", data: { receiverId: activeThreadId, isTyping: false } });
+      const sent = sendMessage({ event: "chat:message", data: { receiverId: activeThreadId, text: content } });
+      if (!sent) {
+        throw new Error("WebSocket unavailable");
+      }
       setDraft("");
+      stopTypingIndicator();
     } catch (error) {
       console.error("Error al enviar el mensaje:", error);
+      setNotice("No se pudo enviar el mensaje. Comprueba tu conexión.");
     } finally {
       setIsSending(false);
     }
@@ -822,6 +940,11 @@ export default function EpicureSalonWorkspace() {
                                 }`}
                               >
                                 <p>{msg.text}</p>
+                                {msg.isOwn && msg.deliveryStatus && (
+                                  <span className="mt-1 block text-right text-[9px] tracking-[0.5px] text-[#a88a83] uppercase">
+                                    {msg.deliveryStatus}
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -890,13 +1013,30 @@ export default function EpicureSalonWorkspace() {
                       aria-label="Escribe un mensaje"
                       placeholder="Escribe un mensaje..."
                       value={draft}
-                      onChange={(e) => setDraft(e.target.value)}
+                      onChange={(e) => {
+                        const nextDraft = e.target.value;
+                        setDraft(nextDraft);
+
+                        if (!activeThreadId) return;
+                        sendMessage({
+                          event: "chat:typing",
+                          data: { receiverId: activeThreadId, isTyping: nextDraft.trim().length > 0 },
+                        });
+                      }}
+                      onBlur={() => {
+                        if (activeThreadId) {
+                          sendMessage({
+                            event: "chat:typing",
+                            data: { receiverId: activeThreadId, isTyping: false },
+                          });
+                        }
+                      }}
                       className="w-full resize-none bg-transparent px-2 py-1 text-[13px] leading-5 text-[#e6e1df] outline-none placeholder:text-[#a88a83]/70"
                     />
 
                     <div className="flex items-center justify-between border-t border-white/5 pt-2">
                       <span className="pl-2 text-[9px] tracking-[0.45px] text-[#a88a83] uppercase">
-                        CHAT ACTIVO
+                        {isTyping ? "ESCRIBIENDO..." : "CHAT ACTIVO"}
                       </span>
 
                       <button

@@ -1,5 +1,5 @@
 import { Controller, Get, Query } from "@nestjs/common";
-import { RatingAggregatorService } from "./rating-aggregator";
+import { RatingAggregatorService } from "./rating-aggregator.js";
 import { resolveObjectURL } from "buffer";
 
 @Controller('api/recommendation')
