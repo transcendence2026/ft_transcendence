@@ -19,6 +19,7 @@ import { SocialModule } from './social/social.module.js';
 import { PrivacyModule } from './privacy/privacy.module.js';
 import { RecommendationModule } from './recommendation/recommendation.module.js';
 import { FriendsModule } from './friends/friends.module.js';
+import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 
 @Module({
 	imports: [
@@ -40,6 +41,7 @@ import { FriendsModule } from './friends/friends.module.js';
 		MessagesModule,
     	HealthModule,
     	EventEmitterModule.forRoot(),
+		PrometheusModule.register(),
 		//Modulos siguientes que importaremos cuando se hagan
 		//UsersModule,  //Modulo para gesrionar perfiles y datos usuarios
 		//ProductsModule, //Modulo para catálogo de tienda

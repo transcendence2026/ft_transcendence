@@ -27,6 +27,7 @@ services:
     container_name: prometheus
     volumes:
     - ./prometheus-config.yml:/etc/prometheus/prometheus.yml
+    - prometheus_data:/prometheus
     ports:
       - "9090:9090"
     networks:
@@ -38,6 +39,7 @@ services:
       - ./grafana-config.yml:/etc/grafana/provisioning/datasources/datasource.yml
       - ./cadvisor-dashboard.json:/var/lib/grafana/dashboards/cadvisor-dashboard.json
       - ./provisioning-dashboards.yml:/etc/grafana/provisioning/dashboards/provisioning-dashboards.yml
+      - grafana_data:/var/lib/grafana
     environment:
       #- GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER}
       #- GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
@@ -51,3 +53,10 @@ services:
 
 networks:
   monitoring-net:
+      external: true
+      name: ft_transcendence_shared
+
+
+volumes:
+  grafana_data:
+  prometheus_data:
