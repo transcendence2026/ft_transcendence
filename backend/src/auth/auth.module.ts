@@ -26,11 +26,11 @@ import { TwoFactorService } from './2fa/two-factor.service.js';     // El nuevo 
 		PrismaModule,
 		PassportModule,
     	JwtModule.registerAsync({
-    	imports: [ConfigModule],
-    	inject: [ConfigService],
-   		useFactory: (configService: ConfigService) => ({
-        	secret: configService.get<string>('JWT_SECRET') || 'super-secret',
-        	signOptions: { expiresIn: '15m' },
+			imports: [ConfigModule],
+			inject: [ConfigService],
+			useFactory: (configService: ConfigService) => ({
+				secret: configService.get<string>('JWT_SECRET') || 'super-secret',
+				signOptions: { expiresIn: '15m' },
     		}),
 		}),
 	],
