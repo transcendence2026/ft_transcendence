@@ -93,7 +93,7 @@ export class PreferenceVectorizer {
     const cuisineBlockLength = ORDERED_CUISINES.length;
 
     // 2. Spicy: 1 if the dish has the "Spicy" tag, 0 otherwise
-    vector[cuisineBlockLength + 1] = dish.tags.some((t) => t.name === SPICY_TAG) ? 1 : 0;
+    vector[cuisineBlockLength] = dish.tags.some((t) => t.name === SPICY_TAG) ? 1 : 0;
 
     // 3. A dish has a single price, so it fills both the min and max slots
     const price = this.normalize(dish.priceRange, PRICE_MIN, PRICE_MAX);

@@ -1,3 +1,4 @@
+import { cosineSimilarity } from "./cosine-similarity";
 import {
   PreferenceVectorizer,
   ORDERED_CUISINES,
@@ -102,5 +103,60 @@ describe("PreferenceVectorizer", () => {
     const vector = PreferenceVectorizer.toVector(pref);
     const italianIdx = ORDERED_CUISINES.indexOf("ITALIAN");
     expect(vector[italianIdx]).toBe(1);
+  });
+});
+
+describe('PreferenceVectorizer.toDishVector', () => {
+  it('has the same length as the user vector (15)', () => {
+    const v = PreferenceVectorizer.toDishVector({ cuisine: 'ITALIAN', priceRange: 2, tags: [] });
+    expect(v).toHaveLength(PreferenceVectorizer.VECTOR_LENGTH);
+  });
+
+  it('encodes cuisine one-hot, Spicy tag and price in both price slots', () => {
+    const v = PreferenceVectorizer.toDishVector({
+      cuisine: 'ITALIAN',
+      priceRange: 4,
+      tags: [{ name: 'Spicy' }],
+    });
+    expect(v).toEqual([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1]);
+  });
+
+  it('leaves the spicy dimension at 0 without the Spicy tag', () => {
+    const v = PreferenceVectorizer.toDishVector({
+      cuisine: 'JAPANESE',
+      priceRange: 1,
+      tags: [{ name: 'Vegan' }],
+    });
+    expect(v[12]).toBe(0);
+  });
+
+  it('gives cosine 1 for a dish identical to the user vector', () => {
+    const user = PreferenceVectorizer.toVector({
+      favoriteCuisines: ['ITALIAN'],
+      spicyLevel: 5,
+      preferredPriceMin: 4,
+      preferredPriceMax: 4,
+    });
+    const dish = PreferenceVectorizer.toDishVector({
+      cuisine: 'ITALIAN',
+      priceRange: 4,
+      tags: [{ name: 'Spicy' }],
+    });
+    expect(cosineSimilarity(user, dish)).toBeCloseTo(1);
+  });
+
+  it('gives cosine 0 when nothing is shared', () => {
+    const user = PreferenceVectorizer.toVector({
+      favoriteCuisines: ['ITALIAN'],
+      spicyLevel: 1,
+      preferredPriceMin: 1,
+      preferredPriceMax: 1,
+    });
+    const dish = PreferenceVectorizer.toDishVector({
+      cuisine: 'MEXICAN',
+      priceRange: 4,
+      tags: [],
+    });
+    expect(cosineSimilarity(user, dish)).toBe(0);
   });
 });
