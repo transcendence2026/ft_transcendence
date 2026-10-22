@@ -1,7 +1,8 @@
 import { Controller, Get, Query, Req, UseGuards } from "@nestjs/common";
-import { RatingAggregatorService } from "./rating-aggregator";
-import { RecommendationService } from "./recommendation.service";
-import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { RatingAggregatorService } from "./rating-aggregator.js";
+import { RecommendationService } from "./recommendation.service.js";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard.js";
+import { resolveObjectURL } from "buffer";
 
 @Controller('api/recommendations')
 export class RecommendationController {

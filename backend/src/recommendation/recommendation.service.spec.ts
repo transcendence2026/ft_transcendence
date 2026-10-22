@@ -6,7 +6,7 @@ jest.mock('../prisma/prisma.service', () => ({
 }));
 
 
-import { RecommendationService } from "./recommendation.service";
+import { RecommendationService } from "./recommendation.service.js";
 
 // Minimal PrismaService mock: only the calls the service makes
 function createPrismaMock() {

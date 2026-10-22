@@ -4,7 +4,7 @@ import { Module } from '@nestjs/common';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
-import { FilesModule } from './files/files.module';
+import { FilesModule } from './files/files.module.js';
 import { AuthModule } from './auth/auth.module.js'; //importas la rama
 import { ConfigModule } from '@nestjs/config';
 import { HealthModule } from './health/health.module.js';
@@ -19,7 +19,8 @@ import { SocialModule } from './social/social.module.js';
 import { PrivacyModule } from './privacy/privacy.module.js';
 import { RecommendationModule } from './recommendation/recommendation.module.js';
 import { FriendsModule } from './friends/friends.module.js';
-import { SearchModule } from './search/search.module';
+import { SearchModule } from './search/search.module.js';
+import { NotificationGateway } from './notification/notification.gateway.js';
 
 @Module({
 	imports: [
@@ -52,6 +53,6 @@ import { SearchModule } from './search/search.module';
 		}), 
 	],
 	controllers: [],
-	providers: [WebsocketGateway, PresenceService, RoomService],
+	providers: [WebsocketGateway, PresenceService, RoomService, NotificationGateway],
 })
 export class AppModule {}

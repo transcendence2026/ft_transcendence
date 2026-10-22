@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { PreferenceVectorizer } from './preference-vectorizer';
-import { cosineSimilarity } from './cosine-similarity';
+import { PrismaService } from '../prisma/prisma.service.js';
+import { PreferenceVectorizer } from './preference-vectorizer.js';
+import { cosineSimilarity } from './cosine-similarity.js';
 
 export interface DishRecommendation {
 	id: string;

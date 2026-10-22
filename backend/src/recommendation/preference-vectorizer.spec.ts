@@ -1,9 +1,9 @@
-import { cosineSimilarity } from "./cosine-similarity";
+import { cosineSimilarity } from "./cosine-similarity.js";
 import {
   PreferenceVectorizer,
   ORDERED_CUISINES,
   PreferenceInput,
-} from "./preference-vectorizer";
+} from "./preference-vectorizer.js";
 
 // Helper to build a valid PreferenceInput with sensible defaults,
 // overriding only the fields relevant to each test.

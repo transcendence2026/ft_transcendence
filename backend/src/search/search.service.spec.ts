@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { Prisma } from '@prisma/client';
-import { SearchService } from './search.service';
-import { SearchQueryDto } from './dto/search-query.dto';
+import { SearchService } from './search.service.js';
+import { SearchQueryDto } from './dto/search-query.dto.js';
 
 // @nestjs/common v12 is ESM-only and Jest (CJS) can't load it on Node 22, so
 // mock the two things the service uses. The service logic doesn't depend on Nest

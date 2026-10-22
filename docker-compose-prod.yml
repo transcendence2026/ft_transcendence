@@ -94,7 +94,7 @@ services:
       - "5173"
     environment:
       VITE_API_URL: ${VITE_API_URL:-https://localhost:8443}
-    command: npm run dev -- --host 0.0.0.0
+    command: sh -c "npm install --include=dev && npm run dev -- --host 0.0.0.0"
     volumes:
       # Mount source code for hot reloading while preserving installed packages.
       - ./frontend:/app

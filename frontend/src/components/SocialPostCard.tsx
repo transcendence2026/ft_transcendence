@@ -35,7 +35,7 @@ export function SocialPostCard({ post }: { post: SocialPost }) {
   const isPlaceholder = post.id.startsWith('placeholder-');
 
   return (
-    <article className="rounded border border-border bg-surface p-5">
+    <article className="feed-post rounded border border-border bg-surface p-5">
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 gap-3">
           <Avatar name={post.author.username} src={post.author.profile?.avatarUrl ? imageUrl(post.author.profile.avatarUrl) : null} size="sm" />
@@ -48,9 +48,9 @@ export function SocialPostCard({ post }: { post: SocialPost }) {
           </div>
         </div>
       </div>
-      <div className="mt-5"><h2 className="font-serif text-xl text-text-strong">{post.title}</h2><p className="mt-2 whitespace-pre-line text-sm leading-7 text-text">{post.content}</p></div>
-      {post.images.length > 0 && <div className={`mt-5 grid gap-2 ${post.images.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>{post.images.slice(0, 4).map((image) => <img key={image.id} src={imageUrl(image.url)} alt={`Dish shared by ${post.author.username}`} className="aspect-[4/3] w-full rounded object-cover" />)}</div>}
-      <div className="mt-5 flex items-center gap-5 border-t border-border pt-4 text-xs text-muted"><Button type="button" variant="ghost" aria-pressed={liked} onClick={() => setLiked((value) => !value)} className={`px-0 py-0 text-xs ${liked ? 'text-primary-soft' : 'text-muted'}`}>{liked ? '♥' : '♡'} {liked ? 1 : 0}</Button><Button type="button" variant="ghost" className="px-0 py-0 text-xs text-muted">□ 0</Button><Button type="button" variant="ghost" className="px-0 py-0 text-xs text-muted">↗ Share</Button></div>
+      <div className="post-copy mt-5"><h2 className="font-serif text-xl text-text-strong">{post.title}</h2><p className="mt-2 whitespace-pre-line text-sm leading-7 text-text">{post.content}</p></div>
+      {post.images.length > 0 && <div className={`post-gallery mt-5 grid gap-2 ${post.images.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>{post.images.slice(0, 4).map((image) => <img key={image.id} src={imageUrl(image.url)} alt={`Dish shared by ${post.author.username}`} className="aspect-[4/3] w-full rounded object-cover" />)}</div>}
+      <div className="post-actions mt-5 flex items-center gap-5 border-t border-border pt-4 text-xs text-muted"><Button type="button" variant="ghost" aria-pressed={liked} onClick={() => setLiked((value) => !value)} className={`px-0 py-0 text-xs ${liked ? 'text-primary-soft' : 'text-muted'}`}>{liked ? '♥' : '♡'} {liked ? 1 : 0}</Button><Button type="button" variant="ghost" className="px-0 py-0 text-xs text-muted">□ 0</Button><Button type="button" variant="ghost" className="px-0 py-0 text-xs text-muted">↗ Share</Button></div>
     </article>
   );
 }

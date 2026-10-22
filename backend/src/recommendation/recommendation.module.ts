@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
-import { RatingAggregatorService } from './rating-aggregator';
-import { RecommendationController } from './recommendation.controller';
-import { RecommendationService } from './recommendation.service';
+import { RatingAggregatorService } from './rating-aggregator.js';
+import { RecommendationController } from './recommendation.controller.js';
+import { RecommendationService } from './recommendation.service.js';
 
 @Module({
 	controllers: [RecommendationController],
