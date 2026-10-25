@@ -6,7 +6,7 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
-import { FilesModule } from './files/files.module';
+import { FilesModule } from './files/files.module.js';
 import { AuthModule } from './auth/auth.module.js'; //importas la rama
 import { ConfigModule } from '@nestjs/config';
 import { HealthModule } from './health/health.module.js';
@@ -22,6 +22,8 @@ import { PrivacyModule } from './privacy/privacy.module.js';
 import { RecommendationModule } from './recommendation/recommendation.module.js';
 import { FriendsModule } from './friends/friends.module.js';
 import { RgpdModule } from './rgpd/rgpd.module.js';
+import { SearchModule } from './search/search.module.js';
+import { NotificationGateway } from './notification/notification.gateway.js';
 
 @Module({
 	imports: [
@@ -50,6 +52,7 @@ import { RgpdModule } from './rgpd/rgpd.module.js';
 		FriendsModule,
 		MessagesModule,
     	HealthModule,
+		SearchModule,
     	EventEmitterModule.forRoot(),
 		//Modulos siguientes que importaremos cuando se hagan
 		//UsersModule,  //Modulo para gesrionar perfiles y datos usuarios
@@ -65,6 +68,7 @@ import { RgpdModule } from './rgpd/rgpd.module.js';
 		WebsocketGateway,
 		PresenceService,
 		RoomService,
+		NotificationGateway,
 		{
 		provide: APP_GUARD,
 		useClass: ThrottlerGuard,

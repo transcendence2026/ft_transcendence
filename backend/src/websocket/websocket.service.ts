@@ -10,6 +10,11 @@ export class PresenceService {
   async addClient(userId: string, client: WebSocket) {    
     if (!this.activeSockets.has(userId)) {
       this.activeSockets.set(userId, new Set());
+    }
+
+    this.activeSockets.get(userId)?.add(client);
+
+    if (this.activeSockets.get(userId)?.size === 1) {
       await this.prisma.user.update({ where: { id: userId }, data: { status: 'ONLINE' } });
 
       const friendship = await this.prisma.friendship.findMany({ where: { status: 'ACCEPTED', OR: [ { senderId: userId }, { receiverId: userId } ] } })
@@ -31,8 +36,6 @@ export class PresenceService {
         }
       })
     }
-
-    this.activeSockets.get(userId)?.add(client);
   }
 
   async removeClient(userId: string, client: WebSocket) {
@@ -73,6 +76,7 @@ export class PresenceService {
   getUserSockets(userId: string) {
     return this.activeSockets.get(userId)
   }
+
 }
 
 @Injectable()

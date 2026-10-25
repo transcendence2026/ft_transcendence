@@ -160,6 +160,20 @@ const TAG_NAMES = [
 	'Shareable',
 ];
 
+const SPICY_DISHES = new Set([
+	'Tacos al Pastor',
+	'Patatas Bravas',
+	'Paneer Tikka Masala',
+	'Chana Masala',
+	'Lamb Biryani',
+	'Green Curry Chicken',
+	'Tom Yum Soup',
+	'Kung Pao Chicken',
+	'Kimchi Jjigae',
+	'Korean Fried Chicken',
+	'Buffalo Wings',
+]);
+
 const FIRST_NAMES = [
 	'Lucia', 'Allan', 'Patricia', 'Antonio', 'Ana',
 	'Mateo', 'Nora', 'Hugo', 'Alicia', 'Pablo'
@@ -207,6 +221,10 @@ async function seedTags() {
 async function seedRestaurantsAndDishes(tags: { id: string; name: string }[]) {
 	let totalDishes = 0;
 
+	// Spicy is ssigned by dish (SPICY_DISHES), never randomly
+	const spicyTag = tags.find((tag) => tag.name === 'Spicy');
+	const randomTags = tags.filter((tag) => tag.name !== 'Spicy');
+
 	// Loop through each restaurant definitions in the RESTAURANTS array
 	for (const restaurantData of RESTAURANTS) {
 		// Create the restaurant record in the database
@@ -220,8 +238,11 @@ async function seedRestaurantsAndDishes(tags: { id: string; name: string }[]) {
 		for (let i = 0; i < dishCount; i++) {
 			// Get dish name and description using modulo to safely cucle through templates
 			const [name, description] = dishTemplates[i % dishTemplates.length];
-			// Select a random subset of 1 to 3 tags for this dish
-			const assignedTags = randomSubset(tags, randomInt(1, 3));
+			// Select 1-3 random non-spicy tags, then add "Spicy" only for spicy dishes
+			const assignedTags = randomSubset(randomTags, randomInt(1, 3));
+			if (SPICY_DISHES.has(name) && spicyTag) {
+				assignedTags.push(spicyTag);
+			}
 
 			// Create the dish in the database linked to the current restaurant and selected tags
 			await prisma.dish.create({
@@ -438,6 +459,37 @@ async function seedReviews(users: { id: string; username: string }[]) {
 	return totalReviews;
 }
 
+// Seeds friendships and blocks so friend-based recommendations can be tested
+async function seedSocialGraph(users: { id: string; username: string }[]) {
+	let friendships = 0;
+
+	// Ring: user i is an ACCEPTED friend of users i+1 and i+2 (deterministic)
+	for (let i = 0; i < users.length; i++) {
+		for (const offset of [1, 2]) {
+			const friend = users[(i + offset) % users.length];
+			await prisma.friendship.create({
+				data: { senderId: users[i].id, receiverId: friend.id, status: 'ACCEPTED' },
+			});
+			friendships++;
+		}
+	}
+
+	// Non-accepted statuses: the service must ignore these
+	await prisma.friendship.create({
+		data: { senderId: users[0].id, receiverId: users[5].id, status: 'PENDING' },
+	});
+	await prisma.friendship.create({
+		data: { senderId: users[1].id, receiverId: users[6].id, status: 'DECLINED' },
+	});
+
+	// One block to check that blocked users are excluded
+	await prisma.block.create({
+		data: { blockedId: users[2].id, blockerId: users[7].id },
+	});
+
+	return friendships + 2;
+}
+
 // Main orchestrator function that executes the database seeding workflow in order
 async function main() {
 	// Step 1: Wipe existing database records to maintain a clean test environment
@@ -456,6 +508,10 @@ async function main() {
 	console.log('Seeding test users...');
 	const users = await seedUsers();
 
+	// Step 4b: Seed friendships and blocks between the users above
+	console.log('Seeding social graph...');
+	const friendshipCount = await seedSocialGraph(users);
+
 	// Step 5: Seed social content so the dashboard feed has real examples.
 	console.log('Seeding social posts...');
 	const postCount = await seedPosts(users);
@@ -465,7 +521,7 @@ async function main() {
 	const reviewCount = await seedReviews(users);
 
 	// Log a summary of all inserted entities
-	console.log(`Done: ${RESTAURANTS.length} restaurants, ${dishCount} dishes, ${tags.length} tags, ${users.length} users, ${postCount} posts.`);
+	console.log(`Done: ${RESTAURANTS.length} restaurants, ${dishCount} dishes, ${tags.length} tags, ${users.length} users, ${postCount} posts, ${reviewCount} reviews, ${friendshipCount} friendships.`);
 }
 
 // Execute the main seeding flow with error handling and cleanup logic

@@ -1,8 +1,10 @@
 import React, { createContext, useState, useEffect, type ReactNode } from 'react';
 import axios from 'axios';
 
-// Si existe la variable de entorno la usa; si no, queda en '' (rutas relativas para Nginx/Docker)
-const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+// Si existe la variable de entorno la usa; si no, en desarrollo local recurre a :3000 y en prod a rutas relativas
+const API_BASE_URL = import.meta.env.VITE_API_URL !== undefined
+    ? import.meta.env.VITE_API_URL
+    : (import.meta.env.DEV ? 'http://localhost:3000' : '');
 
 if (API_BASE_URL) {
     axios.defaults.baseURL = API_BASE_URL;

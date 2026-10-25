@@ -19,6 +19,10 @@ import { FortyTwoStrategy } from './oauth/forty-two.strategy.js';
 import { TwoFactorController } from './2fa/two-factor.controller.js'; // El nuevo controlador de 2FA
 import { TwoFactorService } from './2fa/two-factor.service.js';     // El nuevo servicio de 2FA
 
+const isFortyTwoOAuthConfigured = Boolean(
+	process.env.FORTY_TWO_CLIENT_ID && process.env.FORTY_TWO_CLIENT_SECRET,
+);
+
 //Registras y juntas el AuthController mas AuthService y se guardan en el NestJS
 @Module({
 	imports: [
@@ -39,7 +43,7 @@ import { TwoFactorService } from './2fa/two-factor.service.js';     // El nuevo 
 	providers: [
 		AuthService, 
 		JwtStrategy, 
-		FortyTwoStrategy,
+		...(isFortyTwoOAuthConfigured ? [FortyTwoStrategy] : []),
 		TwoFactorService, // Registramos el servicio y la estrategia de Passport
 	],
 	exports: [JwtModule, PassportModule],
