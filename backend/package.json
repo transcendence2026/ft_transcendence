@@ -2,6 +2,7 @@
   "name": "transcendence-backend",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\"",
@@ -9,6 +10,7 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
+    "test:websocket:stress": "tsx --tsconfig tsconfig.json src/scripts/websocket-stress-test.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "db:push": "prisma db push",

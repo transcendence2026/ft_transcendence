@@ -2,10 +2,11 @@ import { Body, Controller, Get, Header, Patch, Post, Req, StreamableFile, UseGua
 import { FileInterceptor } from '@nestjs/platform-express';
 import { fileTypeFromFile } from 'file-type';
 import { unlink } from 'node:fs/promises';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { createMulterOptions } from '../files/multer-opts-builder';
-import { UpdateProfileDto } from './dto/update-profile.dto';
-import { UsersService } from './users.service';
+<<<<<<< HEAD
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
+import { createMulterOptions } from '../files/multer-opts-builder.js';
+import { UpdateProfileDto } from './dto/update-profile.dto.js';
+import { UsersService } from './users.service.js';
 import { GastronomicJournalService } from './gastronomic-journal.service.js';
 
 @Controller('api/users')
