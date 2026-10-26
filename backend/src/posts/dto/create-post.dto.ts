@@ -13,9 +13,9 @@ export class CreatePostDto {
 
   @IsOptional()
   @IsArray()
-  @Matches(/^\/uploads\/posts\/[A-Za-z0-9._-]+$/, {
+  @Matches(/^(\/uploads\/posts\/[A-Za-z0-9._-]+|https?:\/\/[^\s]+)$/, {
     each: true,
-    message: 'Each image URL must be a local post upload path',
+    message: 'Each image URL must be a local upload path or an HTTP(S) URL',
   })
   imageUrls?: string[];
 }

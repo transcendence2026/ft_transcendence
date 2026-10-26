@@ -120,8 +120,8 @@ export class PostsService {
   }
 
   private assertPostImageUrl(url: string) {
-    if (!/^\/uploads\/posts\/[A-Za-z0-9._-]+$/.test(url)) {
-      throw new BadRequestException('The image URL must be a local post upload path');
+    if (!/^(\/uploads\/posts\/[A-Za-z0-9._-]+|https?:\/\/[^\s]+)$/.test(url)) {
+      throw new BadRequestException('The image URL must be a local upload path or an HTTP(S) URL');
     }
   }
 }

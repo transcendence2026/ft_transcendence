@@ -2,7 +2,6 @@ import { Body, Controller, Get, Header, Patch, Post, Req, StreamableFile, UseGua
 import { FileInterceptor } from '@nestjs/platform-express';
 import { fileTypeFromFile } from 'file-type';
 import { unlink } from 'node:fs/promises';
-<<<<<<< HEAD
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { createMulterOptions } from '../files/multer-opts-builder.js';
 import { UpdateProfileDto } from './dto/update-profile.dto.js';

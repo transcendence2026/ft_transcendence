@@ -8,6 +8,7 @@ import {
 import { Avatar } from "../components/Avatar";
 import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
+import { ImageDropzone } from "../components/ImageDropzone";
 import { Loader } from "../components/Loader";
 import { SocialPostCard } from "../components/SocialPostCard";
 import ProtectedRoute from "../components/ProtectedRoute";
@@ -45,6 +46,7 @@ const placeholderPosts: FeedPost[] = [
     friendship: { status: "SELF", requestId: null },
   },
 ];
+type CreatedPost = Omit<FeedPost, "friendship">;
 
 function formatDate(value: string) {
   const minutes = Math.floor((Date.now() - new Date(value).getTime()) / 60000);
@@ -181,6 +183,16 @@ function DashboardContent() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [usingPlaceholder, setUsingPlaceholder] = useState(false);
+  const [postTitle, setPostTitle] = useState("");
+  const [postContent, setPostContent] = useState("");
+  const [postImage, setPostImage] = useState<File | null>(null);
+  const [postImageUrl, setPostImageUrl] = useState("");
+  const [imageSource, setImageSource] = useState<"upload" | "url">("upload");
+  const [postImageKey, setPostImageKey] = useState(0);
+  const [postImageProgress, setPostImageProgress] = useState(0);
+  const [showPostComposer, setShowPostComposer] = useState(false);
+  const [posting, setPosting] = useState(false);
+  const [postError, setPostError] = useState<string | null>(null);
 
   const rosterNames = [
     "Chef Nicolas Laurent",
@@ -211,6 +223,7 @@ function DashboardContent() {
         setPosts(data.items);
         setCursor(data.nextCursor);
         setHasMore(data.hasMore);
+        setUsingPlaceholder(false);
       })
       .catch(() => {
         if (!cancelled) {
@@ -252,6 +265,64 @@ function DashboardContent() {
     observer.observe(sentinel);
     return () => observer.disconnect();
   }, [cursor, hasMore, loading, loadingMore, usingPlaceholder]);
+
+  const handleCreatePost = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const title = postTitle.trim();
+    const content = postContent.trim();
+    if (!title || !content) {
+      setPostError("Add a title and something to share.");
+      return;
+    }
+
+    setPosting(true);
+    setPostError(null);
+    try {
+      let imageUrl: string | undefined;
+      if (imageSource === "upload" && postImage) {
+        const formData = new FormData();
+        formData.append("file", postImage);
+        const uploadResponse = await axios.post<{ url: string }>(
+          `${API_BASE_URL}/api/files/post`,
+          formData,
+          {
+            onUploadProgress: (progressEvent) => {
+              if (progressEvent.total) {
+                setPostImageProgress(Math.round((progressEvent.loaded * 100) / progressEvent.total));
+              }
+            },
+          },
+        );
+        imageUrl = uploadResponse.data.url;
+      } else if (imageSource === "url" && postImageUrl.trim()) {
+        imageUrl = postImageUrl.trim();
+      }
+
+      const { data } = await axios.post<CreatedPost>(`${API_BASE_URL}/api/social/posts`, {
+        title,
+        content,
+        ...(imageUrl ? { imageUrls: [imageUrl] } : {}),
+      });
+      const newPost: FeedPost = {
+        ...data,
+        friendship: { status: "SELF", requestId: null },
+      };
+      setPosts((current) => [newPost, ...current.filter((post) => !post.id.startsWith("placeholder-"))]);
+      setUsingPlaceholder(false);
+      setPostTitle("");
+      setPostContent("");
+      setPostImage(null);
+      setPostImageUrl("");
+      setImageSource("upload");
+      setPostImageProgress(0);
+      setPostImageKey((key) => key + 1);
+      setShowPostComposer(false);
+    } catch (requestError: any) {
+      setPostError(requestError.response?.data?.message || "Your post could not be published.");
+    } finally {
+      setPosting(false);
+    }
+  };
 
   // Paso 1: Pedir el QR a NestJS
   const handleStart2FA = async () => {
@@ -388,12 +459,124 @@ function DashboardContent() {
               })}
             </div>
 
-            {/* Encart de publication rapide */}
-            <div className="mb-6 flex items-center gap-3 border border-white/5 bg-[#1d1b1a] p-3.5">
-              <Avatar name={username} size="sm" />
-              <div className="flex-1 border border-white/5 bg-[#0f0e0d]/80 px-4 py-2.5 text-[13px] text-[#a88a83]">
-                Comparte una receta o un plato con la comunidad...
-              </div>
+          <div className="scrollbar-hidden min-h-0 flex-1 space-y-4 overflow-y-auto pb-8 pr-1">
+            <div className="rounded border border-border bg-surface p-4">
+              {!showPostComposer ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setPostError(null);
+                    setShowPostComposer(true);
+                  }}
+                  className="w-full justify-start border border-border px-4 py-3 text-sm text-muted"
+                >
+                  Share something with the community...
+                </Button>
+              ) : (
+                <form onSubmit={handleCreatePost} className="space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-raised text-xs font-bold text-primary-soft">{username.slice(0, 2).toUpperCase()}</div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => {
+                        if (!posting) {
+                          setShowPostComposer(false);
+                          setPostError(null);
+                          setPostTitle("");
+                          setPostContent("");
+                          setPostImage(null);
+                          setPostImageUrl("");
+                          setImageSource("upload");
+                          setPostImageProgress(0);
+                          setPostImageKey((key) => key + 1);
+                        }
+                      }}
+                      disabled={posting}
+                      className="px-2 py-1 text-xs text-muted"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                  <input
+                    type="text"
+                    value={postTitle}
+                    onChange={(event) => setPostTitle(event.target.value)}
+                    maxLength={200}
+                    placeholder="Post title"
+                    aria-label="Post title"
+                    className="w-full rounded border border-border bg-background px-4 py-2 text-sm text-text-strong placeholder-muted focus:border-primary focus:outline-none"
+                  />
+                  <textarea
+                    value={postContent}
+                    onChange={(event) => setPostContent(event.target.value)}
+                    maxLength={10000}
+                    placeholder="Share something with the community..."
+                    aria-label="Post content"
+                    rows={3}
+                    className="w-full resize-y rounded border border-border bg-background px-4 py-3 text-sm text-text placeholder-muted focus:border-primary focus:outline-none"
+                  />
+                  <div className="space-y-3 rounded border border-border bg-background p-3">
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant={imageSource === "upload" ? "primary" : "ghost"}
+                        onClick={() => {
+                          setImageSource("upload");
+                          setPostImageUrl("");
+                        }}
+                        className="px-3 py-1.5 text-xs"
+                      >
+                        Upload image
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={imageSource === "url" ? "primary" : "ghost"}
+                        onClick={() => {
+                          setImageSource("url");
+                          setPostImage(null);
+                          setPostImageKey((key) => key + 1);
+                          setPostImageProgress(0);
+                        }}
+                        className="px-3 py-1.5 text-xs"
+                      >
+                        Use image URL
+                      </Button>
+                    </div>
+                    {imageSource === "upload" ? (
+                      <ImageDropzone
+                        key={postImageKey}
+                        onFileSelect={(file) => {
+                          setPostImage(file);
+                          setPostImageUrl("");
+                        }}
+                        isUploading={posting && Boolean(postImage)}
+                        uploadProgress={postImageProgress}
+                        variant="post"
+                      />
+                    ) : (
+                      <input
+                        type="url"
+                        value={postImageUrl}
+                        onChange={(event) => {
+                          setPostImageUrl(event.target.value);
+                          setPostImage(null);
+                        }}
+                        placeholder="https://example.com/image.jpg"
+                        aria-label="Image URL"
+                        className="w-full rounded border border-border bg-surface px-4 py-2 text-sm text-text-strong placeholder-muted focus:border-primary focus:outline-none"
+                      />
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    {postError ? <p role="alert" className="text-xs text-red-400">{postError}</p> : <span />}
+                    <Button type="submit" disabled={posting} className="shrink-0 px-4 py-2 text-xs">
+                      {posting ? "Publishing..." : "Publish post"}
+                    </Button>
+                  </div>
+                </form>
+              )}
             </div>
 
             {/* Liste des publications */}
@@ -416,6 +599,7 @@ function DashboardContent() {
                 </div>
               )}
             </div>
+          </div>
           </section>
 
           {/* COLONNE DROITE (4 cols) : SÉCURITÉ 2FA & TENDANCES */}
