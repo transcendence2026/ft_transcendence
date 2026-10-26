@@ -1,9 +1,15 @@
 import React, { createContext, useState, useEffect, type ReactNode } from 'react';
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+// Si existe la variable de entorno la usa; si no, en desarrollo local recurre a :3000 y en prod a rutas relativas
+const API_BASE_URL = import.meta.env.VITE_API_URL !== undefined
+    ? import.meta.env.VITE_API_URL
+    : (import.meta.env.DEV ? 'http://localhost:3000' : '');
 
-axios.defaults.baseURL = API_BASE_URL;
+if (API_BASE_URL) {
+    axios.defaults.baseURL = API_BASE_URL;
+}
+// Permite que viajen las cookies HttpOnly en todas las peticiones
 axios.defaults.withCredentials = true;
 
 export interface LoginResponse {
@@ -132,7 +138,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // 6. OAuth 42: Redirección al endpoint del backend
     const oauth42 = () => {
-        window.location.href = `${API_BASE_URL}/api/auth/oauth/42`;
+        window.location.href = '/api/auth/oauth/42';
     };
 
     const completeOAuth = async () => {

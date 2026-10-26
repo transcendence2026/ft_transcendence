@@ -27,7 +27,7 @@ export class AuthController {
 			httpOnly: true, // Prohibe a JavaScript leer la cookie (blindaje ante XSS)
 			secure: isProduction, //solo viaje si conexion es cifrada (HTTPS)
 			//evita peticiones maliciosas externas al backend
-			sameSite: 'strict', //Solo se envía si la petición nace dentro de nuestra propia web (blindaje anti-CSRF)
+			sameSite: 'lax', //Solo se envía si la petición nace dentro de nuestra propia web (blindaje anti-CSRF)
 			maxAge: 15 * 60 * 1000, //15 minuntos calidez AccessToken
 			path: '/', //cookie funciona en toda la app
 		});
@@ -35,7 +35,7 @@ export class AuthController {
     	res.cookie('refreshToken', refreshToken, {
 			httpOnly: true, //JavaScripts no puede leerla ni manipularla
 			secure: isProduction, //Solo viaja bajo conexiones HTTPS cifradas
-			sameSite: 'strict', // No se envía desde sitios de terceros (mitiga ataques CSRF)
+			sameSite: 'lax', // No se envía desde sitios de terceros (mitiga ataques CSRF)
 			maxAge: 7 * 24 * 60 * 60 * 1000, // 7 días
 			path: '/api/auth/refresh',       // Solo se envía al endpoint de refresco
     });
@@ -47,11 +47,10 @@ export class AuthController {
 		@Body() registerDto: RegisterUserDto,
 		@Res({ passthrough: true }) res: Response,
 	) {
-		//service genera la respuesta pero controller la empaqueta (pone codigo HTTP correcto) y se la da al cliente
-		//controlador es como si tradujera la respuesta al idioma de internet
 		const result = await this.authService.register(registerDto);
-		if (result.accessToken && result.refreshToken) {
-			this.setAuthCookie(res, result.accessToken, result.refreshToken);
+
+    	if (result.accessToken && result.refreshToken) {
+        	this.setAuthCookie(res, result.accessToken, result.refreshToken);
 		}
 		return result;
 	}
@@ -154,7 +153,7 @@ export class AuthController {
         
 		// 2.- Si no requiere 2F o el login se completo
 		// entonces entra la funcion setAuthCookie y se crea la cookie segura
-        if (result.token) {
+        if (result.accessToken && result.refreshToken) {
             this.setAuthCookie(res, result.accessToken, result.refreshToken);
         }
 
