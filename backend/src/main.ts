@@ -2,16 +2,23 @@ import 'reflect-metadata';
 import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { WsAdapter } from '@nestjs/platform-ws';
+import type { WebSocketAdapter } from '@nestjs/common/interfaces/websockets/web-socket-adapter.interface.js';
 import { AppModule } from './app.module.js';
 import { ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
+
+class CompatibleWsAdapter extends WsAdapter {
+  bindClientConnect(server: { on: (event: string, callback: Function) => unknown }, callback: Function) {
+    server.on('connection', callback);
+  }
+}
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   // Configura el prefijo global para que todas las rutas respondan bajo /api
   //app.setGlobalPrefix('api');
   app.enableCors({ origin: true, credentials: true });
-  app.useWebSocketAdapter(new WsAdapter(app));
+  app.useWebSocketAdapter(new CompatibleWsAdapter(app) as WebSocketAdapter);
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
   app.use(cookieParser()); //parsear cookies entrantes
   app.enableCors({

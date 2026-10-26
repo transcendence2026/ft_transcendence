@@ -2,13 +2,14 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { extname, join, resolve } from 'node:path';
-import type { Content, TableCell, TDocumentDefinitions } from 'pdfmake/interfaces';
+import type { Content, TableCell } from 'pdfmake';
 import { PrismaService } from '../prisma/prisma.service.js';
 
 const uploadsRoot = resolve(process.cwd(), 'uploads');
 const fontsRoot = join(process.cwd(), 'node_modules/pdfmake/fonts/Roboto');
-const nodeRequire = createRequire(__filename);
+const nodeRequire = createRequire(import.meta.url);
 const pdfMake = nodeRequire('pdfmake') as typeof import('pdfmake');
+type TDocumentDefinitions = Parameters<typeof pdfMake.createPdf>[0];
 
 pdfMake.setFonts({
   Roboto: {
@@ -178,7 +179,7 @@ export class GastronomicJournalService {
           color: '#9a5d38',
         },
       },
-      footer: (currentPage, pageCount) => ({
+      footer: (currentPage: number, pageCount: number) => ({
         text: `Diario gastronómico de ${user.username}  ·  ${currentPage}/${pageCount}`,
         alignment: 'center',
         color: '#718078',
