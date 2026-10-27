@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Header, Patch, Post, Req, StreamableFile, UseGuards, UseInterceptors, UploadedFile, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { Body, Controller, Get, Delete, Header, Patch, Post, Req, StreamableFile, UseGuards, UseInterceptors, UploadedFile, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { fileTypeFromFile } from 'file-type';
 import { unlink } from 'node:fs/promises';

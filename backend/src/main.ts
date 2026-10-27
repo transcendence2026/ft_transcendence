@@ -25,7 +25,8 @@ async function bootstrap() {
   );
   // Configura el prefijo global para que todas las rutas respondan bajo /api
   //app.setGlobalPrefix('api');
-  app.useWebSocketAdapter(new CompatibleWsAdapter(app) as WebSocketAdapter);
+  app.enableCors({ origin: true, credentials: true });
+  app.useWebSocketAdapter(new WsAdapter(app));
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
