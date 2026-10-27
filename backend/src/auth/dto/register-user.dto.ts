@@ -13,6 +13,9 @@ export class RegisterUserDto {
 
 	@IsString({ message: 'Username must be a string' })
 	@MinLength(3, { message: 'Username must be at least 3 characters long'})
+	@Matches(/^[a-zA-Z0-9_-]+$/, {
+    	message: 'Username can only contain letters, numbers, underscores, and hyphens',
+	})
 	username!: string;
 
 	@IsString({ message: 'Password must be a string' })

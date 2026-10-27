@@ -1,6 +1,8 @@
 //metemos AuthModule dentro de la AppModule, así cuando arranque la aplicacion,
 //enciende tambien el modulo de autenticacion
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
@@ -19,6 +21,7 @@ import { SocialModule } from './social/social.module.js';
 import { PrivacyModule } from './privacy/privacy.module.js';
 import { RecommendationModule } from './recommendation/recommendation.module.js';
 import { FriendsModule } from './friends/friends.module.js';
+import { RgpdModule } from './rgpd/rgpd.module.js';
 import { SearchModule } from './search/search.module.js';
 import { NotificationGateway } from './notification/notification.gateway.js';
 
@@ -28,6 +31,13 @@ import { NotificationGateway } from './notification/notification.gateway.js';
 		ConfigModule.forRoot({
 			isGlobal: true,
 		}),
+		// Regla de Rate Limiting: maximo 100 peticiones cada 60 segundos por IP
+		ThrottlerModule.forRoot([
+		{
+			ttl: 60000, // ventana de tiempo en milisegundos (1 minuto)
+			limit: 100, // tope de llamadas permitidas dentro de ese minuto
+		},
+		]),
 		PrismaModule,
 		AuthModule, //Importa el Modulo de Autenticación
 		UsersModule,
@@ -37,6 +47,7 @@ import { NotificationGateway } from './notification/notification.gateway.js';
 		ReviewsModule,
 		SocialModule,
 		PrivacyModule,
+		RgpdModule,
 		RecommendationModule,
 		FriendsModule,
 		MessagesModule,
@@ -53,6 +64,15 @@ import { NotificationGateway } from './notification/notification.gateway.js';
 		}), 
 	],
 	controllers: [],
-	providers: [WebsocketGateway, PresenceService, RoomService, NotificationGateway],
+	providers: [
+		WebsocketGateway,
+		PresenceService,
+		RoomService,
+		NotificationGateway,
+		{
+		provide: APP_GUARD,
+		useClass: ThrottlerGuard,
+		},
+	],
 })
 export class AppModule {}
