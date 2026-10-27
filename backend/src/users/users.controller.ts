@@ -35,6 +35,26 @@ export class UsersController {
   updateCurrentUser(@Req() req: any, @Body() updateProfileDto: UpdateProfileDto) {
     return this.usersService.updateProfile(req.user.id, updateProfileDto);
   }
+
+  // GET /api/users/blocked (¡DEBE IR ANTES DE :id!)
+  @Get('blocked')
+  getBlockedUsers(@Req() req: any) {
+    return this.usersService.getBlockedUsers(req.user.id);
+  }
+
+  // POST /api/users/block/:id
+  @Post('block/:id')
+  blockUser(@Req() req: any) {
+    return this.usersService.blockUser(req.user.id, req.params.id);
+  }
+
+  // DELETE /api/users/block/:id
+  @Delete('block/:id')
+  unblockUser(@Req() req: any) {
+    return this.usersService.unblockUser(req.user.id, req.params.id);
+  }
+
+
   //GET /api/users/:id
   @UseGuards(JwtAuthGuard)
   @Get(':id')
