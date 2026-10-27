@@ -2,7 +2,6 @@ import 'reflect-metadata';
 import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { WsAdapter } from '@nestjs/platform-ws';
-import type { WebSocketAdapter } from '@nestjs/common/interfaces/websockets/web-socket-adapter.interface.js';
 import { AppModule } from './app.module.js';
 import { ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
@@ -26,7 +25,7 @@ async function bootstrap() {
   // Configura el prefijo global para que todas las rutas respondan bajo /api
   //app.setGlobalPrefix('api');
   app.enableCors({ origin: true, credentials: true });
-  app.useWebSocketAdapter(new WsAdapter(app));
+  app.useWebSocketAdapter(new CompatibleWsAdapter(app));
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
