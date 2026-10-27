@@ -1,5 +1,6 @@
 node_modules/
 dist/
+dev-dist/
 
 # Variables de entorno en cualquier nivel
 *.env

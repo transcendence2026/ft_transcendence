@@ -46,7 +46,7 @@ export default function AppLayout({
   const unreadNotifications = notification.filter((item) => !item.read);
 
   useEffect(() => {
-    const latestNotification = notification.at(-1);
+    const latestNotification = notification[notification.length - 1];
     if (!latestNotification || sessionStorage.getItem(`notification-toast:${latestNotification.id}`)) {
       return;
     }
