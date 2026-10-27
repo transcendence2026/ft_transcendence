@@ -54,6 +54,7 @@ export interface DishRecommendation {
 	restaurant: { id: string; name: string; cuisine: string; priceRange: number };
 	tags: string[];
 	score: number; // cosine similarity, 0..1
+	source: 'personalized' | 'top-rated';
 }
 
 export async function searchRestaurants(

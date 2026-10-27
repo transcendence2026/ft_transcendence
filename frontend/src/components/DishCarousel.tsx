@@ -39,15 +39,17 @@ export function DishCarousel() {
 		if (track) track.scrollBy({ left: direction * track.clientWidth * 0.8, behavior: 'smooth' });
 	};
 
+	const topRated = dishes[0]?.source === 'top-rated';
+
 	return (
 		<section aria-labelledby="recommendations-title" className="border border-white/5 bg-[#211f1e] p-5">
 			<div className="flex items-end justify-between gap-4">
 				<div>
 					<p className="text-[10px] font-bold tracking-[2px] text-[#fabc4d] uppercase">
-						RECOMENDACIONES DE TasteSync
+						{topRated ? 'LOS MÁS VALORADOS' : 'RECOMENDACIONES DE TasteSync'}
 					</p>
 					<h2 id="recommendations-title" className="mt-1 text-[20px] text-[#e6e1df]">
-						Lo mejor para ti
+						{topRated ? 'Platos populares' : 'Lo mejor para ti'}
 					</h2>
 				</div>
 				{dishes.length > 1 && (
@@ -92,7 +94,9 @@ export function DishCarousel() {
 								<div className="flex items-start justify-between gap-2">
 									<h3 className="text-base text-[#e6e1df]">{dish.name}</h3>
 									<span className="shrink-0 text-xs text-[#fabc4d]">
-										{Math.round(dish.score * 100)}% afín
+										{dish.source === 'top-rated'
+											? `★ ${(dish.score * 5).toFixed(1)}`
+											: `${Math.round(dish.score * 100)}% afín`}
 									</span>
 								</div>
 								<p className="mt-1 text-xs text-[#a88a83]">
