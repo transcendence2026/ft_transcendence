@@ -317,7 +317,7 @@ async function seedJournalUser() {
 
 	return prisma.user.create({
 		data: {
-			email: 'ancanale@tastesync.dev',
+			email: 'ancanale@gmail.com',
 			username: 'ancanale',
 			passwordHash,
 			role: 'USER',
@@ -438,6 +438,55 @@ async function seedJournalReviews(authorId: string) {
 	}
 
 	return dishes.length;
+}
+
+async function seedJournalMessages(
+	journalUser: { id: string },
+	users: { id: string; username: string }[],
+) {
+	const conversationUsers = users.slice(0, 3);
+	const messages = [
+		[
+			{ sender: 'journal', text: 'Hey! I saw your post about weekend cooking. What are you making next?' },
+			{ sender: 'other', text: 'I am deciding between ramen and homemade pasta. Your journal gave me ideas.' },
+			{ sender: 'journal', text: 'Both sound excellent. I can share my ramen notes if you go that route.' },
+			{ sender: 'other', text: 'Please do! I would also love your recommendation for a good spicy topping.' },
+		],
+		[
+			{ sender: 'other', text: 'That tacos post looks incredible. Was the salsa homemade?' },
+			{ sender: 'journal', text: 'Yes, roasted tomatoes, lime and a little smoked chilli.' },
+			{ sender: 'other', text: 'I am definitely trying that this week. Thanks for the recipe inspiration!' },
+		],
+		[
+			{ sender: 'journal', text: 'Have you found any great places to eat lately?' },
+			{ sender: 'other', text: 'There is a small Italian place near the market that makes wonderful carbonara.' },
+			{ sender: 'journal', text: 'That sounds like my kind of place. I will add it to my list.' },
+			{ sender: 'other', text: 'Let me know what you think when you try it.' },
+		],
+	];
+
+	let totalMessages = 0;
+	let messageIndex = 0;
+
+	for (const [conversationIndex, conversation] of messages.entries()) {
+		const otherUser = conversationUsers[conversationIndex];
+		if (!otherUser) continue;
+
+		for (const message of conversation) {
+			await prisma.message.create({
+				data: {
+					senderId: message.sender === 'journal' ? journalUser.id : otherUser.id,
+					receiverId: message.sender === 'journal' ? otherUser.id : journalUser.id,
+					text: message.text,
+					createdAt: new Date(Date.now() - (messages.length - messageIndex) * 60 * 60 * 1000),
+				},
+			});
+			messageIndex++;
+			totalMessages++;
+		}
+	}
+
+	return totalMessages;
 }
 
 async function seedPosts(users: { id: string; username: string }[]) {
@@ -641,6 +690,7 @@ async function main() {
 	const journalUser = await seedJournalUser();
 	const journalPostCount = await seedJournalPosts(journalUser.id);
 	const journalReviewCount = await seedJournalReviews(journalUser.id);
+	const journalMessageCount = await seedJournalMessages(journalUser, users);
 
 	// Step 4b: Seed friendships and blocks between the users above
 	console.log('Seeding social graph...');
@@ -655,7 +705,7 @@ async function main() {
 	const reviewCount = await seedReviews(users);
 
 	// Log a summary of all inserted entities
-	console.log(`Done: ${RESTAURANTS.length} restaurants, ${dishCount} dishes, ${tags.length} tags, ${users.length + 1} users, ${postCount + journalPostCount} posts, ${reviewCount + journalReviewCount} reviews, ${friendshipCount} friendships.`);
+	console.log(`Done: ${RESTAURANTS.length} restaurants, ${dishCount} dishes, ${tags.length} tags, ${users.length + 1} users, ${postCount + journalPostCount} posts, ${reviewCount + journalReviewCount} reviews, ${friendshipCount} friendships, ${journalMessageCount} direct messages.`);
 }
 
 // Execute the main seeding flow with error handling and cleanup logic
