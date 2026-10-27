@@ -6,6 +6,7 @@ import ComponentPlayground from "./pages/ComponentPlayground";
 import Profile from "./pages/Profile";
 import Chat from "./pages/Chat";
 import Notifications from "./pages/Notifications";
+import Discover from "./pages/Discover";
 import { TermsOfService } from "./pages/TermsOfService";
 import { PrivacyPolicy } from "./pages/PrivacyPolicy";
 import { Footer } from "./components/Footer";
@@ -99,6 +100,7 @@ export default function App() {
                   {/* Páginas institucionales públicas */}
                   <Route path="/terms" element={<TermsOfService />} />
                   <Route path="/privacy" element={<PrivacyPolicy />} />
+                  <Route path="/discover" element={<PrivateRoute><Discover /></PrivateRoute>} />
 
                   {/* Playground de componentes del equipo */}
                   <Route path="/components" element={<ComponentPlayground />} />
