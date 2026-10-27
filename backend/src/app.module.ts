@@ -20,6 +20,7 @@ import { PrivacyModule } from './privacy/privacy.module.js';
 import { RecommendationModule } from './recommendation/recommendation.module.js';
 import { FriendsModule } from './friends/friends.module.js';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
+import { MetricsModule } from './metrics/metrics.module.js';
 
 @Module({
 	imports: [
@@ -30,7 +31,7 @@ import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 		PrismaModule,
 		AuthModule, //Importa el Modulo de Autenticación
 		UsersModule,
-		
+		MetricsModule,
 		FilesModule,
 		PostsModule,
 		ReviewsModule,

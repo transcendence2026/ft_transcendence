@@ -1,6 +1,6 @@
 .PHONY: help build certs up push seed down restart logs ps clean
 
-COMPOSE_FILE ?= docker-compose-prod.yml
+COMPOSE_FILE ?= docker-compose.yml
 COMPOSE := docker compose -f $(COMPOSE_FILE)
 
 CERT_DIR := proxy/certs
