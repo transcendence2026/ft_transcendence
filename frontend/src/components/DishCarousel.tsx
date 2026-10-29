@@ -9,8 +9,9 @@ import {
 	getDishRecommendations,
 	type DishRecommendation,
 } from "../api/explore";
+import { Link } from "react-router-dom";
 
-export function DishCarousel() {
+export function DishCarousel({ onTagClick }: { onTagClick?: (tag: string) => void }) {
 	const [dishes, setDishes] = useState<DishRecommendation[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(false);
@@ -100,15 +101,27 @@ export function DishCarousel() {
 									</span>
 								</div>
 								<p className="mt-1 text-xs text-[#a88a83]">
-									{dish.restaurant.name} ·{' '}
+									<Link
+										to={`/restaurants/${dish.restaurant.id}`}
+										className="hover:text-[#fabc4d] hover:underline focus-visible:outline-1 focus-visible:outline-[#fabc4d]"
+									>
+										{dish.restaurant.name}
+									</Link>
+									{' · '}
 									{CUISINE_LABELS[dish.restaurant.cuisine] ?? dish.restaurant.cuisine}
 								</p>
 								<p className="mt-2 text-sm text-[#e6e1df]">{dish.price.toFixed(2)} €</p>
 								<div className="mt-3 flex flex-wrap gap-1.5">
 									{dish.tags.slice(0, 3).map((tag) => (
-										<Badge key={tag} tone="muted">
-											{tag}
-										</Badge>
+										<button
+											key={tag}
+											type="button"
+											aria-label={`Filtrar por ${tag}`}
+											onClick={() => onTagClick?.(tag)}
+											className="focus-visible:outline focus-visible:outline-1 focus-visible:outline-[#fabc4d]"
+										>
+											<Badge tone="muted">{tag}</Badge>
+										</button>
 									))}
 								</div>
 							</li>
