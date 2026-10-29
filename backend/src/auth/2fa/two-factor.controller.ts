@@ -11,9 +11,7 @@ export class TwoFactorController {
 		private readonly authService: AuthService,
 	) {}
 
-	//El frontend hace una petición a esta dirección exacta 
-	// cuando el usuario quiere empezar a configurar el 2FA 
-	// y necesita que le devuelvas el código secreto y la imagen QR.
+	// generate: Generates the secret code and QR image to activate 2FA
 	@Post('generate')
 	@UseGuards(JwtAuthGuard)
 	async registerTwofactor(@Request() req: any) {
@@ -22,10 +20,7 @@ export class TwoFactorController {
 		return this.twoFactorService.generateTwoFactorSecret(userId, userEmail);
 	}
 
-	//El frontend hace una petición a esta dirección 
-	// cuando el usuario introduce los 6 dígitos de su móvil 
-	// para demostrar que ha escaneado bien el QR 
-	// y activar definitivamente el sistema en su cuenta.
+	// turn-on: Enables 2FA after entering the 6-digit code from their phone.
 	@Post('turn-on')
 	@UseGuards(JwtAuthGuard)
 	async turnOnTwoFactor(
@@ -48,22 +43,24 @@ export class TwoFactorController {
     const isProd = process.env.NODE_ENV === 'production';
     const cookieOptions = {
       httpOnly: true,
-      secure: isProd, // Activo para HTTPS
+      secure: isProd, // HTTPS
       sameSite: 'lax' as const,
     };
 
+	// Short-lived token (Access Token)-> 15 min
     if (result.accessToken) {
       res.cookie('accessToken', result.accessToken, {
         ...cookieOptions,
-        maxAge: 15 * 60 * 1000, // 15 minutos
+        maxAge: 15 * 60 * 1000,
         path: '/',
       });
     }
 
+	//long-lived token (Refresh Token) -> 7 days
     if (result.refreshToken) {
       res.cookie('refreshToken', result.refreshToken, {
         ...cookieOptions,
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 días
+        maxAge: 7 * 24 * 60 * 60 * 1000,
         path: '/api/auth/refresh',
       });
     }
@@ -71,9 +68,7 @@ export class TwoFactorController {
     return result;
   }
 
-	//frontend hace una peticion HTTP a esta direccion
-	//para desactivar 2FA
-	//JwtService: herramienta para descifrar y validar tokens
+	// turn-off: Disable 2FA
 	@Post('turn-off')
 	@UseGuards(JwtAuthGuard)
 	async turnOffTwoFactor(

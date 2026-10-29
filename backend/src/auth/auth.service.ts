@@ -19,6 +19,7 @@ export class AuthService {
 		private readonly twoFactorService: TwoFactorService,
 	) {}
 
+    //JwtService: herramienta para descifrar y validar tokens
     //Generamos tokens: AccessToken y RefreshToken con sus duraciones y secretos
     async generateTokens(user: { id: string; email: string; username: string; role?: string }) {
         const payload = {
