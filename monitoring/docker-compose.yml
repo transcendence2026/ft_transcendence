@@ -4,6 +4,9 @@ services:
       container_name: cadvisor
       hostname: cadvisor
       restart: unless-stopped
+      privileged: true
+      devices: 
+        - /dev/kmsg:/dev/kmsg
 # cAdvisor needs access to the host's system directories (:ro) 
 # to monitor container and system-wide performance metrics (CPU, memory, disk, network) via the Linux kernel.
       volumes:
