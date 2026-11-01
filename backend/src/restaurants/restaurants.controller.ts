@@ -4,7 +4,7 @@ import { SearchController } from '../search/search.controller.js';
 import { RecommendationController } from '../recommendation/recommendation.controller.js';
 import { RestaurantsService } from './restaurants.service.js';
 
-@Controller('restaurants')
+@Controller('api/restaurants')
 // @UseGuards(JwtAuthGuard)
 export class RestaurantsController {
 	constructor(private readonly restaurants: RestaurantsService) {}
