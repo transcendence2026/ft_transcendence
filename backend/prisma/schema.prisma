@@ -37,14 +37,15 @@ model User {
   //Relations
   profile             Profile?
   preference          Preference?
-  sentFriendships     Friendship[] @relation("UserSentFriendships")
-  receivedFriendships Friendship[] @relation("UserReceivedFriendships")
-  blockedUsers        Block[]      @relation("UserBlocks")
-  blockedBy           Block[]      @relation("UserBlockedBy")
+  sentFriendships     Friendship[]         @relation("UserSentFriendships")
+  receivedFriendships Friendship[]         @relation("UserReceivedFriendships")
+  blockedUsers        Block[]              @relation("UserBlocks")
+  blockedBy           Block[]              @relation("UserBlockedBy")
   posts               Post[]
   reviews             Review[]
-  sentMessages        Message[]    @relation("UserSentMessages")
-  receivedMessages    Message[]    @relation("UserReceivedMessages")
+  favoriteRestaurants FavoriteRestaurant[]
+  sentMessages        Message[]            @relation("UserSentMessages")
+  receivedMessages    Message[]            @relation("UserReceivedMessages")
 }
 
 model Profile {
@@ -77,17 +78,17 @@ enum Cuisine {
 }
 
 model Preference {
-  id      String          @id @default(uuid())
-  userId  String          @unique
-  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   favoriteCuisines  Cuisine[] // e.g. ["Italian", "Japanese"]
-  spicyLevel        Int   @default(2) // 1 = mild ... 5 = very spicy
-  preferredPriceMin Int   @default(1) // matches Restaurant.priceRange (1-4)
-  preferredPriceMax Int   @default(4)
+  spicyLevel        Int       @default(2) // 1 = mild ... 5 = very spicy
+  preferredPriceMin Int       @default(1) // matches Restaurant.priceRange (1-4)
+  preferredPriceMax Int       @default(4)
 
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([favoriteCuisines], type: Gin)
 }
@@ -144,25 +145,40 @@ model Post {
 }
 
 model PostImage {
-  id      String    @id @default(uuid())
-  url     String    // URL o path 
-  postId  String
-  post    Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid())
+  url    String // URL o path 
+  postId String
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@index([postId])
 }
 
 model Restaurant {
-  id           String     @id @default(uuid())
-  name         String
-  cuisine      Cuisine
-  priceRange   Int
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  id         String   @id @default(uuid())
+  name       String
+  cuisine    Cuisine
+  priceRange Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  dishes Dish[]
-  @@index ([cuisine, priceRange])
+  dishes              Dish[]
+  favoriteRestaurants FavoriteRestaurant[]
+
+  @@index([cuisine, priceRange])
   @@index([createdAt, id])
+}
+
+model FavoriteRestaurant {
+  id           String     @id @default(uuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@unique([userId, restaurantId])
+  @@index([userId])
+  @@index([restaurantId])
 }
 
 model Dish {
@@ -177,6 +193,7 @@ model Dish {
 
   reviews Review[]
   tags    Tag[]    @relation("DishTags")
+
   @@index([restaurantId])
 }
 

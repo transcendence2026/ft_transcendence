@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { Avatar } from '../components/Avatar';
 import { Badge } from '../components/Badge';
@@ -24,6 +24,13 @@ interface Dish {
   rating: number;
 }
 
+interface FavoriteRestaurant {
+  id: string;
+  name: string;
+  cuisine: string;
+  priceRange: number;
+}
+
 interface ProfileData {
   id: string;
   username: string;
@@ -35,6 +42,7 @@ interface ProfileData {
   message?: string | null;
   profile: { avatarUrl?: string | null; bio?: string | null } | null;
   favoriteDishes: Dish[];
+  favoriteRestaurants: FavoriteRestaurant[];
   stats: { recipesRated: number; averageRecipeRating: number; favoriteIngredients: string[] | null; } | null;
   friendship: { status: 'SELF' | 'NONE' | 'OUTGOING_PENDING' | 'INCOMING_PENDING' | 'ACCEPTED' | 'DECLINED'; requestId: string | null };
 }
@@ -423,7 +431,8 @@ function ProfileContent() {
         	    <Tabs 
 					tabs={[
 						{ id: 'overview', label: 'Overview' }, 
-						{ id: 'favorites', label: 'Favorite dishes' }, 
+						{ id: 'favorites', label: 'Favorite dishes' },
+            { id: 'favorite-restaurants', label: 'Favorite restaurants' },
 						{ id: 'posts', label: 'Posts' },
 						...(isOwnProfile ? [{ id: 'privacy', label: 'Privacy & GDPR' }] : [])
 					]} 
@@ -466,6 +475,32 @@ function ProfileContent() {
 				    <p className="text-muted">Favorite dishes will appear after you review a dish.</p>
 				  )}
 			    </div>
+          ) : activeTab === 'favorite-restaurants' ? (
+            <div className="mt-8 grig gap-4 md:grid-cols-3">
+              {profile.favoriteRestaurants.length ? (
+                profile.favoriteRestaurants.map((restaurant) => (
+                  <Link
+                    key={restaurant.id}
+                    to={`/restaurants/${restaurant.id}`}
+                    className="border border-border bg-surface p-5 transition hover:border-primary"
+                  >
+                    <p className="text-xs uppercase tracking-wide text-secondary">
+                      {restaurant.cuisine}
+                    </p>
+                    <h2 className="mt-3 font-serif text-xl text-text">
+                      {restaurant.name}
+                    </h2>
+                    <p className="mt-3 text-primary">
+                      {'€'.repeat(restaurant.priceRange)}
+                    </p>
+                  </Link>
+                ))
+              ) : (
+                <p className="text-muted">
+                  Favorite restaurants will appear here.
+                </p>
+              )}
+            </div>
 			  ) : activeTab === 'posts' ? (
 			    <div className="mt-8 space-y-4">
 				  {profilePostsLoading && !profilePosts.length ? (

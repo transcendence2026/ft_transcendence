@@ -1,8 +1,5 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service.js";
-import { reverse } from "dns";
-import { ReviewsController } from "../reviews/reviews.controller.js";
-import { Cuisine } from "@prisma/client";
 
 @Injectable()
 export class RestaurantsService {
@@ -66,5 +63,54 @@ export class RestaurantsService {
 				.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
 				.slice(0, 10),
 		};
+	}
+
+	async getFavoriteStatus(userId: string, restaurantId: string) {
+		const favorite = await this.prisma.favoriteRestaurant.findUnique({
+			where: {
+				userId_restaurantId: {
+					userId,
+					restaurantId,
+				},
+			},
+		});
+
+		return { favorite: !!favorite };
+	}
+
+	async addFavorite(userId: string, restaurantId: string) {
+		const restaurant = await this.prisma.restaurant.findUnique({
+			where: { id: restaurantId },
+			select: { id: true },
+		});
+
+		if (!restaurant) {
+			throw new NotFoundException('Restaurant not found');
+		}
+
+		await this.prisma.favoriteRestaurant.upsert({
+			where: {
+				userId_restaurantId: {
+					userId,
+					restaurantId,
+				},
+			},
+			update: {},
+			create: {
+				userId,
+				restaurantId,
+			},
+		});
+		return { favorite: true };
+	}
+
+	async removeFavorite(userId: string, restaurantId: string) {
+		await this.prisma.favoriteRestaurant.deleteMany({
+			where: {
+				userId,
+				restaurantId,
+			},
+		});
+		return { favorite: false };
 	}
 }

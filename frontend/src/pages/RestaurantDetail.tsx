@@ -46,6 +46,8 @@ export default function RestaurantDetail() {
 	const { id } = useParams<{ id: string }>();
 	const { token, logout } = useAuth();
 	const [state, setState] = useState<State>({ status: 'loading' });
+	const [isFavorite, setIsFavorite] = useState(false);
+	const [favoriteLoading, setFavoriteLoading] = useState(false);
 
 	useEffect(() => {
 		// Cancel the request if the user navigates away or the id changes
@@ -70,6 +72,55 @@ export default function RestaurantDetail() {
 			});
 		return () => controller.abort();
 	}, [id, token]);
+
+		useEffect(() => {
+		if (!id || !token) return;
+
+		const controller = new AbortController();
+
+		fetch(`/api/restaurants/${id}/favorite`, {
+			headers: { Authorization: `Bearer ${token}` },
+			signal: controller.signal,
+		})
+		.then(async (res) => {
+			if (!res.ok) throw new Error(`HTTP ${res.status}`);
+			const data = await res.json();
+			setIsFavorite(data.favorite);
+		})
+		.catch((err) => {
+			if (err.name !== 'AbortError') {
+				console.error('Could not load favorite status', err);
+			}
+		});
+
+		return () => controller.abort();
+	}, [id, token]);
+
+	async function toggleFavorite() {
+		if (!id || !token || favoriteLoading) return;
+
+		setFavoriteLoading(true);
+
+		try {
+			const response = await fetch(`/api/restaurants/${id}/favorite`, {
+				method: isFavorite ? 'DELETE' : 'POST',
+				headers: {
+					Authorization: `Bearer ${token}`,
+				},
+			});
+
+			if (!response.ok) {
+				throw new Error(`HTTP ${response.status}`);
+			}
+
+			const data = await response.json();
+			setIsFavorite(data.favorite);
+		} catch (error) {
+			console.error('Could not update favorite status', error);
+		} finally {
+			setFavoriteLoading(false);
+		}
+	}
 
 	return (
 		<AppLayout sidebarFooter={<SidebarAccount onLogout={() => void logout()} />}>
@@ -96,14 +147,31 @@ export default function RestaurantDetail() {
 						</p>
 					)}
 
-					{state.status === 'ok' && <Content r={state.data} />}
+					{state.status === 'ok' && (
+						<Content
+							r={state.data}
+							isFavorite={isFavorite}
+							favoriteLoading={favoriteLoading}
+							onToggleFavorite={() => void toggleFavorite()}
+						/>
+					)}
 				</div>
 			</main>
 		</AppLayout>
 	);
 }
 
-function Content({ r }: { r: Restaurant }) {
+function Content({ 
+	r,
+	isFavorite,
+	favoriteLoading,
+	onToggleFavorite,
+ }: { 
+	r: Restaurant;
+	isFavorite: boolean;
+	favoriteLoading: boolean;
+	onToggleFavorite: () => void;
+}) {
 	return (
 		<article className="flex flex-col gap-6">
 			<header className="border-b border-white/5 pb-5">
@@ -111,6 +179,15 @@ function Content({ r }: { r: Restaurant }) {
 					{CUISINE_LABELS[r.cuisine] ?? r.cuisine}
 				</p>
 				<h1 className="mt-1 text-[28px] tracking-[-0.5px] text-[#e6e1df]">{r.name}</h1>
+				<button
+					type="button"
+					onClick={onToggleFavorite}
+					disabled={favoriteLoading}
+					aria-pressed={isFavorite}
+					className="mt-4 inline-flex items-center gap-2 border border-[#fabc4d]/40 px-4 py-2 text-sm text-[#fabc4d] hover:bg-[#fabc4d]/10 disabled:opacity-50"
+				>
+					{isFavorite ? '★ Remove from favorites' : '☆ Añadir a favoritos'}
+				</button>
 				<p className="mt-2 text-sm text-[#a88a83]">
 					<span className="text-[#fabc4d]">{'€'.repeat(r.priceRange)}</span> ·{' '}
 					{r.avgRating !== null
