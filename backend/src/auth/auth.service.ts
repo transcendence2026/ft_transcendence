@@ -1,6 +1,13 @@
-import { Injectable, UnauthorizedException, ConflictException, Inject } from '@nestjs/common';
+import {
+	ConflictException,
+	Inject,
+	Injectable,
+	ServiceUnavailableException,
+	UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt'; //importamos Servicio de tokens
 import * as bcrypt from 'bcrypt'; //importamos libreria de cifrado
+import { Prisma } from '@prisma/client';
 import { RegisterUserDto } from './dto/register-user.dto.js';
 import { LoginUserDto } from './dto/login-user.dto.js';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -157,9 +164,21 @@ export class AuthService {
 
 	// Método auxiliar preparado para cuando se integre la base de datos
     private async findUserByEmail(email: string) {
-        return await this.prisma.user.findUnique({
-            where: { email },
-        });
+        try {
+            return await this.prisma.user.findUnique({
+                where: { email },
+            });
+        } catch (error) {
+            if (
+                error instanceof Prisma.PrismaClientKnownRequestError
+                && (error.code === 'P2021' || error.code === 'P2022')
+            ) {
+                throw new ServiceUnavailableException(
+                    'The authentication database is not ready. Run the database schema setup first.',
+                );
+            }
+            throw error;
+        }
     }
 
 	//Una vez que el proveedor externo nos da los datos del usuario en el req.user (callback),
