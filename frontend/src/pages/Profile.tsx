@@ -476,23 +476,32 @@ function ProfileContent() {
 				  )}
 			    </div>
           ) : activeTab === 'favorite-restaurants' ? (
-            <div className="mt-8 grig gap-4 md:grid-cols-3">
+            <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {profile.favoriteRestaurants.length ? (
                 profile.favoriteRestaurants.map((restaurant) => (
                   <Link
                     key={restaurant.id}
                     to={`/restaurants/${restaurant.id}`}
-                    className="border border-border bg-surface p-5 transition hover:border-primary"
+                    className="group flex min-h-36 flex-col justify-between border border-border bg-surface p-5 transition hover:-translate-y-0.5 hover:border-primary hover:bg-surface-raised"
                   >
-                    <p className="text-xs uppercase tracking-wide text-secondary">
-                      {restaurant.cuisine}
-                    </p>
-                    <h2 className="mt-3 font-serif text-xl text-text">
-                      {restaurant.name}
-                    </h2>
-                    <p className="mt-3 text-primary">
-                      {'€'.repeat(restaurant.priceRange)}
-                    </p>
+                    <div>
+                      <div className="flex items-start justify-between gap-3">
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-secondary">
+                          {restaurant.cuisine}
+                        </span>
+                        <span className="text-sm text-primary">
+                          {'€'.repeat(restaurant.priceRange)}
+                        </span>
+                      </div>
+
+                      <h2 className="mt-5 font-serif text-xl text-text transition group-hover:text-primary">
+                        {restaurant.name}
+                      </h2>
+                    </div>
+
+                    <span className="mt-6 text-xs text-muted">
+                      View restaurant →
+                    </span>
                   </Link>
                 ))
               ) : (
