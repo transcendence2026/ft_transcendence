@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link, useParams } from 'react-router-dom';
 import AppLayout, { SidebarAccount } from "../components/AppLayout";
 import { Badge } from "../components/Badge";
@@ -48,6 +48,12 @@ export default function RestaurantDetail() {
 	const [state, setState] = useState<State>({ status: 'loading' });
 	const [isFavorite, setIsFavorite] = useState(false);
 	const [favoriteLoading, setFavoriteLoading] = useState(false);
+	const [reviewDishId, setReviewDishId] = useState('');
+	const [reviewRating, setReviewRating] = useState(5);
+	const [reviewComment, setReviewComment] = useState('');
+	const [reviewSubmitting, setReviewSubmitting] = useState(false);
+	const [reviewError, setReviewError] = useState<string | null>(null);
+	const [reviewVersion, setReviewVersion] = useState(0);
 
 	useEffect(() => {
 		// Cancel the request if the user navigates away or the id changes
@@ -71,7 +77,7 @@ export default function RestaurantDetail() {
 				setState({ status: 'error', message: err.message });
 			});
 		return () => controller.abort();
-	}, [id, token]);
+	}, [id, token, reviewVersion]);
 
 		useEffect(() => {
 		if (!id || !token) return;
@@ -122,6 +128,47 @@ export default function RestaurantDetail() {
 		}
 	}
 
+	async function submitReview(event: FormEvent<HTMLFormElement>) {
+		event.preventDefault();
+
+		if (!reviewDishId || !token) return;
+
+		setReviewSubmitting(true);
+		setReviewError(null);
+
+		try {
+			const response = await fetch('/api/reviews', {
+				method: 'POST',
+				credentials: 'include',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${token}`,
+				},
+				body: JSON.stringify({
+					dishId: reviewDishId,
+					rating: reviewRating,
+					comment: reviewComment.trim() || undefined,
+				})
+			});
+
+			if (!response.ok) {
+				const data = await response.json().catch(() => null);
+				throw new Error(data?.message ?? `HTTP ${response.status}`);
+			}
+
+			setReviewDishId('');
+			setReviewRating(5);
+			setReviewComment('');
+			setReviewVersion((current) => current + 1);
+		} catch (error) {
+			setReviewError(
+				error instanceof Error ? error.message : 'Could not submit review',
+			);
+		} finally {
+			setReviewSubmitting(false);
+		}
+	}
+
 	return (
 		<AppLayout sidebarFooter={<SidebarAccount onLogout={() => void logout()} />}>
 			<main className="flex-1 bg-[#0f0e0d] p-6">
@@ -153,6 +200,15 @@ export default function RestaurantDetail() {
 							isFavorite={isFavorite}
 							favoriteLoading={favoriteLoading}
 							onToggleFavorite={() => void toggleFavorite()}
+							reviewDishId={reviewDishId}
+							reviewRating={reviewRating}
+							reviewComment={reviewComment}
+							reviewSubmitting={reviewSubmitting}
+							reviewError={reviewError}
+							onReviewDishChange={setReviewDishId}
+							onReviewRatingChange={setReviewRating}
+							onReviewCommentChange={setReviewComment}
+							onSubmitReview={submitReview}
 						/>
 					)}
 				</div>
@@ -166,11 +222,29 @@ function Content({
 	isFavorite,
 	favoriteLoading,
 	onToggleFavorite,
+	reviewDishId,
+	reviewRating,
+	reviewComment,
+	reviewSubmitting,
+	reviewError,
+	onReviewDishChange,
+	onReviewRatingChange,
+	onReviewCommentChange,
+	onSubmitReview,
  }: { 
 	r: Restaurant;
 	isFavorite: boolean;
 	favoriteLoading: boolean;
 	onToggleFavorite: () => void;
+	reviewDishId: string;
+	reviewRating: number;
+	reviewComment: string;
+	reviewSubmitting: boolean;
+	reviewError: string | null;
+	onReviewDishChange: (value: string) => void;
+	onReviewRatingChange: (value: number) => void;
+	onReviewCommentChange: (value: string) => void;
+	onSubmitReview: (event: FormEvent<HTMLFormElement>) => void;
 }) {
 	return (
 		<article className="flex flex-col gap-6">
@@ -221,6 +295,70 @@ function Content({
 						))}
 					</ul>
 				)}
+			</section>
+
+			<section className="border border-white/5 bg-[#211f1e] p-5">
+				<h2 className="text-[20px] text-[#e6e1df]">Escribe una reseña</h2>
+
+				<form onSubmit={onSubmitReview} className="mt-4 flex flex-col gap-4">
+					<label className="flex flex-col gap-1 text-sm text-[#a88a83]">
+						Plato
+						<select
+							value={reviewDishId}
+							onChange={(event) => onReviewDishChange(event.target.value)}
+							required
+							className="border border-white/10 bg-[#1d1b1a] px-3 py-2 text-[#e6e1df]"
+						>
+							<option value="">Selecciona un plato</option>
+								{r.dishes.map((dish) => (
+									<option key={dish.id} value={dish.id}>
+										{dish.name}
+									</option>
+								))}
+						</select>
+					</label>
+
+					<label className="flex flex-col gap-1 text-sm text-[#a88a83]">
+						Clasificación
+						<select
+							value={reviewRating}
+							onChange={(event) => onReviewRatingChange(Number(event.target.value))}
+							className="border border-white/10 bg-[#1d1b1a] px-3 py-2 text-[#e6e1df]"
+						>
+							{[5, 4, 3, 2, 1].map((rating) => (
+								<option key={rating} value={rating}>
+									{'★'.repeat(rating)} ({rating}/5)
+								</option>
+							))}
+						</select>
+					</label>
+
+					<label className="flex flex-col gap-1 text-sm text-[#a88a83]">
+						Comentario
+						<textarea
+							value={reviewComment}
+							onChange={(event) => onReviewCommentChange(event.target.value)}
+							maxLength={2000}
+							rows={4}
+							placeholder="Share your thoughts about this dish"
+							className="resize-y border border-white/10 bg-[#1d1b1a] px-3 py-2 text-[#e6e1df]"
+						></textarea>
+					</label>
+
+					{reviewError && (
+						<p role="alert" className="text-sm text-[#ffb4a1]">
+							{reviewError}
+						</p>
+					)}
+
+					<button
+						type="submit"
+						disabled={reviewSubmitting || !r.dishes.length}
+						className="inline-flex w-fit border border-[#fabc4d]/40 px-4 py-2 text-sm text-[#fabc4d] hover:bg-[#fabc4d]/10 disabled:opacity-50"
+					>
+						{reviewSubmitting ? 'Submiting...' : 'Submit review'}
+					</button>
+				</form>
 			</section>
 
 			<section aria-labelledby="reviews-title" className="border border-white/5 bg-[#211f1e] p-5">
