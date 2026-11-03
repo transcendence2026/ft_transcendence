@@ -9,7 +9,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-	  disable: true, // Desactiva el Service Worker y su registro para evitar el fallo con SSL autofirmado
+	  disable: false, // Desactiva el Service Worker y su registro para evitar el fallo con SSL autofirmado
       registerType: "autoUpdate",
 	  //devOptions: { enabled: false },
       includeAssets: [],
@@ -35,6 +35,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
+		navigateFallback: "/index.html",
 		navigateFallbackDenylist: [/^\/api/],
       },
     }),
