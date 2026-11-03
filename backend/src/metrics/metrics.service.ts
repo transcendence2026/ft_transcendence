@@ -27,6 +27,7 @@ export class MetricsService {
     this.httpRequestsTotal = new client.Counter({
       name: 'http_requests_total',
       help: 'Número total de peticiones HTTP',
+      //method = GET, POST,
       labelNames: ['method', 'route', 'status_code'],
       registers: [this.registry],
     });
