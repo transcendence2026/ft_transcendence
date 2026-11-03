@@ -18,6 +18,14 @@ function getAuthErrorMessage(error: unknown, fallback: string): string {
     return "No se puede conectar con el servidor. Comprueba que el backend esté iniciado.";
   }
 
+  if (error.response.status === 401) {
+    return "Incorrect credentials";
+  }
+
+  if (error.response.status === 503) {
+    return "Authentication service not ready";
+  }
+
   const message = error.response.data?.message;
   if (Array.isArray(message)) {
     return message.join(" ");
