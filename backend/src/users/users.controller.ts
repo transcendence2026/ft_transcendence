@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Patch, Post, Req, UseGuards, UseInterceptors, UploadedFile, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { Body, Controller, Get, Delete, Header, Patch, Post, Req, StreamableFile, UseGuards, UseInterceptors, UploadedFile, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { fileTypeFromFile } from 'file-type';
 import { unlink } from 'node:fs/promises';
@@ -6,12 +6,15 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { createMulterOptions } from '../files/multer-opts-builder.js';
 import { UpdateProfileDto } from './dto/update-profile.dto.js';
 import { UsersService } from './users.service.js';
+import { GastronomicJournalService } from './gastronomic-journal.service.js';
 
 @Controller('api/users')
 @UseGuards(JwtAuthGuard)
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
-
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly gastronomicJournalService: GastronomicJournalService,
+  ) {}
   //GET /api/users/me
   @UseGuards(JwtAuthGuard)
   @Get('me')
@@ -19,12 +22,20 @@ export class UsersController {
     return this.usersService.getProfile(req.user.id);
   }
 
+  @Get('export/pdf')
+  @Header('Content-Type', 'application/pdf')
+  @Header('Content-Disposition', 'attachment; filename="diario-gastronomico.pdf"')
+  async exportJournal(@Req() req: any): Promise<StreamableFile> {
+    const pdf = await this.gastronomicJournalService.generatePdf(req.user.id);
+    return new StreamableFile(pdf);
+  }
   //PATCH /api/users/me
   @UseGuards(JwtAuthGuard)
   @Patch('me')
   updateCurrentUser(@Req() req: any, @Body() updateProfileDto: UpdateProfileDto) {
     return this.usersService.updateProfile(req.user.id, updateProfileDto);
   }
+
   // GET /api/users/blocked (¡DEBE IR ANTES DE :id!)
   @Get('blocked')
   getBlockedUsers(@Req() req: any) {
@@ -42,6 +53,7 @@ export class UsersController {
   unblockUser(@Req() req: any) {
     return this.usersService.unblockUser(req.user.id, req.params.id);
   }
+
 
   //GET /api/users/:id
   @UseGuards(JwtAuthGuard)

@@ -7,6 +7,12 @@ import { ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 
+class CompatibleWsAdapter extends WsAdapter {
+  bindClientConnect(server: { on: (event: string, callback: Function) => unknown }, callback: Function) {
+    server.on('connection', callback);
+  }
+}
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   // Aplicar Helmet a nivel de servidor HTTP
@@ -18,13 +24,14 @@ async function bootstrap() {
   );
   // Configura el prefijo global para que todas las rutas respondan bajo /api
   //app.setGlobalPrefix('api');
-  app.useWebSocketAdapter(new WsAdapter(app));
+  app.enableCors({ origin: true, credentials: true });
+  app.useWebSocketAdapter(new CompatibleWsAdapter(app));
   app.useGlobalPipes(
-	new ValidationPipe({
-	  whitelist: true,//solo admite campos q estan declarados en el DTO
+    new ValidationPipe({
+      whitelist: true,
       forbidNonWhitelisted: true, //Aborta peticion (400) si alguien intenta colar un campo no predeterminado
       transform: true, //evita que el servidor interprete números o booleanos como simples palabras, previniendo errores de lógica y validación.
-	}),
+    }),
   );
   app.use(cookieParser()); //parsear cookies entrantes
   app.enableCors({
