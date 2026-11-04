@@ -110,6 +110,7 @@ function ProfileContent() {
   const profilePostsEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isAvatarDropzoneVisible, setIsAvatarDropzoneVisible] = useState(false);
+  const [isExportingJournal, setIsExportingJournal] = useState(false);
   const [isPrivate, setIsPrivate] = useState<boolean>(false);
   const [blockedUsers, setBlockedUsers] = useState<BlockedUserItem[]>([]);
 
@@ -224,6 +225,27 @@ function ProfileContent() {
     setMessage('Friend request cancelled.');
   };
 
+  const downloadJournal = async () => {
+    setIsExportingJournal(true);
+    try {
+      const response = await axios.get<Blob>(`${API_BASE_URL}/api/users/export/pdf`, { responseType: 'blob' });
+      const url = URL.createObjectURL(response.data);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'diario-gastronomico.pdf';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      setError(null);
+      setMessage('Your gastronomic journal is ready.');
+    } catch {
+      setError('The gastronomic journal could not be exported.');
+    } finally {
+      setIsExportingJournal(false);
+    }
+  };
+
   // Alternar privacidad
   const togglePrivacy = async () => {
     try {
@@ -296,7 +318,12 @@ function ProfileContent() {
                 <p className="mt-1 text-sm text-muted">Member since {memberSince}</p>
               </div>
             </div>
-            {isOwnProfile && <Button type="button" onClick={() => setIsEditing((current) => !current)}>{isEditing ? 'Close editor' : 'Edit profile'}</Button>}
+            {isOwnProfile && <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="secondary" onClick={() => void downloadJournal()} disabled={isExportingJournal}>
+                {isExportingJournal ? 'Preparing journal...' : 'Download journal'}
+              </Button>
+              <Button type="button" onClick={() => setIsEditing((current) => !current)}>{isEditing ? 'Close editor' : 'Edit profile'}</Button>
+            </div>}
             {!isOwnProfile && (friendship?.status === 'NONE' || friendship?.status === 'DECLINED') && <Button type="button" onClick={() => void sendFriendRequest()}>+ Add friend</Button>}
             {!isOwnProfile && friendship?.status === 'OUTGOING_PENDING' && <Badge tone="muted">Request sent</Badge>}
             {!isOwnProfile && friendship?.status === 'ACCEPTED' && <Badge tone="success">Friends</Badge>}
