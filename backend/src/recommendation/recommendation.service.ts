@@ -2,7 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { PreferenceVectorizer } from './preference-vectorizer.js';
 import { cosineSimilarity } from './cosine-similarity.js';
+import { DISH_INCLUDE } from './dish-with-relations.js';
 import { Cuisine } from '@prisma/client';
+import { VectorCacheService } from './vector-cache.service.js';
 
 export interface DishRecommendation {
 	id: string;
@@ -25,15 +27,12 @@ export interface SimilarFriend {
 // reviews befor its own averagecounts as much as the global mean
 const COLD_START_PRIOR_WEIGHT = 3;
 
-// Same relations for every dish query
-const DISH_INCLUDE = {
-  restaurant: { select: { id: true, name: true, cuisine: true, priceRange: true } },
-  tags: { select: { name: true } },
-} as const;
-
 @Injectable()
 export class RecommendationService {
-	constructor(private readonly prisma: PrismaService) {}
+	constructor(
+    private readonly prisma: PrismaService,
+    private readonly cache: VectorCacheService,
+  ) {}
 
 	/** Dishes ranked by cosine similarity to the user's preference vector */
 	async getDishRecommendations(userId: string, limit = 10): Promise<DishRecommendation[]> {

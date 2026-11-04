@@ -9,6 +9,7 @@ jest.mock('../prisma/prisma.service', () => ({
 import { groupBy } from "rxjs";
 import { RecommendationService } from "./recommendation.service.js";
 import { RatingAggregatorService } from "./rating-aggregator.js";
+import { VectorCacheService } from "./vector-cache.service.js";
 
 // Minimal PrismaService mock: only the calls the service makes
 function createPrismaMock() {
@@ -44,10 +45,12 @@ function makeDish(id: string, cuisine:string, priceRange: number, spicy = false)
 describe('RecommendationService', () => {
 	let prisma: ReturnType<typeof createPrismaMock>;
 	let service: RecommendationService;
+	let cache: VectorCacheService;
 
 	beforeEach(() => {
 		prisma = createPrismaMock();
-		service = new RecommendationService(prisma as any);
+		cache = new VectorCacheService();
+		service = new RecommendationService(prisma as any, cache);
 		prisma.preference.findUnique.mockResolvedValue(userPref);
 		prisma.review.findMany.mockResolvedValue([]);
 		prisma.review.groupBy.mockResolvedValue([]);
@@ -138,6 +141,19 @@ describe('RecommendationService', () => {
 				priceRange: 2,
 			});
 			expect(rec.source).toBe('personalized');
+		});
+
+		it('loads the catalog once for consecutive requests', async () => {
+			await service.getDishRecommendations('u1');
+			await service.getDishRecommendations('u1');
+			expect(prisma.dish.findMany).toHaveBeenCalledTimes(1);
+		});
+
+		it('reloads the catalog after invalidation', async () => {
+			await service.getDishRecommendations('u1');
+			cache.invalidateCatalog();
+			await service.getDishRecommendations('u1');
+			expect(prisma.dish.findMany).toHaveBeenCalledTimes(2);
 		});
 	});
 
