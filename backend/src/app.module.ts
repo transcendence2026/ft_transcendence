@@ -24,6 +24,7 @@ import { FriendsModule } from './friends/friends.module.js';
 import { RgpdModule } from './rgpd/rgpd.module.js';
 import { SearchModule } from './search/search.module.js';
 import { NotificationGateway } from './notification/notification.gateway.js';
+import { RestaurantsModule } from './restaurants/restaurants.module.js';
 
 @Module({
 	imports: [
@@ -54,6 +55,7 @@ import { NotificationGateway } from './notification/notification.gateway.js';
     	HealthModule,
 		SearchModule,
     	EventEmitterModule.forRoot(),
+		RestaurantsModule,
 		//Modulos siguientes que importaremos cuando se hagan
 		//UsersModule,  //Modulo para gesrionar perfiles y datos usuarios
 		//ProductsModule, //Modulo para catálogo de tienda

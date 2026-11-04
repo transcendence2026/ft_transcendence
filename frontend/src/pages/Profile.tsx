@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { Avatar } from '../components/Avatar';
 import { Badge } from '../components/Badge';
@@ -24,6 +24,13 @@ interface Dish {
   rating: number;
 }
 
+interface FavoriteRestaurant {
+  id: string;
+  name: string;
+  cuisine: string;
+  priceRange: number;
+}
+
 interface ProfileData {
   id: string;
   username: string;
@@ -35,6 +42,7 @@ interface ProfileData {
   message?: string | null;
   profile: { avatarUrl?: string | null; bio?: string | null } | null;
   favoriteDishes: Dish[];
+  favoriteRestaurants: FavoriteRestaurant[];
   stats: { recipesRated: number; averageRecipeRating: number; favoriteIngredients: string[] | null; } | null;
   friendship: { status: 'SELF' | 'NONE' | 'OUTGOING_PENDING' | 'INCOMING_PENDING' | 'ACCEPTED' | 'DECLINED'; requestId: string | null };
 }
@@ -450,7 +458,8 @@ function ProfileContent() {
         	    <Tabs 
 					tabs={[
 						{ id: 'overview', label: 'Overview' }, 
-						{ id: 'favorites', label: 'Favorite dishes' }, 
+						{ id: 'favorites', label: 'Favorite dishes' },
+            { id: 'favorite-restaurants', label: 'Favorite restaurants' },
 						{ id: 'posts', label: 'Posts' },
 						...(isOwnProfile ? [{ id: 'privacy', label: 'Privacy & GDPR' }] : [])
 					]} 
@@ -493,6 +502,41 @@ function ProfileContent() {
 				    <p className="text-muted">Favorite dishes will appear after you review a dish.</p>
 				  )}
 			    </div>
+          ) : activeTab === 'favorite-restaurants' ? (
+            <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {profile.favoriteRestaurants.length ? (
+                profile.favoriteRestaurants.map((restaurant) => (
+                  <Link
+                    key={restaurant.id}
+                    to={`/restaurants/${restaurant.id}`}
+                    className="group flex min-h-36 flex-col justify-between border border-border bg-surface p-5 transition hover:-translate-y-0.5 hover:border-primary hover:bg-surface-raised"
+                  >
+                    <div>
+                      <div className="flex items-start justify-between gap-3">
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-secondary">
+                          {restaurant.cuisine}
+                        </span>
+                        <span className="text-sm text-primary">
+                          {'€'.repeat(restaurant.priceRange)}
+                        </span>
+                      </div>
+
+                      <h2 className="mt-5 font-serif text-xl text-text transition group-hover:text-primary">
+                        {restaurant.name}
+                      </h2>
+                    </div>
+
+                    <span className="mt-6 text-xs text-muted">
+                      View restaurant →
+                    </span>
+                  </Link>
+                ))
+              ) : (
+                <p className="text-muted">
+                  Favorite restaurants will appear here.
+                </p>
+              )}
+            </div>
 			  ) : activeTab === 'posts' ? (
 			    <div className="mt-8 space-y-4">
 				  {profilePostsLoading && !profilePosts.length ? (

@@ -15,7 +15,8 @@
     "prisma:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:reset": "prisma migrate reset --force",
-    "test": "jest"
+    "test": "jest",
+    "benchmark:reviews": "tsx --tsconfig tsconfig.json src/scripts/benchmark-recommendations.ts"
   },
   "prisma": {
     "seed": "tsx --tsconfig prisma/tsconfig.seed.json prisma/seed.ts"
