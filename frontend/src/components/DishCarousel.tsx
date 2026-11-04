@@ -9,8 +9,9 @@ import {
 	getDishRecommendations,
 	type DishRecommendation,
 } from "../api/explore";
+import { Link } from "react-router-dom";
 
-export function DishCarousel() {
+export function DishCarousel({ onTagClick }: { onTagClick?: (tag: string) => void }) {
 	const [dishes, setDishes] = useState<DishRecommendation[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(false);
@@ -39,15 +40,17 @@ export function DishCarousel() {
 		if (track) track.scrollBy({ left: direction * track.clientWidth * 0.8, behavior: 'smooth' });
 	};
 
+	const topRated = dishes[0]?.source === 'top-rated';
+
 	return (
 		<section aria-labelledby="recommendations-title" className="border border-white/5 bg-[#211f1e] p-5">
 			<div className="flex items-end justify-between gap-4">
 				<div>
 					<p className="text-[10px] font-bold tracking-[2px] text-[#fabc4d] uppercase">
-						RECOMENDACIONES DE TasteSync
+						{topRated ? 'LOS MÁS VALORADOS' : 'RECOMENDACIONES DE TasteSync'}
 					</p>
 					<h2 id="recommendations-title" className="mt-1 text-[20px] text-[#e6e1df]">
-						Lo mejor para ti
+						{topRated ? 'Platos populares' : 'Lo mejor para ti'}
 					</h2>
 				</div>
 				{dishes.length > 1 && (
@@ -92,19 +95,33 @@ export function DishCarousel() {
 								<div className="flex items-start justify-between gap-2">
 									<h3 className="text-base text-[#e6e1df]">{dish.name}</h3>
 									<span className="shrink-0 text-xs text-[#fabc4d]">
-										{Math.round(dish.score * 100)}% afín
+										{dish.source === 'top-rated'
+											? `★ ${(dish.score * 5).toFixed(1)}`
+											: `${Math.round(dish.score * 100)}% afín`}
 									</span>
 								</div>
 								<p className="mt-1 text-xs text-[#a88a83]">
-									{dish.restaurant.name} ·{' '}
+									<Link
+										to={`/restaurants/${dish.restaurant.id}`}
+										className="hover:text-[#fabc4d] hover:underline focus-visible:outline-1 focus-visible:outline-[#fabc4d]"
+									>
+										{dish.restaurant.name}
+									</Link>
+									{' · '}
 									{CUISINE_LABELS[dish.restaurant.cuisine] ?? dish.restaurant.cuisine}
 								</p>
 								<p className="mt-2 text-sm text-[#e6e1df]">{dish.price.toFixed(2)} €</p>
 								<div className="mt-3 flex flex-wrap gap-1.5">
 									{dish.tags.slice(0, 3).map((tag) => (
-										<Badge key={tag} tone="muted">
-											{tag}
-										</Badge>
+										<button
+											key={tag}
+											type="button"
+											aria-label={`Filtrar por ${tag}`}
+											onClick={() => onTagClick?.(tag)}
+											className="focus-visible:outline focus-visible:outline-1 focus-visible:outline-[#fabc4d]"
+										>
+											<Badge tone="muted">{tag}</Badge>
+										</button>
 									))}
 								</div>
 							</li>

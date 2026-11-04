@@ -12,6 +12,11 @@ export class UsersService {
       where: { id: userId },
       include: {
         profile: true,
+        favoriteRestaurants: {
+          include: {
+            restaurant: true,
+          },
+        },
         reviews: {
           include: { dish: { include: { restaurant: true, tags: true } } },
         },
@@ -53,13 +58,14 @@ export class UsersService {
         status: user.status,
         isPrivate: true,                      // Indica al frontend que está bloqueado
         isBlocked: isBlockedByViewer,        //estado de bloqueo
-		createdAt: user.createdAt,
+		    createdAt: user.createdAt,
         profile: {
           avatarUrl: user.profile?.avatarUrl ?? null,
           bio: null,                          // Oculto por privacidad
         },
         friendship: relationship,
         favoriteDishes: [],                   // Vacío
+        favoriteRestaurants: [],
         stats: null,                          // Nulo para activar el candado en UI
       };
 	}
@@ -69,8 +75,8 @@ export class UsersService {
       username: user.username,
       email: isSelf ? user.email : null, //Solo visible para el dueño
       status: user.status,
-	  isPrivate: user.isPrivate,
-	  isBlocked: isBlockedByViewer,
+	    isPrivate: user.isPrivate,
+	    isBlocked: isBlockedByViewer,
       createdAt: user.createdAt,
       profile: user.profile,
       friendship: relationship,
@@ -83,6 +89,12 @@ export class UsersService {
         restaurant: review.dish.restaurant.name,
         cuisine: review.dish.restaurant.cuisine,
         rating: review.rating,
+      })),
+      favoriteRestaurants: user.favoriteRestaurants.map((favorite) => ({
+        id: favorite.restaurant.id,
+        name: favorite.restaurant.name,
+        cuisine: favorite.restaurant.cuisine,
+        priceRange: favorite.restaurant.priceRange,
       })),
       stats: {
         recipesRated: user.reviews.length,
