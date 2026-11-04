@@ -64,7 +64,8 @@ services:
     expose:
       # Expose port 3000 only to other services, not directly to the host.
       - "3000"
-    # command: sh -c "npm install --include=dev && npm run db:push && npm run start:dev"
+    # Initialize the schema before starting so a new database can become healthy.
+    command: sh -c "npm run db:push && npm run start:prod"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
       interval: 5s
