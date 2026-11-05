@@ -22,6 +22,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     }
 
    //Passport injects the payload and returns only what the application needs
+   //Passport injects the return value of validate() directly into request.user
     async validate(payload: any): Promise<UserPayload> {
         return {
             id: payload.id,
