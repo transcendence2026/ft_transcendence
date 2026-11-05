@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import * as client from 'prom-client';
+import { Counter } from 'prom-client';
 
 @Injectable()
 export class MetricsService {
@@ -26,7 +27,7 @@ export class MetricsService {
     // 2. Contador de peticiones (necesario para complementar la latencia)
     this.httpRequestsTotal = new client.Counter({
       name: 'http_requests_total',
-      help: 'Número total de peticiones HTTP',
+      help: 'Total number of HTTP requests, by method, route and status code',
       //method = GET, POST,
       labelNames: ['method', 'route', 'status_code'],
       registers: [this.registry],
