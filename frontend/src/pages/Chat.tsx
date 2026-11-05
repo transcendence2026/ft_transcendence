@@ -36,13 +36,6 @@ export interface SalonThread {
   unreadCount?: number;
 }
 
-interface FriendsResponse {
-  friends: {
-    id: string;
-    username: string;
-  }[];
-}
-
 export type MessageAttachment =
   | {
       type: "dish_card";
@@ -182,6 +175,8 @@ export default function EpicureSalonWorkspace() {
     INITIAL_THREADS[0]?.id ?? null
   );
   const [searchQuery, setSearchQuery] = useState("");
+  const [isNewChatOpen, setIsNewChatOpen] = useState(false);
+  const [newChatQuery, setNewChatQuery] = useState("");
   const [isPinned, setIsPinned] = useState(false);
   const [showThreadInfo, setShowThreadInfo] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -203,39 +198,6 @@ export default function EpicureSalonWorkspace() {
     }
     setIsTyping(false);
   };
-
-  useEffect(() => {
-    const fetchThreads = async () => {
-      try {
-        const response = await fetch("/api/friends");
-        if (!response.ok) {
-          throw new Error(`Unable to load friends: ${response.status}`);
-        }
-
-        const friendsResponse: FriendsResponse = await response.json();
-        const salonThreads: SalonThread[] = friendsResponse.friends.map((friend) => ({
-          id: friend.id,
-          category: "CONVERSACIÓN",
-          timestamp: "AHORA",
-          title: friend.username,
-          participants: friend.username,
-          preview: "Inicia una conversación",
-        }));
-
-        if (salonThreads.length > 0) {
-          setThreads(salonThreads);
-          setActiveThreadId(salonThreads[0].id);
-        } else {
-          setThreads([]);
-          setActiveThreadId(null);
-        }
-      } catch (error) {
-        console.error("Error al recuperar las conversaciones", error);
-      }
-    };
-
-    fetchThreads();
-  }, []);
 
   useEffect(() => {
     const fetchMessages = async () => {
@@ -335,6 +297,16 @@ export default function EpicureSalonWorkspace() {
     );
   }, [threads, searchQuery]);
 
+  const availableUsers = useMemo(() => {
+    // TODO: Add a user search endpoint and populate this list with its results.
+    const query = newChatQuery.trim().toLowerCase();
+    if (!query) return threads;
+
+    return threads.filter((thread) =>
+      thread.title.toLowerCase().includes(query)
+    );
+  }, [newChatQuery, threads]);
+
   const handleSendMessage = async (e?: FormEvent) => {
     e?.preventDefault();
     const content = draft.trim();
@@ -358,18 +330,14 @@ export default function EpicureSalonWorkspace() {
   };
 
   const handleStartConversation = () => {
-    const id = `conversation-${Date.now()}`;
-    const newThread: SalonThread = {
-      id,
-      category: "ATENCIÓN",
-      timestamp: "AHORA",
-      title: "Nueva conversación",
-      participants: "Equipo Épicure",
-      preview: "Escribe tu primer mensaje",
-    };
-    setThreads((prev) => [newThread, ...prev]);
-    setActiveThreadId(id);
-    setMessages([]);
+    setIsNewChatOpen((current) => !current);
+    setNewChatQuery("");
+  };
+
+  const handleSelectUser = (thread: SalonThread) => {
+    setActiveThreadId(thread.id);
+    setIsNewChatOpen(false);
+    setNewChatQuery("");
     setNotice(null);
   };
 
@@ -470,14 +438,92 @@ export default function EpicureSalonWorkspace() {
                     </p>
                     <h1 className="text-[20px] tracking-[-0.5px] text-[#e6e1df]">Mensajes</h1>
                   </div>
-                  <button
-                    type="button"
-                    aria-label="Nueva conversación"
-                    onClick={handleStartConversation}
-                    className="flex size-8 items-center justify-center border border-white/5 bg-[#211f1e] hover:border-[#fabc4d]/40"
-                  >
-                    <Plus aria-hidden="true" className="size-3" strokeWidth={1.75} />
-                  </button>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      aria-label="Nueva conversación"
+                      aria-expanded={isNewChatOpen}
+                      onClick={handleStartConversation}
+                      className="flex size-8 items-center justify-center border border-white/5 bg-[#211f1e] hover:border-[#fabc4d]/40"
+                    >
+                      <Plus aria-hidden="true" className="size-3" strokeWidth={1.75} />
+                    </button>
+
+                    {isNewChatOpen && (
+                      <div
+                        role="dialog"
+                        aria-label="Nueva conversación"
+                        className="absolute top-10 right-0 z-20 w-72 border border-[#fabc4d]/20 bg-[#211f1e] p-3 shadow-2xl"
+                      >
+                        <div className="mb-3 flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-[10px] font-bold tracking-[1.8px] text-[#fabc4d] uppercase">
+                              NUEVO MENSAJE
+                            </p>
+                            <p className="mt-1 text-[12px] text-[#a88a83]">
+                              Elige un usuario para contactar
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            aria-label="Cerrar"
+                            onClick={() => setIsNewChatOpen(false)}
+                            className="text-[18px] leading-none text-[#a88a83] hover:text-[#e6e1df]"
+                          >
+                            ×
+                          </button>
+                        </div>
+
+                        <div className="relative">
+                          <Search
+                            aria-hidden="true"
+                            className="pointer-events-none absolute top-1/2 left-2.5 size-3 -translate-y-1/2 text-[#a88a83]"
+                            strokeWidth={1.75}
+                          />
+                          <input
+                            autoFocus
+                            type="search"
+                            aria-label="Buscar un usuario"
+                            placeholder="Buscar un usuario..."
+                            value={newChatQuery}
+                            onChange={(event) => setNewChatQuery(event.target.value)}
+                            className="w-full border border-white/10 bg-[#0f0e0d]/80 py-2 pr-3 pl-8 text-[12px] text-[#e6e1df] outline-none placeholder:text-[#a88a83] focus:border-[#fabc4d]/40"
+                          />
+                        </div>
+
+                        <div className="mt-3 max-h-52 overflow-y-auto">
+                          {availableUsers.length > 0 ? (
+                            availableUsers.map((thread) => (
+                              <button
+                                key={thread.id}
+                                type="button"
+                                onClick={() => handleSelectUser(thread)}
+                                className="flex w-full items-center gap-3 border-b border-white/5 px-2 py-2.5 text-left last:border-0 hover:bg-white/[0.04]"
+                              >
+                                <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-[#fabc4d]/25 bg-[#0f0e0d] text-[10px] font-bold text-[#fabc4d]">
+                                  {thread.title.slice(0, 2).toUpperCase()}
+                                </span>
+                                <span className="min-w-0">
+                                  <span className="block truncate text-[13px] text-[#e6e1df]">
+                                    {thread.title}
+                                  </span>
+                                  <span className="block text-[10px] tracking-[0.8px] text-[#a88a83] uppercase">
+                                    Utilisateur
+                                  </span>
+                                </span>
+                              </button>
+                            ))
+                          ) : (
+                            <p className="px-2 py-4 text-center text-[12px] leading-relaxed text-[#a88a83]">
+                              {newChatQuery.trim()
+                                ? "No se encontró ningún usuario."
+                                : "No hay amigos disponibles por el momento."}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <p className="text-[12px] leading-4 tracking-[0.3px] text-[#a88a83]">
@@ -597,7 +643,6 @@ export default function EpicureSalonWorkspace() {
 
           <section className="col-span-9 flex flex-col justify-between bg-[#141312]">
             {!activeThread ? (
-              /* ÉTAT VIDE : AUCUNE CONVERSATION SÉLECTIONNÉE */
               <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
                 <div className="flex size-16 items-center justify-center border border-[#fabc4d]/20 bg-[#1d1b1a] shadow-lg">
                   <MessageCircle aria-hidden="true" className="size-7" strokeWidth={1.25} />
@@ -614,7 +659,6 @@ export default function EpicureSalonWorkspace() {
                 </p>
               </div>
             ) : (
-              /* CONVERSATION SÉLECTIONNÉE */
               <>
                 <div className="flex items-start justify-between border-b border-white/5 bg-[#141312]/90 p-4 backdrop-blur-sm">
                   <div className="flex items-start gap-3">
@@ -997,7 +1041,6 @@ export default function EpicureSalonWorkspace() {
                     <input
                       ref={imageInputRef}
                       type="file"
-                      accept="image/*"
                       className="hidden"
                       onChange={handleAttachment}
                     />
