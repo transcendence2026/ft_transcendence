@@ -24,7 +24,7 @@ RUN apk add --no-cache openssl
 
 COPY package*.json ./
 COPY prisma ./prisma
-RUN npm ci --only=production
+RUN npm ci
 
 # Generate Prisma Client for the runtime environment
 RUN npx prisma generate
