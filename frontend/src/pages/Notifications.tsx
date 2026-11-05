@@ -20,7 +20,7 @@ export default function Notifications() {
       if (!response.ok) {
         throw new Error(`Friend request update failed: ${response.status}`);
       }
-      const item = notification.find((candidate) => candidate.data.requestId === requestId);
+      const item = notification.find((candidate) => candidate.requestId === requestId);
       if (item) markAsRead(item.id);
     } catch (error) {
       console.error("No se pudo actualizar la solicitud de amistad", error);
@@ -94,22 +94,22 @@ export default function Notifications() {
                         className="min-w-0 flex-1 text-left"
                       >
                         <span className="block text-sm leading-6 text-[#e6e1df]">
-                          {item.data.message}
+                          {item.message}
                         </span>
                         <span className="mt-1 block text-[10px] tracking-[1px] text-[#a88a83] uppercase">
-                          {item.data.type}
+                          {item.type}
                         </span>
                         </button>
                       <span className="flex shrink-0 items-center gap-3">
-                        {item.data.type === "friend_request" && item.data.requestId && (
+                        {item.type === "friend_request" && item.requestId && (
                           <>
                             <span className="flex gap-2">
                               <button
                                 type="button"
-                                disabled={processingRequestId === item.data.requestId}
+                                disabled={processingRequestId === item.requestId}
                                 onClick={(event) => {
                                   event.stopPropagation();
-                                  void updateFriendRequest(item.data.requestId!, "accept");
+                                  void updateFriendRequest(item.requestId!, "accept");
                                 }}
                                 className="border border-[#fabc4d]/40 px-2 py-1 text-[10px] tracking-[1px] text-[#fabc4d] uppercase disabled:opacity-50"
                               >
@@ -117,10 +117,10 @@ export default function Notifications() {
                               </button>
                               <button
                                 type="button"
-                                disabled={processingRequestId === item.data.requestId}
+                                disabled={processingRequestId === item.requestId}
                                 onClick={(event) => {
                                   event.stopPropagation();
-                                  void updateFriendRequest(item.data.requestId!, "reject");
+                                  void updateFriendRequest(item.requestId!, "reject");
                                 }}
                                 className="border border-white/10 px-2 py-1 text-[10px] tracking-[1px] text-[#a88a83] uppercase disabled:opacity-50"
                               >

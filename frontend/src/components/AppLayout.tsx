@@ -89,7 +89,7 @@ export default function AppLayout({
               <p className="text-[10px] font-bold tracking-[1.8px] text-[#fabc4d] uppercase">
                 Nueva notificación
               </p>
-              <p className="mt-1 text-sm leading-5 text-[#e6e1df]">{toastNotification.data.message}</p>
+              <p className="mt-1 text-sm leading-5 text-[#e6e1df]">{toastNotification.message}</p>
               <p className="mt-2 text-[10px] tracking-[1px] text-[#a88a83] uppercase">
                 Ver centro de avisos
               </p>
@@ -233,9 +233,9 @@ export default function AppLayout({
                           key={item.id}
                           className={`border-b border-white/5 px-1 py-3 last:border-0 ${item.read ? "opacity-60" : ""}`}
                         >
-                          <p className="text-[12px] leading-5 text-[#e6e1df]">{item.data.message}</p>
+                          <p className="text-[12px] leading-5 text-[#e6e1df]">{item.message}</p>
                           <p className="mt-1 text-[10px] tracking-[0.6px] text-[#a88a83] uppercase">
-                            {item.data.type}
+                            {item.type}
                           </p>
                         </div>
                       ))

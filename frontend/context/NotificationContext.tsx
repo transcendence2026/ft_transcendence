@@ -9,14 +9,14 @@ import { useWebSocket } from "./WebSocketContext";
 
 type NotificationType = {
   id: string;
-  event: string;
-  data: {
-    type: string;
-    message: string;
-    senderId: string;
-    requestId?: string;
-  }
+  type: string;
+  message: string;
+  senderId: string;
+  receiverId: string;
+  requestId?: string | null;
   read: boolean;
+  createdAt: string;
+  event?: string;
 }
 
 interface NotificationContextValue {
@@ -36,19 +36,42 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
 
   useEffect(() => {
+    if (status === 'open') {
+      void fetch('/api/notifications', { credentials: 'include' })
+        .then((response) => {
+          if (!response.ok) throw new Error('Unable to load notifications');
+          return response.json() as Promise<NotificationType[]>;
+        })
+        .then(setNotification)
+        .catch(() => setError('Unable to load notifications'));
+    }
+  }, [status]);
+
+  useEffect(() => {
     if (status != 'open' || messages.length <= 0) return;
 
     try {
-      const lastMessage: NotificationType = JSON.parse(messages.slice(-1)[0].data);  
+      const lastMessage = JSON.parse(messages.slice(-1)[0].data) as {
+        event?: string;
+        data?: NotificationType;
+      };
 
-      if (lastMessage.event == 'notification')
-        setNotification(prev => [...prev, { ...lastMessage, read: false, id: crypto.randomUUID() }]);
+      if (lastMessage.event === 'notification' && lastMessage.data) {
+        setNotification((prev) => [
+          lastMessage.data!,
+          ...prev.filter((notification) => notification.id !== lastMessage.data!.id),
+        ]);
+      }
     } catch (err) {
       setError("Error will catching notifications");
     }
   }, [messages, status])
 
   const markAsRead = (notificationId: string) => {
+    void fetch(`/api/notifications/${notificationId}/read`, {
+      method: 'PATCH',
+      credentials: 'include',
+    }).catch(() => setError('Unable to mark notification as read'));
     setNotification(prevState => {
       return prevState.map((notif) => {
         if (notif.id === notificationId) {
@@ -59,6 +82,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     })
   }
   const markAllAsRead = () => {
+    void fetch('/api/notifications/read-all', {
+      method: 'PATCH',
+      credentials: 'include',
+    }).catch(() => setError('Unable to mark notifications as read'));
     setNotification(prevState => {
       return prevState?.map((notif) => {
         return {...notif, read: true}
