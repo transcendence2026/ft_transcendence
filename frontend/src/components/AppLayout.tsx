@@ -36,7 +36,7 @@ export default function AppLayout({
   isSaved = false,
   onToggleSaved,
 }: AppLayoutProps) {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const username = user?.username ?? "Usuario";
@@ -147,7 +147,7 @@ export default function AppLayout({
           </div>
         </div>
 
-        {sidebarFooter}
+        {sidebarFooter ?? <SidebarAccount onLogout={() => void logout()} />}
       </aside>
 
       <div className="flex flex-1 flex-col">
