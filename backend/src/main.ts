@@ -22,7 +22,6 @@ async function bootstrap() {
       contentSecurityPolicy: false,
     }),
   );
-  app.enableCors({ origin: true, credentials: true });
   app.useWebSocketAdapter(new CompatibleWsAdapter(app));
   app.useGlobalPipes(
     new ValidationPipe({
