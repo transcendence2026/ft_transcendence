@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import { jest } from '@jest/globals';
 import { Prisma } from '@prisma/client';
 import { SearchService } from './search.service.js';
 import { SearchQueryDto } from './dto/search-query.dto.js';
@@ -9,8 +10,6 @@ jest.mock('@nestjs/common', () => ({
 	Injectable: () => () => undefined,
 	BadRequestException: class BadRequestException extends Error {},
 }));
-// eslint-disable-next-line @typescript-eslin/no-require-imports
-const { BadRequestException } = require('@nestjs/common');
 
 // Builds a DTO the way ValidationPipe would after transform (limit defaults to 10)
 function buildQuery(overrides: Partial<SearchQueryDto> = {}): SearchQueryDto {
@@ -18,14 +17,21 @@ function buildQuery(overrides: Partial<SearchQueryDto> = {}): SearchQueryDto {
 }
 
 // Fake rows shaped like the raw query output
-function buildRows(count: number, startAt = 1) {
-  return Array.from({ length: count }, (_, i) => ({
-		id: `r${startAt + i}`,
-		name: `Restaurant ${startAt + i}`,
-		cuisine: 'ITALIAN',
-		priceRange: 2,
-		avgRating: 4.2,
-		reviewCount: 3,
+function buildRows(count: number, startAt = 1): Array<{
+	id: string;
+	name: string;
+	cuisine: string;
+	priceRange: number;
+	avgRating: number;
+	reviewCount: number;
+	}> {
+		return Array.from({ length: count }, (_, i) => ({
+			id: `r${startAt + i}`,
+			name: `Restaurant ${startAt + i}`,
+			cuisine: 'ITALIAN',
+			priceRange: 2,
+			avgRating: 4.2,
+			reviewCount: 3,
 	}));
 }
 
@@ -188,9 +194,9 @@ describe('SearchService', () => {
 		it('rejects an unknown cursor with 400 and does not run the search query', async () => {
 			findUnique.mockResolvedValue(null);
 	
-			await expect(service.search(buildQuery({ cursor: 'nope' }))).rejects.toThrow(
-				BadRequestException,
-			);
+			await expect(
+				service.search(buildQuery({ cursor: 'nope' })),
+				).rejects.toThrow('Invalid cursor');
 			expect(queryRaw).not.toHaveBeenCalled();
 		});
 	

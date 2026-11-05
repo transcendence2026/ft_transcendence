@@ -3,7 +3,6 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { PreferenceVectorizer } from './preference-vectorizer.js';
 import { cosineSimilarity } from './cosine-similarity.js';
 import { DISH_INCLUDE } from './dish-with-relations.js';
-import { Cuisine } from '@prisma/client';
 import { VectorCacheService } from './vector-cache.service.js';
 
 export interface DishRecommendation {
@@ -31,7 +30,7 @@ const COLD_START_PRIOR_WEIGHT = 3;
 export class RecommendationService {
 	constructor(
     private readonly prisma: PrismaService,
-    private readonly cache: VectorCacheService,
+    private readonly vectorCache: VectorCacheService,
   ) {}
 
 	/** Dishes ranked by cosine similarity to the user's preference vector */
@@ -43,21 +42,29 @@ export class RecommendationService {
 		const userVector = PreferenceVectorizer.toVector(preference);
 		const reviewedIds = await this.getReviewedDishIds(userId);
 
-    const dishes = await this.prisma.dish.findMany({
-      where: { id: { notIn: reviewedIds } },
-      include: DISH_INCLUDE,
-    });
+    let catalog = this.vectorCache.getCatalog();
 
-    return dishes
-      .map((dish) => {
-        const dishVector = PreferenceVectorizer.toDishVector({
+    if (!catalog) {
+      const dishes = await this.prisma.dish.findMany({
+        include: DISH_INCLUDE,
+      });
+      catalog = dishes.map((dish) => ({
+        dish,
+        vector: PreferenceVectorizer.toDishVector({
           cuisine: dish.restaurant.cuisine,
           priceRange: dish.restaurant.priceRange,
           tags: dish.tags,
-        });
+        }),
+      }));
+      this.vectorCache.setCatalog(catalog);
+    }
+
+    return catalog
+      .filter(({ dish }) => !reviewedIds.includes(dish.id))
+      .map(({ dish, vector }) => {
         return this.toRecommendation(
           dish,
-          cosineSimilarity(userVector, dishVector),
+          cosineSimilarity(userVector, vector),
           'personalized',
         );
       })

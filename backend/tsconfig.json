@@ -2,6 +2,7 @@
 {
   "extends": "./tsconfig.build.json",
   "compilerOptions": {
+    "isolatedModules": true,
     "types": ["node", "jest"],
   },
   "exclude": ["node_modules"]

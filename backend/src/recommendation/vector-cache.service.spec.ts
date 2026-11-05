@@ -1,3 +1,4 @@
+import { jest } from '@jest/globals';
 import { VectorCacheService, type CatalogEntry } from './vector-cache.service.js';
 
 const TTL_MS = 10 * 60 * 1000;

@@ -10,13 +10,19 @@ import {
 	type DishRecommendation,
 } from "../api/explore";
 import { Link } from "react-router-dom";
+import { select } from "three/tsl";
 
 export function DishCarousel({ onTagClick }: { onTagClick?: (tag: string) => void }) {
 	const [dishes, setDishes] = useState<DishRecommendation[]>([]);
+	const [selectedTag, setSelectedTag] = useState<string | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(false);
 	const [attempt, setAttempt] = useState(0);
 	const trackRef = useRef<HTMLUListElement>(null);
+
+	const visibleDishes = selectedTag
+		? dishes.filter((dish) => dish.tags.includes(selectedTag))
+		: dishes;
 
 	useEffect(() => {
 		const controller = new AbortController();
@@ -87,7 +93,7 @@ export function DishCarousel({ onTagClick }: { onTagClick?: (tag: string) => voi
 						aria-label="Lista de platos recomendados"
 						className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 focus-visible:outline focus-visible:outline-1 focus-visible:outline-[#fabc4d]"
 					>
-						{dishes.map((dish) => (
+						{visibleDishes.map((dish) => (
 							<li
 								key={dish.id}
 								className="w-64 shrink-0 snap-start border border-white/5 bg-[#1d1b1a] p-4"
@@ -117,7 +123,10 @@ export function DishCarousel({ onTagClick }: { onTagClick?: (tag: string) => voi
 											key={tag}
 											type="button"
 											aria-label={`Filtrar por ${tag}`}
-											onClick={() => onTagClick?.(tag)}
+											onClick={() => {
+												setSelectedTag((currentTag) => (currentTag === tag ? null : tag));
+												onTagClick?.(tag);
+											}}
 											className="focus-visible:outline focus-visible:outline-1 focus-visible:outline-[#fabc4d]"
 										>
 											<Badge tone="muted">{tag}</Badge>

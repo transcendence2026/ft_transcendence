@@ -5,10 +5,10 @@ jest.mock('../prisma/prisma.service', () => ({
   PrismaService: class {},
 }));
 
-
-import { groupBy } from "rxjs";
+import { jest } from '@jest/globals';
+import { Test, TestingModule } from '@nestjs/testing';
 import { RecommendationService } from "./recommendation.service.js";
-import { RatingAggregatorService } from "./rating-aggregator.js";
+import { PrismaService } from '../prisma/prisma.service.js';
 import { VectorCacheService } from "./vector-cache.service.js";
 
 // Minimal PrismaService mock: only the calls the service makes
@@ -78,9 +78,9 @@ describe('RecommendationService', () => {
 
 		it('ranks dishes by similarity, highest first', async () => {
 			prisma.dish.findMany.mockResolvedValue([
-				makeDish('mexican-spicy', 'MEXICAN', 1, true), // no shared dimension -> 0
-				makeDish('italian', 'ITALIAN', 2), // best match
-				makeDish('japanese', 'JAPANESE', 4), // only price overlap
+				makeDish('mexican-spicy', 'MEXICAN', 1, true),
+				makeDish('italian', 'ITALIAN', 2),
+				makeDish('japanese', 'JAPANESE', 4),
 			]);
 
 			const result = await service.getDishRecommendations('u1');
@@ -107,15 +107,20 @@ describe('RecommendationService', () => {
 
 		it('excludes dishes the user already reviewed', async () => {
 			prisma.review.findMany.mockResolvedValue([{ dishId: 'd1' }, { dishId: 'd2' }]);
+			prisma.dish.findMany.mockResolvedValue([
+				makeDish('d1', 'ITALIAN', 2),
+				makeDish('d2', 'ITALIAN', 2),
+				makeDish('d3', 'ITALIAN', 2),
+			]);
 
-			await service.getDishRecommendations('u1');
+			const result = await service.getDishRecommendations('u1');
 
 			expect(prisma.review.findMany).toHaveBeenCalledWith(
 				expect.objectContaining({ where: { authorId: 'u1' } }),
 			);
-			expect(prisma.dish.findMany).toHaveBeenCalledWith(
-				expect.objectContaining({ where: { id: { notIn: ['d1', 'd2'] } } }),
-			);
+			expect(result.map((r) => r.id)).not.toContain('d1');
+			expect(result.map((r) => r.id)).not.toContain('d2');
+			expect(result.map((r) => r.id)).toContain('d3');
 		});
 
 		it('respects the limit', async () => {
