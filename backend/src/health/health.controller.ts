@@ -7,7 +7,6 @@ import { MetricsInterceptor } from '../metrics/metrics.interceptor.js';
 export class HealthController {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  @UseInterceptors(MetricsInterceptor)
   @Get()
   async check() {
     try {
@@ -19,10 +18,10 @@ export class HealthController {
   }
 
     // TEMPORARY: delete after the test
-    @UseInterceptors(MetricsInterceptor)
-    @Get('boom')
-    boom() {
-        throw new NotFoundException();
-    }
+    //@UseInterceptors(MetricsInterceptor)
+    // @Get('boom')
+    // boom() {
+    //     throw new NotFoundException();
+    // }
 }
 

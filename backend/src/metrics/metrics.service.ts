@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import * as client from 'prom-client';
-import { Counter } from 'prom-client';
+import { Counter, Histogram } from 'prom-client';
 
 @Injectable()
 export class MetricsService {
