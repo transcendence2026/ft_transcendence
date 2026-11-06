@@ -16,18 +16,31 @@ export class MetricsInterceptor implements NestInterceptor {
     const response = http.getResponse();
 
     //ignore metrics from /api/health and /metrics
-    if (IGNORED_ROUTES.includes(request.route?.path)) {
-        return next.handle();   // pasa sin medir nada
-    }
+    // if (IGNORED_ROUTES.includes(request.route?.path)) {
+    //     return next.handle();   // pasa sin medir nada
+    // }
 
     return next.handle().pipe(
-      tap(() => {
-        this.metricsService.httpRequestsTotal.inc({
-          method: request.method,
-          route: request.route?.path,
-          status_code: String(response.statusCode),
-        });
-      }),
+      tap({
+        next: () => {this.metricsService.httpRequestsTotal.inc({
+                    method: request.method,
+                    route: request.route?.path,
+                    status_code: String(response.statusCode),
+                    });
+        },
+        error: (err) => {
+            // 1. decide the status number:
+            //    if err is an HttpException -> use its status
+            //    otherwise                  -> use a fallback number
+            const status = /* ??? */;
+
+            // 2. same inc as in next, but with this status as a string
+            this.metricsService.httpRequests.inc({
+                method: request.method,
+                route: request.route?.path,
+                status_code: /* ??? */,
+        },
+      })
     );
   }
 }
