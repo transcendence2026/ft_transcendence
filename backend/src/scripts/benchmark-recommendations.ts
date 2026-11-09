@@ -13,10 +13,12 @@
 import { performance } from 'node:perf_hooks';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { RecommendationService } from '../recommendation/recommendation.service.js';
+import { VectorCacheService } from '../recommendation/vector-cache.service.js';
 
 const BENCH_PREFIX = '__BENCH__';
+const cache = new VectorCacheService();
 
-// ---- CLI args -------------------------------------------------------------
+// CLI args
 function arg(name: string, fallback: number): number {
   const found = process.argv.find((a) => a.startsWith(`--${name}=`));
   return found ? Number(found.split('=')[1]) : fallback;
@@ -26,7 +28,7 @@ const WARMUP_RUNS = arg('warmup', 5);
 const MEASURED_RUNS = arg('runs', 50);
 const ONLY_CLEANUP = process.argv.includes('--cleanup');
 
-// ---- Safety guard: never run against production ---------------------------
+// Safety guard: never run against production
 function assertNotProduction(): void {
   const dbUrl = process.env.DATABASE_URL ?? '';
   if (process.env.NODE_ENV === 'production') {
@@ -37,7 +39,7 @@ function assertNotProduction(): void {
   }
 }
 
-// ---- Stats helpers --------------------------------------------------------
+// Stats helpers 
 function percentile(sortedAsc: number[], p: number): number {
   const idx = Math.min(
     sortedAsc.length - 1,
@@ -56,7 +58,7 @@ function report(label: string, samples: number[]): void {
   console.log(`  min:  ${sorted[0].toFixed(2)} ms | max: ${sorted[sorted.length - 1].toFixed(2)} ms`);
 }
 
-// ---- Data setup / teardown ------------------------------------------------
+// Data setup / teardown 
 async function cleanup(prisma: PrismaService): Promise<void> {
   const { count } = await prisma.review.deleteMany({
     where: { comment: { startsWith: BENCH_PREFIX } },
@@ -119,14 +121,14 @@ async function measure(
   return samples;
 }
 
-// ---- Main -----------------------------------------------------------------
+// main
 async function main(): Promise<void> {
   assertNotProduction();
 
   const prisma = new PrismaService();
   await prisma.$connect();
 
-  const service = new RecommendationService(prisma);
+  const service = new RecommendationService(prisma, cache);
 
   try {
     if (ONLY_CLEANUP) {
