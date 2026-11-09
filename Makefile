@@ -72,6 +72,7 @@ monitor-down:
 
 restart:
 	$(COMPOSE) restart
+	$(MONITORING) restart
 
 logs:
 	$(COMPOSE) logs -f
