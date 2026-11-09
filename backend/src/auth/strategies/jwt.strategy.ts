@@ -18,6 +18,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
             ignoreExpiration: false,
             //the validity of the token is checked using the secret key JWT_SECRET with which it was signed
             secretOrKey: process.env.JWT_SECRET || 'super-secret',
+			algorithms: ['HS256'],
         });
     }
 
