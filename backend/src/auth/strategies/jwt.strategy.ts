@@ -6,7 +6,7 @@ import { UserPayload } from '../interfaces/user-payload.interface.js';
 
 @Injectable()
 // Extends PassportStrategy so Passport automatically verifies the token's cryptographic signature.
-export class JwtStrategy extends PassportStrategy(Strategy) {
+export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     constructor() {
         super({
             //extracts only the 'accessToken' from the HttpOnly cookie
