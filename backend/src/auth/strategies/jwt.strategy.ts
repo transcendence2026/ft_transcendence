@@ -5,8 +5,7 @@ import { Request } from 'express'
 import { UserPayload } from '../interfaces/user-payload.interface.js';
 
 @Injectable()
-// JwtStrategy inherits from PassportStrategy(Strategy) 
-// so that Passport handles the cryptographic verification of the token
+// Extends PassportStrategy so Passport automatically verifies the token's cryptographic signature.
 export class JwtStrategy extends PassportStrategy(Strategy) {
     constructor() {
         super({
@@ -22,8 +21,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         });
     }
 
-   //Passport injects the payload and returns only what the application needs
-   //Passport injects the return value of validate() directly into request.user
+   // Passport extracts the sanitized payload from validate() and injects it directly into request.user.
     async validate(payload: any): Promise<UserPayload> {
         return {
             id: payload.id,

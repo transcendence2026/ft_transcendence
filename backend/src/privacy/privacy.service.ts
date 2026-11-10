@@ -5,7 +5,6 @@ import { PrismaService } from "../prisma/prisma.service.js";
 export class PrivacyService {
 	constructor(private readonly prisma: PrismaService) {}
 
-	//Alternar Perfil Publico/Privado 
 	//toggle profile visibility(public vs private)
 	async updatePrivacy(userId: string, isPrivate: boolean) {
 		const user = await this.prisma.user.update({
@@ -23,14 +22,13 @@ export class PrivacyService {
 		};
 	}
 
-	//Bloquear a una persona
 	//block a user
 	async blockUser(blockerId: string, blockedId: string) {
 		//prevent user from blocking themselves
 		if( blockerId === blockedId) {
 			throw new BadRequestException('You cannot block yourself');
 		}
-		//Verify if the user exists
+		//Verify if the target user exists
 		const targetUser = await this.prisma.user.findUnique({
 			where: { id: blockedId },
 		});
@@ -38,8 +36,6 @@ export class PrivacyService {
 			throw new NotFoundException('User to block not found');
 		}
 		//Check if the block relationship already exists
-		//Para usar findUnique, tienes que darme la pareja completa (blockerId_blockedId),
-		// porque solo juntos garantizan que el resultado sea una fila única".
 		const existingBlock = await this.prisma.block.findUnique({
 			where: {
 				blockerId_blockedId: {
@@ -110,13 +106,13 @@ export class PrivacyService {
 				},
 			},
 		});
-		//Formt response payload for frontend consumption
+		//Format response payload for frontend consumption
 		return blockedEntries.map((entry) => ({
 			blockId: entry.id,
 			user: {
 				id: entry.blocked.id,
 				username: entry.blocked.username,
-				email: entry.blocked.email,
+				//email: entry.blocked.email,
 				avatarUrl: entry.blocked.profile?.avatarUrl ?? null,
 			},
 		}));

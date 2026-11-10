@@ -13,21 +13,17 @@ import { LoginUserDto } from './dto/login-user.dto.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { TwoFactorService } from './2fa/two-factor.service.js';
 
-//declara y exporta la clase de servicio dd reside la logica de autenticacion
 @Injectable()
 export class AuthService {
-	//define la complejidad con la que bcrypt revuelve y cifra las contraseñas
 	private readonly saltRounds = 10;
 
-	//constructor inyecta el servicio de JWT dentro del serv. de autenticacion par poder firmar tokens
 	constructor(
 		@Inject(JwtService) private readonly jwtService: JwtService,
 		@Inject(PrismaService) private readonly prisma: PrismaService,
 		private readonly twoFactorService: TwoFactorService,
 	) {}
 
-    //JwtService: herramienta para descifrar y validar tokens
-    //Generamos tokens: AccessToken y RefreshToken con sus duraciones y secretos
+    // Issues access and refresh tokens with different expiration windows.
     async generateTokens(user: { id: string; email: string; username: string; role?: string }) {
         const payload = {
             id: user.id,
@@ -48,28 +44,25 @@ export class AuthService {
         return { accessToken, refreshToken};
     }
 
-	//REGISTER: Recibe los datos validados del registro
+	// Handles local user registration, credential hashing, and profile creation
 	async register(registerDto: RegisterUserDto) {
 		const { email, username, password } = registerDto;
 
-	//Comprobamos si ya existe el usuario por email o username
-    // 1. Comprobamos si el email ya existe
+    // Checks if the email is already registered
 	const existingEmail = await this.prisma.user.findUnique({ where: { email } });
 	if (existingEmail) {
     	throw new ConflictException('Email already registered');
 	}
 
-	// 2. Comprobamos si el username ya está ocupado
+	// Checks if the username is already taken
 	const existingUsername = await this.prisma.user.findUnique({ where: { username } });
 	if (existingUsername) {
 		throw new ConflictException('Username already taken');
 	}
 
-		//Ciframos contraseña con bcrypt
+		// Hashes the password using bcrypt
 		const hashedPassword = await bcrypt.hash(password, this.saltRounds);
 		
-		// Guardamos usando passwordHash como marca el schema.prisma
-		//le dice a Prisma que cree una nnueva linea user con el contenido de data
         const user = await this.prisma.user.create({
             data: {
                 email,
@@ -77,13 +70,13 @@ export class AuthService {
                 passwordHash: hashedPassword,
                 status: 'ONLINE',
 				profile: {
-                    create: {}, // Genera su fila en Profile con avatarUrl por defecto
+                    create: {},
 				}
             },
         });
-        // Si todo es correcto, generamos y devolvemos el token JWT
+        // If validation succeeds, generates and returns the JWT tokens
         const tokens = await this.generateTokens(user);
-		//Una vez el usuario esta guardado, devuelve respuesta al controlador para q sepa quien se acaba de registrar
+		// Once the user is persisted, returns the payload to the controller with registration details
 		return {
 			message: 'User registered successfully',
 			token:tokens.accessToken,
@@ -97,26 +90,23 @@ export class AuthService {
 		};
 	}
 
-	// LOGIN: Recibe las credeciales para logearse e intentar entrar en la aplicacion
+	// Authenticates credentials; requires a TOTP code if 2FA is active.
 	async login(loginUserDto: LoginUserDto) {
 		const { email, password } = loginUserDto;
-		// 1. Buscamos al usuario en la BD por email
+		// look for user by mail
 		const user = await this.findUserByEmail(email);
-		//si no lo encuentra, lanza error 401
 		if(!user || !user.passwordHash) {
 			throw new UnauthorizedException('Invalid credentials');
 		}
 
-		//2. Comparamos la contraseña con el hash usando bcrypt.compare
+		// Compares the plain password against the stored hash using bcrypt.compare
 		const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
 		if(!isPasswordValid) {
 			throw new UnauthorizedException('Invalid credentials');
 		}
 
-		//COMPROBACIÓN DE DOBLE FACTOR
+		//// 2fa check
         if (user.isTwoFactorEnabled) {
-            // Si tiene 2FA, NO le damos el token todavía. 
-            // Devolvemos un aviso para que el frontend sepa que tiene que pedir el código de 6 dígitos.
             return {
                 requiresTwoFactor: true,
                 userId: user.id,
@@ -124,13 +114,12 @@ export class AuthService {
             };
         }
 		
-		// Si NO tiene 2FA, generamos el token normal como hasta ahora
-		//3. Si todo es correcto, generamos y devolvemos el token JWT
+		// If everything is valid, generates and returns the JWT tokens
 		const tokens = await this.generateTokens(user);
 
 		return {
 			message: 'Login successful',
-			token: tokens.accessToken, //yo tenia accesToken perohay otra configuracion y esta dando problemas
+			token: tokens.accessToken,
 			accessToken: tokens.accessToken,
             refreshToken: tokens.refreshToken,
 			user: {
@@ -141,7 +130,7 @@ export class AuthService {
 		};
 	}
 
-	// Responde al /api/auth/me del frontend al recargar la página
+	// Retrieves current session user info along with profile details.
     async getMe(userId: string) {
         const user = await this.prisma.user.findUnique({
             where: { id: userId },
@@ -163,7 +152,7 @@ export class AuthService {
         };
     }
 
-	// Método auxiliar preparado para cuando se integre la base de datos
+	// Database lookup helper catching missing migrations/table schema errors.
     private async findUserByEmail(email: string) {
         try {
             return await this.prisma.user.findUnique({
@@ -182,19 +171,12 @@ export class AuthService {
         }
     }
 
-	//Una vez que el proveedor externo nos da los datos del usuario en el req.user (callback),
-	//  el servicio hace lo siguiente: BUSCA en la BD con prisma si exite el usuario
-	//si existe, GENERA EL TOKEN
-	//si no, lo crea en al BD y luego emite token
-	//por ultimo redirige al us al frontend pasando el token para que la interfaz lo guarde
+	// Synchronizes 42 OAuth profiles, sets ONLINE status, and checks 2FA requirements.
     async oauthLogin(userDto: { email: string; username: string; avatarUrl: string }) {
-        // 1. Buscamos si el usuario ya existe en la base de datos por su email
         let user = await this.prisma.user.findUnique({
             where: { email: userDto.email },
 			include: { profile: true },
         });
-
-        // 2. Si no existe, lo creamos automáticamente en la BD
         if (!user) {
 			let finalUsername = userDto.username;
             const existingUsername = await this.prisma.user.findUnique({
@@ -227,7 +209,7 @@ export class AuthService {
 			});
         }
 
-		//COMPROBACIÓN 2FA PARA USUARIOS DE 42
+		//Check 2fa
 		if (user.isTwoFactorEnabled) {
             return {
                 requiresTwoFactor: true,
@@ -235,11 +217,9 @@ export class AuthService {
                 message: 'Please provide your 2FA code',
             };
         }
-        //3. Si todo es correcto, generamos y devolvemos el token JWT
+        // If everything is valid, generates and returns the JWT tokens
         const tokens = await this.generateTokens(user);
        
-
-        // 5. Devolvemos el token y los datos del usuario al cliente
         return {
             message: 'OAuth login successful',
             token: tokens.accessToken,
@@ -253,24 +233,23 @@ export class AuthService {
             },
         };
     }
-	// COMPLETAR LOGIN CON 2FA: Recibe el ID de usuario y el código de 6 dígitos
-	// Si requiresTwoFactor: true
-	//frontend muestra al usuario una ventanita para que introduzca los 6 dígitos de su aplicación de autenticación.
+
+	//Completes 2FA login by verifying the 6-digit TOTP code and issuing session tokens.
     async authenticate2faLogin(userId: string, code: string) {
-        //Comprobamos que nos envien userID y si no lo hacen decuelve 401
+        //Validates that the user ID is provided
         if(!userId) {
             throw new UnauthorizedException('User ID is required')
         }
-        // 1. Validamos el código usando el TwoFactorService (en concreto con verifyCode)
+        // Verifies the TOTP code against the user's secret
         await this.twoFactorService.verifyCode(userId, code);
 
-        // 2. Buscamos al usuario para sacar sus datos y firmar el token
+        // Fetches user data to generate the JWT payload
         const user = await this.prisma.user.findUnique({ where: { id: userId } });
         if (!user) {
             throw new UnauthorizedException('User not found');
         }
 
-        // 3. Generamos el token JWT definitivo
+        // Generates the final JWT token pair
         const tokens = await this.generateTokens(user);
 
         return {
@@ -287,7 +266,7 @@ export class AuthService {
         };
     }
 
-    //REFRESH: valida el refreshToken y emite un nuevo par de tokens
+    // Validates the refresh token and issues a new token pair
     async refreshTokens(refreshToken: string) {
         if(!refreshToken) {
             throw new UnauthorizedException('Refresh token missing');
