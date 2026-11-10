@@ -8,13 +8,14 @@ import { Input } from '../components/Input';
 import { Tabs } from '../components/Tabs';
 import { Loader } from '../components/Loader';
 import { SocialPostCard, type SocialPost } from '../components/SocialPostCard';
-import ProtectedRoute from '../components/ProtectedRoute';
 import { useAuth } from '../../context/AuthContext';
-import { useWebSocket } from '../../context/WebSocketContext';
 import { ImageDropzone } from '../components/ImageDropzone';
 import { RgpdSettings } from '../components/RgpdSettings';
+import AppLayout from '../components/AppLayout';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? '';
+const API_BASE_URL = import.meta.env.VITE_API_URL !== undefined
+  ? import.meta.env.VITE_API_URL
+  : (import.meta.env.DEV ? 'http://localhost:3000' : '');
 
 interface Dish {
   id: string;
@@ -87,8 +88,7 @@ function profileImage(url?: string | null) {
 
 function ProfileContent() {
   const { id } = useParams<{ id: string }>();
-  const { user } = useAuth();
-  const { status: websocketStatus } = useWebSocket();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const isOwnProfile = !id || id === user?.id;
   const profileId = id ?? user?.id;
@@ -115,39 +115,50 @@ function ProfileContent() {
   const [blockedUsers, setBlockedUsers] = useState<BlockedUserItem[]>([]);
 
   useEffect(() => {
-    if (!profileId) return;
+    if (authLoading || (!id && !user?.id)) return;
 
     const endpoint = isOwnProfile
       ? `${API_BASE_URL}/api/users/me`
       : `${API_BASE_URL}/api/users/${profileId}`;
+    let active = true;
 
     void axios.get<ProfileData>(endpoint).then(async ({ data }) => {
+      if (!active) return;
       setProfile(data);
-	  setIsPrivate(Boolean(data.isPrivate));
+      setIsPrivate(Boolean(data.isPrivate));
       setFriendship(data.friendship);
       setForm({ username: data.username, email: data.email, bio: data.profile?.bio ?? '' });
       if (isOwnProfile) {
         const friendsResponse = await axios.get<FriendListResponse>(`${API_BASE_URL}/api/friends`);
+        if (!active) return;
         setFriends(friendsResponse.data.friends);
         setIncomingRequests(friendsResponse.data.incomingRequests);
         setOutgoingRequests(friendsResponse.data.outgoingRequests);
-		//carga lista de bloqueados
-		try {
-          const blockedRes = await axios.get<any>(
-			`${API_BASE_URL}/api/users/blocked`,
-			{ withCredentials: true }
-		  );
-		  // Si viene como array lo toma; si viene dentro de una propiedad, extrae la lista
+        try {
+          const blockedRes = await axios.get<BlockedUserItem[] | { blockedUsers?: BlockedUserItem[]; data?: BlockedUserItem[] }>(
+            `${API_BASE_URL}/api/users/blocked`,
+            { withCredentials: true }
+          );
           const data = blockedRes.data;
           const list = Array.isArray(data) ? data : (data?.blockedUsers ?? data?.data ?? []);
+          if (!active) return;
           setBlockedUsers(list);
-        } catch (err) {
-          console.error('Error cargando lista de bloqueados:', err);
-		  setBlockedUsers([]);
+        } catch (blockedError) {
+          console.error('Could not load blocked users:', blockedError);
+          if (active) setBlockedUsers([]);
         }
       }
-    }).catch(() => setError('We could not load this profile.'));
-  }, [profileId, isOwnProfile, websocketStatus]);
+    }).catch((loadError) => {
+      if (active) {
+        console.error('Could not load profile:', loadError);
+        setError('We could not load this profile.');
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [authLoading, id, user?.id, isOwnProfile, profileId]);
 
   // Si es un perfil privado bloqueado, no intentamos pedir posts
   const isLockedPrivateProfile = !isOwnProfile && Boolean(profile?.isPrivate) && !profile?.stats;
@@ -159,7 +170,7 @@ function ProfileContent() {
       .then(({ data }) => { setProfilePosts(data.items); setProfilePostsCursor(data.nextCursor); setProfilePostsHasMore(data.hasMore); })
       .catch(() => setError('We could not load this user\'s posts.'))
       .finally(() => setProfilePostsLoading(false));
-  }, [activeTab, profileId, websocketStatus, isLockedPrivateProfile]);
+  }, [activeTab, profileId, isLockedPrivateProfile]);
 
   useEffect(() => {
     const sentinel = profilePostsEndRef.current;
@@ -292,30 +303,24 @@ function ProfileContent() {
       setError('Could not unblock user.');
     }
   };
+  if (authLoading) return <main className="flex min-h-screen items-center justify-center bg-background font-sans text-sm text-muted">Loading session...</main>;
   if (error && !profile) return <main className="min-h-screen bg-background p-8 text-text"><p>{error}</p></main>;
   if (!profile) return <main className="min-h-screen bg-background p-8 text-muted">Loading profile...</main>;
   const presence = profile?.status === 'ONLINE' ? 'online' : profile?.status === 'INGAME' ? 'ingame' : 'offline';
   const memberSince = profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) : '';
 
   return (
-    <main className="min-h-screen bg-background font-sans text-text">
-      <header className="flex h-18 items-center justify-between border-b border-border bg-surface px-5 sm:px-8">
-        <button type="button" className="flex items-center gap-3 text-left" onClick={() => navigate('/dashboard')}>
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary font-serif text-xl text-background">t</span>
-          <span className="font-serif text-xl tracking-[-0.03em]">transcendence</span>
-        </button>
-        <Button type="button" variant="ghost" onClick={() => navigate('/dashboard')}>Back to feed</Button>
-      </header>
-
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-8 lg:py-12">
-        <section className="border-b border-border pb-8">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+    <AppLayout>
+      <main className="profile-page min-h-screen bg-[#100f0e] font-sans text-[#e6e1df]">
+        <div className="profile-shell mx-auto max-w-[1180px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+          <section className="profile-hero">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="flex items-center gap-5">
               <Avatar name={profile.username} src={avatarPreview ?? profileImage(profile.profile?.avatarUrl)} presence={presence} size="xl" />
               <div>
-                <div className="mb-2 flex flex-wrap items-center gap-2"><Badge tone={profile.status === 'ONLINE' ? 'success' : 'muted'}>{profile.status.toLowerCase()}</Badge>{profile.stats &&<Badge>{profile.stats.recipesRated} recipes rated</Badge>}</div>
-                <h1 className="font-serif text-4xl tracking-[-0.04em]">{profile.username}</h1>
-                <p className="mt-1 text-sm text-muted">Member since {memberSince}</p>
+                <div className="mb-2 flex flex-wrap items-center gap-2"><Badge tone={profile.status === 'ONLINE' ? 'success' : 'muted'}>{profile.status.toLowerCase()}</Badge><span className="profile-eyebrow">PERSONAL PROFILE</span></div>
+                <h1 className="font-serif text-4xl tracking-[-0.04em] text-[#f2e5d2]">{profile.username}</h1>
+                <p className="mt-1 text-sm text-[#a88a83]">Member since {memberSince}</p>
               </div>
             </div>
             {isOwnProfile && <div className="flex flex-wrap gap-2">
@@ -328,12 +333,13 @@ function ProfileContent() {
             {!isOwnProfile && friendship?.status === 'OUTGOING_PENDING' && <Badge tone="muted">Request sent</Badge>}
             {!isOwnProfile && friendship?.status === 'ACCEPTED' && <Badge tone="success">Friends</Badge>}
             {!isOwnProfile && friendship?.status === 'INCOMING_PENDING' && <div className="flex gap-2"><Button type="button" onClick={() => void respondToFriendRequest('accept')}>Accept</Button><Button type="button" variant="ghost" onClick={() => void respondToFriendRequest('reject')}>Reject</Button></div>}
-			{/* Botón dinámico: si el usuario está bloqueado muestra "Unblock", de lo contrario "Block" */}
 			{!isOwnProfile && (profile.isBlocked ? <Button type="button" variant="ghost" className="text-amber-400 hover:text-amber-300" onClick={() => void unblockUser(profile.id)}>Unblock user</Button> : <Button type="button" variant="ghost" className="text-red-400 hover:text-red-300" onClick={() => void blockUser()}>Block user</Button>)}
           </div>
-          <p className="mt-7 max-w-2xl text-base leading-relaxed text-text-soft">{profile.profile?.bio || (isLockedPrivateProfile ? '' : 'No bio yet. Tell the community what you are cooking.')}</p>
-        </section>
+            <p className="mt-6 max-w-2xl text-base leading-relaxed text-[#e0bfb7]">{profile.profile?.bio || (isLockedPrivateProfile ? '' : 'No bio yet. Tell the community what you are cooking.')}</p>
+          </section>
 
+          <div className="profile-grid">
+            <div className="min-w-0">
         {isEditing && <section className="my-8 max-w-2xl border-b border-border pb-8">
           <div className="grid gap-5 sm:grid-cols-2">
             <Input label="Username" value={form.username} onChange={(event) => setForm({ ...form, username: event.target.value })} />
@@ -435,7 +441,7 @@ function ProfileContent() {
           </section>}
 
 		  {/* CONTENIDO DEL PERFIL: TARJETA DE PRIVACIDAD O TABS */}
-          <section className="mt-8">
+          <section className="profile-content mt-8">
 		    {isLockedPrivateProfile ? (
               <div className="flex flex-col items-center justify-center rounded-control border border-border bg-surface p-12 text-center">
                 <span className="flex h-14 w-14 items-center justify-center rounded-full bg-surface-raised text-2xl border border-border">
@@ -555,12 +561,48 @@ function ProfileContent() {
 			  ) : null}
 		    </>
 	      )}
-        </section>
-      </div>
-    </main>
+          </section>
+            </div>
+
+            <aside className="profile-aside">
+              <section className="profile-panel">
+                <div className="profile-panel-heading">
+                  <p className="profile-eyebrow">PROFILE DETAILS</p>
+                  <span className={`profile-status-dot ${presence}`} />
+                </div>
+                <dl className="profile-details">
+                  <div><dt>USERNAME</dt><dd>@{profile.username}</dd></div>
+                  <div><dt>ACCOUNT</dt><dd>{isPrivate ? 'Private' : 'Public'}</dd></div>
+                  <div><dt>MEMBER SINCE</dt><dd>{memberSince}</dd></div>
+                </dl>
+              </section>
+              <section className="profile-panel">
+                <div className="profile-panel-heading">
+                  <p className="profile-eyebrow">CULINARY STATS</p>
+                  <span className="text-xs text-[#a88a83]">ALL TIME</span>
+                </div>
+                <div className="profile-stat-list">
+                  <div><span>Recipes rated</span><strong>{profile.stats?.recipesRated ?? 0}</strong></div>
+                  <div><span>Average rating</span><strong>{profile.stats?.averageRecipeRating || '--'}<small>/5</small></strong></div>
+                </div>
+                <p className="mt-5 text-[10px] font-bold tracking-[1.6px] text-[#a88a83] uppercase">Favorite ingredients</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {profile.stats?.favoriteIngredients?.length ? profile.stats.favoriteIngredients.map((ingredient) => <Badge key={ingredient} tone="accent">{ingredient}</Badge>) : <span className="text-sm text-[#a88a83]">Not rated yet</span>}
+                </div>
+              </section>
+              <section className="profile-panel profile-panel-accent">
+                <p className="profile-eyebrow">YOUR SPACE</p>
+                <h2 className="mt-2 font-serif text-2xl text-[#f2e5d2]">{isOwnProfile ? 'Shape your culinary identity.' : `Discover ${profile.username}'s table.`}</h2>
+                <p className="mt-3 text-xs leading-5 text-[#bfa99b]">{isOwnProfile ? 'Keep your profile current so the community knows what you enjoy.' : 'Explore ratings, favorite dishes and shared posts.'}</p>
+              </section>
+            </aside>
+          </div>
+        </div>
+      </main>
+    </AppLayout>
   );
 }
 
 export default function Profile() {
-  return <ProtectedRoute><ProfileContent /></ProtectedRoute>;
+  return <ProfileContent />;
 }
