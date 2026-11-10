@@ -55,10 +55,6 @@ import { RestaurantsModule } from './restaurants/restaurants.module.js';
 		SearchModule,
     	EventEmitterModule.forRoot(),
 		RestaurantsModule,
-		//Modulos siguientes que importaremos cuando se hagan
-		//UsersModule,  //Modulo para gesrionar perfiles y datos usuarios
-		//ProductsModule, //Modulo para catálogo de tienda
-		//OrdersModule, //Modulo para compras y carritos
 		ServeStaticModule.forRoot({
 			rootPath: join(process.cwd(), 'uploads'),
 			serveRoot: '/uploads',
