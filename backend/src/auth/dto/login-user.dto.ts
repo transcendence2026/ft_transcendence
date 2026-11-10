@@ -1,6 +1,6 @@
 import { IsEmail, IsString, MinLength } from 'class-validator';
 
-// ensure incoming login requests contain a valid email (ej: user@dominio.com)
+// ensure incoming login requests contain a valid email
 // and a non-empty password string.
 export class LoginUserDto {
 	
