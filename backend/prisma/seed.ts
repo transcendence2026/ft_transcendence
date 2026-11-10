@@ -184,6 +184,52 @@ const LAST_NAMES = [
 	'Ruz', 'Garrido', 'Mondon', 'Landeira', 'Romero'
 ];
 
+// ---- Helper coherent tags ----
+
+function getCoherentTags(dishName: string, cuisine: Cuisine, availableTags: { id: string; name: string }[]): { id: string }[] {
+	const nameLower = dishName.toLowerCase();
+	const assigned: { id: string }[] = [];
+
+	const findTag = (tagName: string) => availableTags.find(t => t.name === tagName);
+
+	const isVeg = nameLower.includes('paneer') || nameLower.includes('vegetable') || nameLower.includes('mushrooms') || nameLower.includes('ratatouille') || nameLower.includes('salad') || nameLower.includes('hummus') || nameLower.includes('falafel') || nameLower.includes('dumplings');
+	const isVegan = nameLower.includes('vegan') || nameLower.includes('falafel') || nameLower.includes('hummus');
+	const isSpicy = SPICY_DISHES.has(dishName);
+
+	if (isVegan) {
+		const veganTag = findTag('Vegan');
+		const vegTag = findTag('Vegetarian');
+		const healthyTag = findTag('Healthy');
+		if (veganTag) assigned.push({ id: veganTag.id });
+		if (vegTag) assigned.push({ id: vegTag.id });
+		if (healthyTag) assigned.push({ id: healthyTag.id });
+	} else if (isVeg) {
+		const vegTag = findTag('Vegetarian');
+		const comfortTag = findTag('Comfort Food');
+		if (vegTag) assigned.push({ id: vegTag.id });
+		if (comfortTag) assigned.push({ id: comfortTag.id });
+	} else {
+		const popularTag = findTag('Popular');
+		const signatureTag = findTag("Chef's Special");
+		if (popularTag) assigned.push({ id: popularTag.id });
+		if (Math.random() > 0.5 && signatureTag) assigned.push({ id: signatureTag.id });
+	}
+
+	if (isSpicy) {
+		const spicyTag = findTag('Spicy');
+		if (spicyTag) assigned.push({ id: spicyTag.id });
+	}
+
+	if (cuisine === Cuisine.ITALIAN && (nameLower.includes('pizza') || nameLower.includes('pasta') || nameLower.includes('lasagna'))) {
+		const comfortTag = findTag('Comfort Food');
+		if (comfortTag) assigned.push({ id: comfortTag.id });
+	}
+
+	const uniqueMap = new Map();
+	assigned.forEach(t => uniqueMap.set(t.id, t));
+	return Array.from(uniqueMap.values());
+}
+
 // ---- Main seeding logic ----
 
 /* Clears all database tables prior to re-seeding.
@@ -221,15 +267,10 @@ async function seedTags() {
 async function seedRestaurantsAndDishes(tags: { id: string; name: string }[]) {
 	let totalDishes = 0;
 
-	// Spicy is ssigned by dish (SPICY_DISHES), never randomly
-	const spicyTag = tags.find((tag) => tag.name === 'Spicy');
-	const randomTags = tags.filter((tag) => tag.name !== 'Spicy');
-
 	// Loop through each restaurant definitions in the RESTAURANTS array
 	for (const restaurantData of RESTAURANTS) {
 		// Create the restaurant record in the database
 		const restaurant = await prisma.restaurant.create({ data: restaurantData });
-
 		// Fetch the dish templates matching the restaurant's cuisine (fallback to empty array)
 		const dishTemplates = DISH_POLL[restaurantData.cuisine];
 		// 3-4 dishes per restaurant -> comfortably clears the 50+ dish requirement
@@ -239,10 +280,7 @@ async function seedRestaurantsAndDishes(tags: { id: string; name: string }[]) {
 			// Get dish name and description using modulo to safely cucle through templates
 			const [name, description] = dishTemplates[i % dishTemplates.length];
 			// Select 1-3 random non-spicy tags, then add "Spicy" only for spicy dishes
-			const assignedTags = randomSubset(randomTags, randomInt(1, 3));
-			if (SPICY_DISHES.has(name) && spicyTag) {
-				assignedTags.push(spicyTag);
-			}
+			const assignedTags = getCoherentTags(name, restaurantData.cuisine, tags);
 
 			// Create the dish in the database linked to the current restaurant and selected tags
 			await prisma.dish.create({
@@ -254,7 +292,7 @@ async function seedRestaurantsAndDishes(tags: { id: string; name: string }[]) {
 					restaurantId: restaurant.id,
 					tags: {
 						// Prisma syntax to associate existing tags via their unique IDs
-						connect: assignedTags.map((tag) => ({ id: tag.id})),
+						connect: assignedTags,
 					},
 				},
 			});

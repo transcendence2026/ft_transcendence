@@ -246,6 +246,14 @@ function Content({
 	onReviewCommentChange: (value: string) => void;
 	onSubmitReview: (event: FormEvent<HTMLFormElement>) => void;
 }) {
+	const [selectedTag, setSelectedTag] = useState<string | null>(null);
+
+	const visibleDishes = selectedTag
+		? r.dishes.filter((dish) =>
+				dish.tags.some((tag) => tag.name === selectedTag),
+			)
+		: r.dishes;
+
 	return (
 		<article className="flex flex-col gap-6">
 			<header className="border-b border-white/5 pb-5">
@@ -275,25 +283,50 @@ function Content({
 				{r.dishes.length === 0 ? (
 					<p className="mt-3 text-sm text-[#a88a83]">Este restaurante aún no tiene platos.</p>
 				) : (
-					<ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-						{r.dishes.map((d) => (
-							<li key={d.id} className="border border-white/5 bg-[#1d1b1a] p-4">
-								<div className="flex items-start justify-between gap-2">
-									<h3 className="text-base text-[#e6e1df]">{d.name}</h3>
-									<span className="shrink-0 text-sm text-[#e6e1df]">{d.price.toFixed(2)} €</span>
-								</div>
-								{d.description && <p className="mt-1 text-xs text-[#a88a83]">{d.description}</p>}
-								<div className="mt-3 flex flex-wrap items-center gap-1.5">
-									{d.tags.map((t) => (
-										<Badge key={t.id} tone="muted">{t.name}</Badge>
-									))}
-									<span className="ml-auto text-xs text-[#fabc4d]">
-										{d.avgRating !== null ? `★ ${d.avgRating.toFixed(1)} (${d.reviewCount})` : 'Sin reseñas'}
-									</span>
-								</div>
-							</li>
-						))}
-					</ul>
+					<>
+						{selectedTag && (
+							<button
+								type="button"
+								onClick={() => setSelectedTag(null)}
+								className="mt-3 text-xs text-[#fabc4d] hover:underline"
+							>
+								Ver todos los platos
+							</button>
+						)}
+						<ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+							{visibleDishes.map((d) => (
+								<li key={d.id} className="border border-white/5 bg-[#1d1b1a] p-4">
+									<div className="flex items-start justify-between gap-2">
+										<h3 className="text-base text-[#e6e1df]">{d.name}</h3>
+										<span className="shrink-0 text-sm text-[#e6e1df]">{d.price.toFixed(2)} €</span>
+									</div>
+									{d.description && <p className="mt-1 text-xs text-[#a88a83]">{d.description}</p>}
+									<div className="mt-3 flex flex-wrap items-center gap-1.5">
+										{d.tags.map((t) => (
+											<button
+												key={t.id}
+												type="button"
+												onClick={() =>
+													setSelectedTag((current) =>
+														current === t.name ? null : t.name,
+													)
+												}
+												aria-pressed={selectedTag === t.name}
+												className="focus-visible:outline focus-visible:outline-1 focus-visible:outline-[#fabc4d]"
+											>
+												<Badge tone={selectedTag === t.name ? 'accent' : 'muted'}>
+													{t.name}
+												</Badge>
+											</button>
+										))}
+										<span className="ml-auto text-xs text-[#fabc4d]">
+											{d.avgRating !== null ? `★ ${d.avgRating.toFixed(1)} (${d.reviewCount})` : 'Sin reseñas'}
+										</span>
+									</div>
+								</li>
+							))}
+						</ul>
+					</>
 				)}
 			</section>
 
