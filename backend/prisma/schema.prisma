@@ -46,6 +46,9 @@ model User {
   favoriteRestaurants FavoriteRestaurant[]
   sentMessages        Message[]            @relation("UserSentMessages")
   receivedMessages    Message[]            @relation("UserReceivedMessages")
+  notificationsSent   Notification[]       @relation("NotificationSender")
+  notifications       Notification[]       @relation("NotificationReceiver")
+  postLikes           PostLike[]
 }
 
 model Profile {
@@ -58,6 +61,19 @@ model Profile {
   bio       String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model PostLike {
+  id        String   @id @default(uuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
 }
 
 // GASTRONOMIC PREFERENCES
@@ -138,6 +154,7 @@ model Post {
   authorId  String
   author    User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
   images    PostImage[]
+  likes     PostLike[]
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
@@ -231,4 +248,19 @@ model Message {
 
   @@index([senderId])
   @@index([receiverId])
+}
+
+model Notification {
+  id         String   @id @default(uuid())
+  senderId   String
+  sender     User     @relation("NotificationSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId String
+  receiver   User     @relation("NotificationReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  type       String
+  message    String
+  requestId  String?
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([receiverId, read, createdAt])
 }

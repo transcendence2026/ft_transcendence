@@ -24,6 +24,7 @@ import { FriendsModule } from './friends/friends.module.js';
 import { RgpdModule } from './rgpd/rgpd.module.js';
 import { SearchModule } from './search/search.module.js';
 import { NotificationGateway } from './notification/notification.gateway.js';
+import { NotificationController } from './notification/notification.controller.js';
 import { RestaurantsModule } from './restaurants/restaurants.module.js';
 
 @Module({
@@ -65,7 +66,7 @@ import { RestaurantsModule } from './restaurants/restaurants.module.js';
 			serveRoot: '/uploads',
 		}), 
 	],
-	controllers: [],
+	controllers: [NotificationController],
 	providers: [
 		WebsocketGateway,
 		PresenceService,
