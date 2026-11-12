@@ -2,7 +2,7 @@
   "apiVersion": "dashboard.grafana.app/v2",
   "kind": "Dashboard",
   "metadata": {
-    "name": "grd2jhg"
+    "name": "backend-observability"
   },
   "spec": {
     "annotations": [
@@ -140,7 +140,7 @@
                 }
               }
             },
-            "version": "13.3.0"
+            "version": "13.3.1"
           }
         }
       },
@@ -255,7 +255,7 @@
                 }
               }
             },
-            "version": "13.3.0"
+            "version": "13.3.1"
           }
         }
       },
@@ -340,7 +340,7 @@
                 "wideLayout": true
               }
             },
-            "version": "13.3.0"
+            "version": "13.3.1"
           }
         }
       },
@@ -425,7 +425,7 @@
                 "wideLayout": true
               }
             },
-            "version": "13.3.0"
+            "version": "13.3.1"
           }
         }
       }
@@ -492,7 +492,9 @@
     "preload": false,
     "tags": [],
     "timeSettings": {
-      "autoRefresh": "",
+      "from": "now-3h",
+      "to": "now",
+      "autoRefresh": "5s",
       "autoRefreshIntervals": [
         "5s",
         "10s",
@@ -506,10 +508,8 @@
         "1d"
       ],
       "fiscalYearStartMonth": 0,
-      "from": "2026-11-11T06:14:54.393Z",
       "hideTimepicker": false,
-      "timezone": "browser",
-      "to": "2026-11-11T18:14:54.393Z"
+      "timezone": "browser"
     },
     "title": "ft_transcendence Backend Observability",
     "variables": []

@@ -65,6 +65,7 @@ seed:
 	$(COMPOSE) exec backend npx prisma db seed
 
 down:
+	$(MONITORING) down
 	$(COMPOSE) down
 
 monitor-down:
