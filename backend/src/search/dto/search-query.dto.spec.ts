@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
-import { SearchQueryDto } from './search-query.dto';
+import { SearchQueryDto } from './search-query.dto.js';
 
 // Mirrors what ValidationPipe({ transform: true }) does with the query string:
 // every value arrives as a string
