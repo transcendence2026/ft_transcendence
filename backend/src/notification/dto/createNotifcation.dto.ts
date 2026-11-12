@@ -22,4 +22,6 @@ export class CreateNotificationDto {
     @IsOptional()
     @IsNotEmpty()
     readonly requestId?: string
+
+    readonly postId?: string
 }
