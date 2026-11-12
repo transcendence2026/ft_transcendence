@@ -7,10 +7,14 @@ import {
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CreatePostDto } from './dto/create-post.dto.js';
 import { UpdatePostDto } from './dto/update-post.dto.js';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
 export class PostsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   findAll() {
     return this.prisma.post.findMany({
@@ -66,9 +70,9 @@ export class PostsService {
     return post;
   }
 
-  create(authorId: string, dto: CreatePostDto) {
+  async create(authorId: string, dto: CreatePostDto) {
     dto.imageUrls?.forEach((url) => this.assertPostImageUrl(url));
-    return this.prisma.post.create({
+    const post = await this.prisma.post.create({
       data: {
         title: dto.title,
         content: dto.content,
@@ -77,6 +81,51 @@ export class PostsService {
       },
       include: { author: { select: { id: true, username: true } }, images: true },
     });
+    await this.emitMentions(authorId, dto.content);
+    return post;
+  }
+
+  async like(postId: string, userId: string) {
+    const post = await this.prisma.post.findUnique({ where: { id: postId }, select: { authorId: true } });
+    if (!post) throw new NotFoundException('Post not found');
+
+    const existing = await this.prisma.postLike.findUnique({ where: { postId_userId: { postId, userId } } });
+    if (existing) return { liked: true };
+
+    await this.prisma.postLike.create({ data: { postId, userId } });
+
+    if (post.authorId !== userId) {
+      this.eventEmitter.emit('notification.create', {
+        senderId: userId,
+        receiverId: post.authorId,
+        type: 'like',
+        message: 'A alguien le ha gustado tu publicación.',
+      });
+    }
+    return { liked: true };
+  }
+
+  async unlike(postId: string, userId: string) {
+    await this.prisma.postLike.deleteMany({ where: { postId, userId } });
+
+    return { liked: false };
+  }
+
+  private async emitMentions(senderId: string, content: string) {
+    const usernames = [...content.matchAll(/@([a-zA-Z0-9_-]+)/g)].map((match) => match[1]);
+    if (!usernames.length) return;
+
+    const users = await this.prisma.user.findMany({
+      where: { username: { in: usernames }, NOT: { id: senderId } },
+      select: { id: true, username: true },
+    });
+    
+    users.forEach((user) => this.eventEmitter.emit('notification.create', {
+      senderId,
+      receiverId: user.id,
+      type: 'mention',
+      message: `Te han mencionado en una publicación.`,
+    }));
   }
 
   async update(id: string, authorId: string, dto: UpdatePostDto) {

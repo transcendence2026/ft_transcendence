@@ -18,14 +18,18 @@ import { NotificationProvider } from "../context/NotificationContext";
 // Componente para proteger rutas privadas (Dashboard)
 function PrivateRoute({ children }: { children: React.ReactElement }) {
   const { token, loading } = useAuth();
-  if (loading) return null; // Espera a que termine la comprobación inicial
+  if (loading) {
+    return <main className="flex min-h-screen items-center justify-center bg-gray-950 text-sm text-gray-400">Loading session...</main>;
+  }
   return token ? children : <Navigate to="/login" replace />;
 }
 
 // Componente para evitar que un usuario ya logueado vuelva a ver Login o Register
 function PublicOnlyRoute({ children }: { children: React.ReactElement }) {
   const { token, loading } = useAuth();
-  if (loading) return null;
+  if (loading) {
+    return <main className="flex min-h-screen items-center justify-center bg-gray-950 text-sm text-gray-400">Loading session...</main>;
+  }
   return token ? <Navigate to="/dashboard" replace /> : children;
 }
 
