@@ -1,11 +1,12 @@
 import axios from 'axios';
-import { EPSILON } from 'three/tsl';
 
 const PAGE_SIZE = 12;
 
+export type FriendshipState = 'NONE' | 'PENDING_SENT' | 'PENDING_RECEIVED' | 'ACCEPTED';
+
 // Must match the Cuisine enum in scheme.prisma
 export const CUISINE = [
-	'ITALIAN', 'JAPANESE', 'MEXICAN', 'FRENCH', 'SPANISH',
+	'ITALIAN', 'JAPANESE', 'MEXICAN', 'INDIAN', 'FRENCH', 'SPANISH',
 	'THAI', 'AMERICAN', 'MEDITERRANEAN', 'CHINESE', 'KOREAN', 'VIETNAMESE',
 ] as const;
 
@@ -33,6 +34,27 @@ export interface RestaurantResult {
 	reviewCount: number;
 }
 
+export interface UserResult {
+	id: string;
+	username: string;
+	firstName: string | null;
+	lastName: string | null;
+	avatarUrl: string | null;
+	bio: string | null; // always null for private profiles
+	isPrivate: boolean;
+	friendshipStatus: FriendshipState;
+}
+
+export interface UserSearchPage {
+	results: UserResult[];
+	nextCursor: string | null;
+}
+
+export interface UserSearchParams {
+	q?: string;
+	cursor?: string | null;
+}
+
 export interface SearchPage {
 	results: RestaurantResult[];
 	nextCursor: string | null;
@@ -55,6 +77,18 @@ export interface DishRecommendation {
 	tags: string[];
 	score: number; // cosine similarity, 0..1
 	source: 'personalized' | 'top-rated';
+}
+
+export async function searchUsers(
+	params: UserSearchParams,
+	signal?: AbortSignal,
+): Promise<UserSearchPage> {
+	const query: Record<string, string | number> = { limit: PAGE_SIZE };
+	if (params.q) query.q = params.q;
+	if (params.cursor) query.cursor = params.cursor;
+
+	const { data } = await axios.get<UserSearchPage>('/api/search/users', { params: query, signal });
+	return data;
 }
 
 export async function searchRestaurants(
