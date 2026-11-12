@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js'; // adjust to your path
 import { SearchQueryDto } from './dto/search-query.dto.js';
+import { UserSearchQueryDto } from './dto/user-search-query.dto.js';
 
 export interface RestaurantRating {
   id: string;
@@ -10,6 +11,18 @@ export interface RestaurantRating {
   priceRange: number;
   avgRating: number | null; // null when the restaurant has no reviews yet
   reviewCount: number;
+}
+
+// the interface goes at the top level, next to RestaurantRating
+export interface UserResult {
+  id: string;
+  username: string;
+  firstName: string | null;
+  lastName: string | null;
+  avatarUrl: string | null;
+  bio: string | null; // always null for private profiles
+  isPrivate: boolean;
+  friendshipStatus: 'NONE' | 'PENDING_SENT' | 'PENDING_RECEIVED' | 'ACCEPTED';
 }
 
 @Injectable()
