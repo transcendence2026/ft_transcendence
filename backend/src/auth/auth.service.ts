@@ -289,6 +289,7 @@ export class AuthService {
                 secret:process.env.JWT_REFRESH_SECRET || 'super-refresh-secret',
             });
             const user = await this.prisma.user.findUnique({ where: { id:payload.id } });
+			// Session state check: blocks refresh if user logged out (hashedRefreshToken === null)
             if(!user || !user.hashedRefreshToken) {
                 throw new UnauthorizedException('Access Denied');
             }
