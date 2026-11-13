@@ -69,8 +69,14 @@ export class AuthController {
 	}
 
 	@Post('logout')
+	@UseGuards(JwtAuthGuard)
 	@HttpCode(HttpStatus.OK)
-	async logout(@Res({ passthrough: true }) res: Response) {
+	async logout(
+		@Request() req: { user: UserPayload },
+		@Res({ passthrough: true }) res: Response,
+	) {
+		await this.authService.logout(req.user.id);
+		
 		const isProduction = process.env.NODE_ENV === 'production';
 		res.clearCookie('accessToken', {
 			httpOnly: true,

@@ -44,6 +44,15 @@ export class AuthService {
         return { accessToken, refreshToken};
     }
 
+	// Hashes and persists the active refresh token in PostgreSQL
+	private async updateRefreshTokenHash(userID: string, refreshToken: string) {
+		const hash = await bcrypt.hash(refreshToken, this.saltRounds);
+		await this.prisma.user.update({
+			where: { id: userID },
+			data: { hashedRefreshToken: hash },
+		});
+	}
+
 	// Handles local user registration, credential hashing, and profile creation
 	async register(registerDto: RegisterUserDto) {
 		const { email, username, password } = registerDto;
@@ -76,6 +85,7 @@ export class AuthService {
         });
         // If validation succeeds, generates and returns the JWT tokens
         const tokens = await this.generateTokens(user);
+		await this.updateRefreshTokenHash(user.id, tokens.refreshToken);
 		// Once the user is persisted, returns the payload to the controller with registration details
 		return {
 			message: 'User registered successfully',
@@ -105,7 +115,7 @@ export class AuthService {
 			throw new UnauthorizedException('Invalid credentials');
 		}
 
-		//// 2fa check
+		// 2fa check
         if (user.isTwoFactorEnabled) {
             return {
                 requiresTwoFactor: true,
@@ -116,6 +126,7 @@ export class AuthService {
 		
 		// If everything is valid, generates and returns the JWT tokens
 		const tokens = await this.generateTokens(user);
+		await this.updateRefreshTokenHash(user.id, tokens.refreshToken);
 
 		return {
 			message: 'Login successful',
@@ -219,6 +230,7 @@ export class AuthService {
         }
         // If everything is valid, generates and returns the JWT tokens
         const tokens = await this.generateTokens(user);
+		await this.updateRefreshTokenHash(user.id, tokens.refreshToken);
        
         return {
             message: 'OAuth login successful',
@@ -251,6 +263,7 @@ export class AuthService {
 
         // Generates the final JWT token pair
         const tokens = await this.generateTokens(user);
+		await this.updateRefreshTokenHash(user.id, tokens.refreshToken);
 
         return {
             message: 'Login with 2FA successful',
@@ -276,12 +289,31 @@ export class AuthService {
                 secret:process.env.JWT_REFRESH_SECRET || 'super-refresh-secret',
             });
             const user = await this.prisma.user.findUnique({ where: { id:payload.id } });
-            if(!user) {
-                throw new UnauthorizedException('User no longer exists');
+            if(!user || !user.hashedRefreshToken) {
+                throw new UnauthorizedException('Access Denied');
             }
-            return await this.generateTokens(user);
+			const isTokenValid = await bcrypt.compare(refreshToken, user.hashedRefreshToken);
+            if (!isTokenValid) {
+                throw new UnauthorizedException('Access Denied');
+            }
+
+            const tokens = await this.generateTokens(user);
+            await this.updateRefreshTokenHash(user.id, tokens.refreshToken);
+
+            return tokens;
         } catch {
             throw new UnauthorizedException('Invalid or expired refresh token');
         }
+    }
+
+// Revokes the active refresh token in PostgreSQL upon logout
+    async logout(userId: string) {
+        await this.prisma.user.updateMany({
+            where: {
+                id: userId,
+                hashedRefreshToken: { not: null },
+            },
+            data: { hashedRefreshToken: null },
+        });
     }
 }
