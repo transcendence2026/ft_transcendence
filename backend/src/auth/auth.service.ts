@@ -313,6 +313,7 @@ export class AuthService {
                 id: userId,
                 hashedRefreshToken: { not: null },
             },
+			// Revocation flag: setting to null immediately invalidates any stolen refresh cookie
             data: { hashedRefreshToken: null },
         });
     }
