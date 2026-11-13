@@ -1,54 +1,47 @@
-//Agrupa todas las piezas de la Autenticacion
+// Bundles all authentication components, strategies, and dependencies
+
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
-//ConfigModule: Es el encargado de ir a buscar el archivo .env, leerlo y
-// y cargar variables de entorno en la aplicacion
-//ConfigService: Es la herramienta que inyectas en tus clases
-//para buscar y consultar esas variables desde el código.
 import { ConfigModule, ConfigService } from '@nestjs/config';
-//Libreria para gestionar la identificacion de los usuarios
 import { PassportModule } from '@nestjs/passport';
 import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
-//JwtStrategy dice a Passport las reglas de cómo debe interceptar, leer y validar un token JWT
-//cuando llega una petición HTTP
 import { JwtStrategy } from './strategies/jwt.strategy.js';
-//PrismaModule da acceso a la Base de Datos
 import { PrismaModule } from '../prisma/prisma.module.js';
 import { FortyTwoStrategy } from './oauth/forty-two.strategy.js';
-import { TwoFactorController } from './2fa/two-factor.controller.js'; // El nuevo controlador de 2FA
-import { TwoFactorService } from './2fa/two-factor.service.js';     // El nuevo servicio de 2FA
+import { TwoFactorController } from './2fa/two-factor.controller.js';
+import { TwoFactorService } from './2fa/two-factor.service.js';
 
+// Verifies OAuth credentials at startup to avoid crashing if env variables are missing
 const isFortyTwoOAuthConfigured = Boolean(
 	process.env.FORTY_TWO_CLIENT_ID && process.env.FORTY_TWO_CLIENT_SECRET,
 );
 
-//Registras y juntas el AuthController mas AuthService y se guardan en el NestJS
 @Module({
 	imports: [
 		ConfigModule,
 		PrismaModule,
 		PassportModule,
+		// Asynchronously registers JwtModule to ensure environment variables are loaded before reading secrets
     	JwtModule.registerAsync({
 			imports: [ConfigModule],
 			inject: [ConfigService],
 			useFactory: (configService: ConfigService) => ({
 				secret: configService.get<string>('JWT_SECRET') || 'super-secret',
-				signOptions: { expiresIn: '15m' },
+				signOptions: { expiresIn: '15m' }, // Short-lived access token for security
     		}),
 		}),
 	],
-	//Registras el controler y el service para que NestJS sepa de su existencia
 	controllers: [AuthController, TwoFactorController],
 	providers: [
 		AuthService, 
 		JwtStrategy, 
+		// Conditionally registers FortyTwoStrategy only when OAuth environment variables are present
 		...(isFortyTwoOAuthConfigured ? [FortyTwoStrategy] : []),
-		TwoFactorService, // Registramos el servicio y la estrategia de Passport
+		TwoFactorService,
 	],
+	// Exports modules so guards and token handlers can be reused in other feature modules
 	exports: [JwtModule, PassportModule],
 })
 export class AuthModule {}
-//al AuthModule se exporta, luego sera importado por app.module.ts
-//Cuando arranca el servidor, NestJS lee appModule que a su vez importa AuthModule
-//si no lo hiciera no sabria las rutas de registro y login
+

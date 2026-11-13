@@ -156,7 +156,7 @@ export default function AppLayout({
             <div className="flex items-center gap-3">
               <ChefHat aria-hidden="true" className="h-8 w-8 text-[#fabc4d]" strokeWidth={1.25} />
               <div>
-                <p className="text-[20px] font-bold tracking-[-0.5px] text-[#e6e1df]">Épicure</p>
+                <p className="text-[20px] font-bold tracking-[-0.5px] text-[#e6e1df]">TasteSync</p>
                 <p className="text-[11px] font-bold tracking-[2.2px] text-[#a88a83] uppercase">
                   RESTAURANTE Y RESERVAS
                 </p>

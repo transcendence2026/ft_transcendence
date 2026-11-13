@@ -35,8 +35,28 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
-		navigateFallback: "/index.html",
-		navigateFallbackDenylist: [/^\/api/],
+		    navigateFallback: "/index.html",
+		    navigateFallbackDenylist: [/^\/api/],
+        runtimeCaching: [
+          {
+            //urlPattern: /^\/api\/(auth\/me|social\/feed)/,
+            urlPattern: ({ url }) =>
+              url.pathname.startsWith("/api/auth/me") ||
+              url.pathname.startsWith("/api/social/feed"),
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "api-offline-cache",
+              networkTimeoutSeconds: 3,
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60 *24,
+              },
+              cacheableResponse: {
+                statuses: [200],
+              },
+            },
+          },
+        ],
       },
     }),
   ],

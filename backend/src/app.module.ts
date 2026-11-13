@@ -29,21 +29,20 @@ import { RestaurantsModule } from './restaurants/restaurants.module.js';
 
 @Module({
 	imports: [
-		//ConfigModule: te permite cargar y leer las variables de entorno del .env
+		//ConfigModule: allows you to load and read environment variables from the .env file.
 		ConfigModule.forRoot({
 			isGlobal: true,
 		}),
-		// Regla de Rate Limiting: maximo 100 peticiones cada 60 segundos por IP
+		// Rate Limiting: maximum 100 requests every 60 seconds per IP
 		ThrottlerModule.forRoot([
 		{
-			ttl: 60000, // ventana de tiempo en milisegundos (1 minuto)
-			limit: 100, // tope de llamadas permitidas dentro de ese minuto
+			ttl: 60000, // time in milliseconds (1 minute)
+			limit: 100, 
 		},
 		]),
 		PrismaModule,
-		AuthModule, //Importa el Modulo de Autenticación
+		AuthModule,
 		UsersModule,
-		
 		FilesModule,
 		PostsModule,
 		ReviewsModule,
@@ -57,10 +56,6 @@ import { RestaurantsModule } from './restaurants/restaurants.module.js';
 		SearchModule,
     	EventEmitterModule.forRoot(),
 		RestaurantsModule,
-		//Modulos siguientes que importaremos cuando se hagan
-		//UsersModule,  //Modulo para gesrionar perfiles y datos usuarios
-		//ProductsModule, //Modulo para catálogo de tienda
-		//OrdersModule, //Modulo para compras y carritos
 		ServeStaticModule.forRoot({
 			rootPath: join(process.cwd(), 'uploads'),
 			serveRoot: '/uploads',
@@ -73,6 +68,7 @@ import { RestaurantsModule } from './restaurants/restaurants.module.js';
 		RoomService,
 		NotificationGateway,
 		{
+		//global guard that intercepts all routes and Apply the limit of 100 calls per minute
 		provide: APP_GUARD,
 		useClass: ThrottlerGuard,
 		},
