@@ -5,8 +5,8 @@ import { PrismaService } from '../prisma/prisma.service.js';
 export class RgpdService {
 	constructor(private readonly prisma: PrismaService) {}
 	
-	//Art. 15 y 20 RGPD: Derecho de acceso y portabilidad
-	//Extrae la informacion del usuario y su actividad
+	// GDPR Art. 15 & 20: Right of access and data portability.
+    // Extracts user personal data, profile settings, social connections, and user-generated content
 	async exportUserData(userId: string) {
 		const user = await this.prisma.user.findUnique({
 			where: { id: userId },
@@ -21,11 +21,11 @@ export class RgpdService {
 				createdAt: true,
 				updatedAt: true,
 
-				//Perfil y preferencias gastronomicas
+				//Profile details and food/dietary preferences
 				profile: true,
 				preference: true,
 
-				//Peticiones de Amistades enviadas y recibidas
+				// Friend requests sent and received
 				sentFriendships: {
 					select: {
 						id: true,
@@ -43,7 +43,7 @@ export class RgpdService {
 					},
 				},
 
-				//Bloqueos realizados por el usuario
+				// User blocklist entries
 				blockedUsers: {
 					select: {
 						id: true,
@@ -52,7 +52,7 @@ export class RgpdService {
 					},
 				},
 				
-				//Publicaciones con sus imagenes
+				// Authored posts and related images
 				posts: {
 					select: {
                         id: true,
@@ -69,7 +69,7 @@ export class RgpdService {
                 	},
 				},
 
-				//Reseñas (valoraciones y criticas) con el plato y restaurante asociado
+				// Authored reviews with dish and restaurant context
 				reviews: {
 					select: {
 						id: true,
@@ -87,7 +87,7 @@ export class RgpdService {
 					},
 				},
 
-				//Mensajes directos enviados
+				// Direct messages sent by the user
 				sentMessages: {
 					select: {
 						id: true,
@@ -102,16 +102,14 @@ export class RgpdService {
       		throw new NotFoundException('Usuario no encontrado');
     	}
 
-		//Estructura del archivo JSON de RGPD
+		// Standardized GDPR JSON export payload
 		return {
-			//Metadatos legales con sello de tiempo
       		exportMetadata: {
 				platform: 'TasteSync',
 				exportDate: new Date().toISOString(),
 				regulation: 'RGPD (Reglamento General de Protección de Datos)',
 				rightsExercised: 'Derecho de acceso y portabilidad (Art. 15 y 20)',
 			},
-			//Credenciales identificativas y estado de la configuracion de seguridad
 			account: {
 				id: user.id,
 				email: user.email,
@@ -122,16 +120,16 @@ export class RgpdService {
 				createdAt: user.createdAt,
 				updatedAt: user.updatedAt,
 			},
-			//Datos biograficos y gustos alimentarios
+			// Biographical information and culinary preferences
 			profile: user.profile,
 			gastronomicPreferences: user.preference,
-			//Relaciones interpersonales (amistades y bloqueos)
+			// Interpersonal connections (friendships and blocks)
 			social: {
 				sentFriendRequests: user.sentFriendships,
 				receivedFriendRequests: user.receivedFriendships,
 				blockedUsers: user.blockedUsers,
 			},
-			//Todo contenido generado por el usuario
+			// User-generated content and activity
 			activity: {
 				posts: user.posts,
 				reviews: user.reviews,
@@ -139,10 +137,10 @@ export class RgpdService {
 			},
 		};
 	}
-	// Art. 17 RGPD: Derecho de supresión de la cuenta / derecho al olvido
-	//Elimina al usuario y a los datos asociados en cascada según Prisma
+	
+	// GDPR Art. 17: Right to erasure ('right to be forgotten').
+    // Deletes the user record; cascading rules configured in schema.prisma remove all dependent relations
 	async deleteUserAccount(userId: string) {
-		//Primero comprueba con findUnique q la cuenta exista antes de intentar eliminarla
 		const user = await this.prisma.user.findUnique({
 			where: { id: userId },
 		});
@@ -150,12 +148,10 @@ export class RgpdService {
 			throw new NotFoundException('Usuario no encontrado');
 		}
 
-		// Al tener 'onDelete: Cascade' definido en el schema.prisma para Profile, Posts, Reviews, etc.,
-		// PostgreSQL borra en cascada el registro del User con toda su información personal.
+		// Database cascade deletes associated records (profile, posts, reviews, friendships, blocks)
 		await this.prisma.user.delete({
 			where: { id: userId },
 		});
-		//Retorna una confirmacion con marca de tiempo de cuando se ejecuto el borrado
 		return {
 			message: 'Cuenta y datos personales eliminados con éxito en cumplimiento del RGPD.',
 			deletedAt: new Date().toISOString(),

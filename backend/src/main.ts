@@ -15,30 +15,28 @@ class CompatibleWsAdapter extends WsAdapter {
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  // Aplicar Helmet a nivel de servidor HTTP
+ // Apply Helmet at the HTTP server level
   app.use(
     helmet({
       crossOriginResourcePolicy: { policy: 'cross-origin' },
       contentSecurityPolicy: false,
     }),
   );
-  // Configura el prefijo global para que todas las rutas respondan bajo /api
-  //app.setGlobalPrefix('api');
-  app.enableCors({ origin: true, credentials: true });
   app.useWebSocketAdapter(new CompatibleWsAdapter(app));
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
-      forbidNonWhitelisted: true, //Aborta peticion (400) si alguien intenta colar un campo no predeterminado
-      transform: true, //evita que el servidor interprete números o booleanos como simples palabras, previniendo errores de lógica y validación.
+      forbidNonWhitelisted: true, //Abort request (400) if someone attempts to include a non-default field
+      transform: true,
     }),
   );
-  app.use(cookieParser()); //parsear cookies entrantes
+  //Parsing incoming cookies
+  app.use(cookieParser());
+  // Allow requests and cookies only from the authorized frontend origin
   app.enableCors({
-      origin: process.env.FRONTEND_URL || 'https://localhost:8443', //le dice al backend q acepte lo que le llega de ese puerto
-      credentials: true, //aceptas que el navegador guarde cookies y credenciales de sesion.
+      origin: process.env.FRONTEND_URL || 'https://localhost:8443',
+      credentials: true,
   });
-  
   const port = Number(process.env.PORT ?? 3000);
   await app.listen(port);
   console.log(`Backend listening on port ${port}`);
