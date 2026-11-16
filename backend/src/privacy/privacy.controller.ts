@@ -8,7 +8,6 @@ export class PrivacyController {
   constructor(private readonly privacyService: PrivacyService) {}
 
   // Toggle profile visibility (public vs private)
-  //PATCH porque solo vamos a modificar un dato parcial del usuario (isPrivate), no a reemplazar toda su ficha.
   @Patch('auth/privacy')
   async updatePrivacy(
     @Request() req: any,
@@ -18,7 +17,6 @@ export class PrivacyController {
   }
 
   // Block a user by ID
-  //POST porque estamos creando un registro nuevo en la base de datos (una fila en la tabla Block).
   @Post('users/block/:id')
   async blockUser(
     @Request() req: any,
@@ -28,7 +26,6 @@ export class PrivacyController {
   }
 
   // Unblock a user by ID
-  //DELETE porque vamos a borrar esa fila de la base de datos.
   @Delete('users/block/:id')
   async unblockUser(
     @Request() req: any,
@@ -37,8 +34,7 @@ export class PrivacyController {
     return this.privacyService.unblockUser(req.user.id, targetUserId);
   }
 
-  // Retrieve blocked users list
-  //GET porque solo estamos pidiendo información para leer, sin modificar nada.
+  // get blocked users list
   @Get('users/blocked')
   async getBlockedUsers(@Request() req: any) {
     return this.privacyService.getBlockedUsers(req.user.id);

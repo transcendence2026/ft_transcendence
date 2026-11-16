@@ -3,15 +3,12 @@ import type { Response } from 'express';
 import { RgpdService } from './rgpd.service.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 
-//Controller: Escucha en la red y asigna la ruta que activa cada accion
-//y delega la ejecución en Service (quien habla con la Base de Datos)
-//rgpd: identifica ambito normativa RGPD
 @Controller('api/rgpd')
 @UseGuards(JwtAuthGuard)
 export class RgpdController {
 	constructor(private readonly rgpdService: RgpdService) {}
 
-	//export: estándar para volcar/descargar informacion
+	// Exports all personal data associated with the authenticated user as a downloadable JSON file
 	@Get('export')
 	async exportData(@Req() req: any, @Res() res: Response) {
 		const data = await this.rgpdService.exportUserData(req.user.id);
@@ -23,14 +20,23 @@ export class RgpdController {
 		);
 		return res.json(data);
 	}
-	//account: deja claro que el recurso a destruir es la cuenta (account)
+
+	// Permanently deletes the authenticated user's account and clears active session cookies
 	@Delete('account')
 	async deleteAccount(@Req() req: any, @Res() res: Response) {
 		const result = await this.rgpdService.deleteUserAccount(req.user.id);
-
-		//Limpia las cookies de sesion
-		res.clearCookie('accessToken', { path: '/' }); //pase de acceso rápido. Viaja en cada petición para comprobar quién eres y qué permisos tienes
-		res.clearCookie('refreshToken', { path: '/api/auth/refresh' }); //pase de renovación. Vive en una cookie HttpOnly segura y solo se utiliza cuando el accessToken caduca
+		const isProduction = process.env.NODE_ENV === 'production';
+		//clean cookies
+		res.clearCookie('accessToken', {
+			httpOnly: true,
+            secure: isProduction,
+            sameSite: 'lax',
+			path: '/' });
+		res.clearCookie('refreshToken', {
+			httpOnly: true,
+			secure: isProduction,
+            sameSite: 'lax',
+			path: '/api/auth/refresh' });
 
 		return res.json(result);
 	}
