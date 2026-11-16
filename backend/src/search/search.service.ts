@@ -107,4 +107,75 @@ export class SearchService {
 
     return { results, nextCursor };
   }
+  async searchUsers(currentUserId: string, query: UserSearchQueryDto) {
+    const { q, cursor, limit } = query;
+
+    const conditions: Prisma.Sql[] = [
+      Prisma.sql`u.id <> ${currentUserId}`,
+      // Hide users blocked by me or who blocked me
+      Prisma.sql`NOT EXISTS (
+        SELECT 1 FROM "Block" b
+        WHERE (b."blockerId" = ${currentUserId} AND b."blockedId" = u.id)
+           OR (b."blockerId" = u.id AND b."blockedId" = ${currentUserId})
+      )`,
+    ];
+
+    if (q) {
+      const pattern = `%${q.replace(/[\\%_]/g, '\\$&')}%`;
+      conditions.push(Prisma.sql`(
+        u.username ILIKE ${pattern}
+        OR p."firstName" ILIKE ${pattern}
+        OR p."lastName" ILIKE ${pattern}
+      )`);
+    }
+
+    if (cursor) {
+      const exists = await this.prisma.user.findUnique({
+        where: { id: cursor },
+        select: { id: true },
+      });
+      if (!exists) {
+        throw new BadRequestException('Invalid cursor');
+      }
+      conditions.push(Prisma.sql`(u."createdAt", u.id) < (
+        SELECT c."createdAt", c.id FROM "User" c WHERE c.id = ${cursor}
+      )`);
+    }
+
+    const rows = await this.prisma.$queryRaw<UserResult[]>(Prisma.sql`
+      SELECT
+        u.id,
+        u.username,
+        p."firstName",
+        p."lastName",
+        p."avatarUrl",
+        CASE WHEN u."isPrivate" THEN NULL ELSE p.bio END AS bio,
+        u."isPrivate",
+        CASE
+          WHEN f.status IS NULL THEN 'NONE'
+          WHEN f.status::text = 'ACCEPTED' THEN 'ACCEPTED'
+          WHEN f.status::text = 'PENDING' AND f."senderId" = ${currentUserId} THEN 'PENDING_SENT'
+          WHEN f.status::text = 'PENDING' THEN 'PENDING_RECEIVED'
+          ELSE 'NONE'
+        END AS "friendshipStatus"
+      FROM "User" u
+      LEFT JOIN "Profile" p ON p."userId" = u.id
+      LEFT JOIN LATERAL (
+        SELECT fr.status, fr."senderId"
+        FROM "Friendship" fr
+        WHERE (fr."senderId" = ${currentUserId} AND fr."receiverId" = u.id)
+           OR (fr."senderId" = u.id AND fr."receiverId" = ${currentUserId})
+        LIMIT 1
+      ) f ON true
+      WHERE ${Prisma.join(conditions, ' AND ')}
+      ORDER BY u."createdAt" DESC, u.id DESC
+      LIMIT ${limit + 1}
+    `);
+
+    const hasMore = rows.length > limit;
+    const results = hasMore ? rows.slice(0, limit) : rows;
+    const nextCursor = hasMore ? results[results.length - 1].id : null;
+
+    return { results, nextCursor };
+  }
 }
