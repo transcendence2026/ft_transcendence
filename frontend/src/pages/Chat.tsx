@@ -19,6 +19,8 @@ import AppLayout from "../components/AppLayout";
 
 import { useWebSocket } from "../../context/WebSocketContext";
 import { useAuth } from "@/context/AuthContext";
+import { NewChatUserList } from "../components/NewChatUserList";
+import { UserResult } from "../api/explore";
 
 export interface SalonThread {
   id: string;
@@ -334,12 +336,29 @@ export default function EpicureSalonWorkspace() {
     setNewChatQuery("");
   };
 
-  const handleSelectUser = (thread: SalonThread) => {
-    setActiveThreadId(thread.id);
-    setIsNewChatOpen(false);
-    setNewChatQuery("");
-    setNotice(null);
-  };
+// New handleSelectUser
+const handleSelectUser = (selected: UserResult) => {
+  const fullName = [selected.firstName, selected.lastName].filter(Boolean).join(" ");
+  setThreads((current) =>
+    current.some((thread) => thread.id === selected.id)
+      ? current
+      : [
+          {
+            id: selected.id,
+            category: selected.friendshipStatus === "ACCEPTED" ? "Amigo" : "Usuario",
+            timestamp: "",
+            title: selected.username,
+            participants: fullName || `@${selected.username}`,
+            preview: "",
+          },
+          ...current,
+        ],
+  );
+  setActiveThreadId(selected.id);
+  setIsNewChatOpen(false);
+  setNewChatQuery("");
+  setNotice(null);
+};
 
   const handleArchiveThread = () => {
     if (!activeThreadId) return;
@@ -490,37 +509,7 @@ export default function EpicureSalonWorkspace() {
                             className="w-full border border-white/10 bg-[#0f0e0d]/80 py-2 pr-3 pl-8 text-[12px] text-[#e6e1df] outline-none placeholder:text-[#a88a83] focus:border-[#fabc4d]/40"
                           />
                         </div>
-
-                        <div className="mt-3 max-h-52 overflow-y-auto">
-                          {availableUsers.length > 0 ? (
-                            availableUsers.map((thread) => (
-                              <button
-                                key={thread.id}
-                                type="button"
-                                onClick={() => handleSelectUser(thread)}
-                                className="flex w-full items-center gap-3 border-b border-white/5 px-2 py-2.5 text-left last:border-0 hover:bg-white/[0.04]"
-                              >
-                                <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-[#fabc4d]/25 bg-[#0f0e0d] text-[10px] font-bold text-[#fabc4d]">
-                                  {thread.title.slice(0, 2).toUpperCase()}
-                                </span>
-                                <span className="min-w-0">
-                                  <span className="block truncate text-[13px] text-[#e6e1df]">
-                                    {thread.title}
-                                  </span>
-                                  <span className="block text-[10px] tracking-[0.8px] text-[#a88a83] uppercase">
-                                    Utilisateur
-                                  </span>
-                                </span>
-                              </button>
-                            ))
-                          ) : (
-                            <p className="px-2 py-4 text-center text-[12px] leading-relaxed text-[#a88a83]">
-                              {newChatQuery.trim()
-                                ? "No se encontró ningún usuario."
-                                : "No hay amigos disponibles por el momento."}
-                            </p>
-                          )}
-                        </div>
+                        <NewChatUserList query={newChatQuery} onSelect={handleSelectUser} />
                       </div>
                     )}
                   </div>
