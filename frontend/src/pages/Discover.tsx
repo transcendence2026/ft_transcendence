@@ -3,7 +3,7 @@ import AppLayout, { SidebarAccount } from '../components/AppLayout';
 import { Button } from '../components/Button';
 import { DishCarousel } from '../components/DishCarousel';
 import { Input } from '../components/Input';
-import { RestaurantResults } from '../components/RestaurantResults';
+import { RestaurantResult } from '../components/RestaurantResults';
 import { UserSearchPanel } from '../components/UserSearchPanel';
 import { useAuth } from '../../context/AuthContext';
 import { CUISINE, CUISINE_LABELS } from '../api/explore';
@@ -142,7 +142,7 @@ export default function Discover() {
 					</section>
 
 					{isRestaurants ? (
-						<RestaurantResults filters={{ q, cuisine, price, rating }} />
+						<RestaurantResult filters={{ q, cuisine, price, rating }} />
 					) : (
 						<UserSearchPanel query={q} />
 					)}
