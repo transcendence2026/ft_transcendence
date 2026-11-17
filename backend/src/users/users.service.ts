@@ -36,39 +36,48 @@ export class UsersService {
         return { status: friendship.status, requestId: friendship.id };
       });
 
-	  // Comprobar si el usuario que mira el perfil (viewerId) tiene bloqueado a este usuario (userId)
-    const isBlockedByViewer = userId !== viewerId
-      ? !!(await this.prisma.block.findUnique({
-          where: {
-            blockerId_blockedId: { blockerId: viewerId, blockedId: userId },
-          },
-        }))
-      : false;
+	  // Comprobar bloqueos en ambos sentidos (si yo le bloqueé o si él me bloqueó)
+    let isBlockedByViewer = false;
+    let isBlockedByTarget = false;
 
-	  //Regla de privacidad: Si es privado y no es él ni un amigo
-	  const isSelf = userId === viewerId;
-	  const isFriend = relationship.status === 'ACCEPTED';
+    if (userId !== viewerId) {
+      const blocks = await this.prisma.block.findMany({
+        where: {
+          OR: [
+            { blockerId: viewerId, blockedId: userId },
+            { blockerId: userId, blockedId: viewerId },
+          ],
+        },
+      });
+      isBlockedByViewer = blocks.some((b) => b.blockerId === viewerId);
+      isBlockedByTarget = blocks.some((b) => b.blockerId === userId);
+    }
 
-	  // CASO 1: Es privado y no soy yo ni un amigo aceptado
-	  if(user.isPrivate && !isSelf && !isFriend) {
-		return {
+    // Regla de privacidad: Si es privado (y no somos amigos) O hay bloqueo entre ambos
+    const isSelf = userId === viewerId;
+    const isFriend = relationship.status === 'ACCEPTED';
+    const isRestricted = !isSelf && (isBlockedByViewer || isBlockedByTarget || (user.isPrivate && !isFriend));
+
+    // CASO 1: Perfil restringido por privacidad o bloqueo
+    if (isRestricted) {
+      return {
         id: user.id,
         username: user.username,
-        email: null,                          // Oculto por privacidad
+        email: null,
         status: user.status,
-        isPrivate: true,                      // Indica al frontend que está bloqueado
-        isBlocked: isBlockedByViewer,        //estado de bloqueo
-		    createdAt: user.createdAt,
+        isPrivate: user.isPrivate,
+        isBlocked: isBlockedByViewer,
+        createdAt: user.createdAt,
         profile: {
           avatarUrl: user.profile?.avatarUrl ?? null,
-          bio: null,                          // Oculto por privacidad
+          bio: null,
         },
         friendship: relationship,
-        favoriteDishes: [],                   // Vacío
+        favoriteDishes: [],
         favoriteRestaurants: [],
-        stats: null,                          // Nulo para activar el candado en UI
+        stats: null,
       };
-	}
+    }
 	// CASO 2: Perfil público o consulta propia (return completo)
     return {
       id: user.id,
@@ -190,7 +199,6 @@ export class UsersService {
           select: {
             id: true,
             username: true,
-            email: true,
             profile: {
               select: { avatarUrl: true },
             },
@@ -205,7 +213,7 @@ export class UsersService {
       user: {
         id: b.blocked.id,
         username: b.blocked.username,
-        email: b.blocked.email,
+
         avatarUrl: b.blocked.profile?.avatarUrl ?? null,
       },
     }));
