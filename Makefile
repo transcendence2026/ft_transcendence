@@ -42,7 +42,7 @@ certs:
 		echo "Certificate already exists; skipping."; \
 	fi
 
-up: app wait-network monitor
+up: app wait-network monitor seed push
 
 app: certs
 	$(COMPOSE) up --build -d
