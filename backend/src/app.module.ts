@@ -45,10 +45,7 @@ import { RestaurantsModule } from './restaurants/restaurants.module.js';
 		PrismaModule,
 		AuthModule,
 		UsersModule,
-<<<<<<< HEAD
 		MetricsModule,
-=======
->>>>>>> origin/dev
 		FilesModule,
 		PostsModule,
 		ReviewsModule,
@@ -61,15 +58,12 @@ import { RestaurantsModule } from './restaurants/restaurants.module.js';
     	HealthModule,
 		SearchModule,
     	EventEmitterModule.forRoot(),
-<<<<<<< HEAD
 		PrometheusModule.register(),
 		//Modulos siguientes que importaremos cuando se hagan
 		//UsersModule,  //Modulo para gesrionar perfiles y datos usuarios
 		//ProductsModule, //Modulo para catálogo de tienda
 		//OrdersModule, //Modulo para compras y carritos
-=======
 		RestaurantsModule,
->>>>>>> origin/dev
 		ServeStaticModule.forRoot({
 			rootPath: join(process.cwd(), 'uploads'),
 			serveRoot: '/uploads',
