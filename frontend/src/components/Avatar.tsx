@@ -13,12 +13,36 @@ interface AvatarProps {
 const sizes = { sm: 'h-9 w-9 text-xs', md: 'h-14 w-14 text-base', lg: 'h-24 w-24 text-2xl', xl: 'h-32 w-32 text-4xl' };
 const presenceColors = { online: 'bg-emerald-400', ingame: 'bg-secondary', offline: 'bg-muted' };
 
-export function Avatar({ name, src, presence, size = 'md', className }: AvatarProps) {
-  const initials = name.slice(0, 2).toUpperCase() || 'U';
-  return <div className={cn('relative shrink-0', className)}>
-    <div className={cn('flex overflow-hidden rounded-full border border-primary/60 bg-surface-raised font-serif text-primary-soft', sizes[size])}>
-      {src ? <img src={src} alt={`${name}'s avatar`} className="h-full w-full object-cover" /> : initials}
-    </div>
-    {presence && <span className={cn('absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-background', presenceColors[presence])} aria-label={presence} />}
-  </div>;
+const DEFAULT_AVATARS = ['/imgPlaceholder1.png', '/imgPlaceholder2.png'];
+
+function getDefaultAvatar(name: string): string {
+  const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return DEFAULT_AVATARS[hash % DEFAULT_AVATARS.length];
 }
+
+export function Avatar({ name, src, presence, size = 'md', className }: AvatarProps) {
+  const isDefault = !src || src === 'default-avatar.png' || src.endsWith('/default-avatar.png');
+  const imageSrc = isDefault ? getDefaultAvatar(name) : src;
+
+  return (
+    <div className={cn('relative shrink-0', className)}>
+      <div className={cn('flex overflow-hidden rounded-full border border-primary/60 bg-surface-raised font-serif text-primary-soft', sizes[size])}>
+        <img src={imageSrc} alt={`${name}'s avatar`} className="h-full w-full object-cover" />
+      </div>
+      {presence && <span className={cn('absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-background', presenceColors[presence])} aria-label={presence} />}
+    </div>
+  );
+}
+
+
+// const sizes = { sm: 'h-9 w-9 text-xs', md: 'h-14 w-14 text-base', lg: 'h-24 w-24 text-2xl', xl: 'h-32 w-32 text-4xl' };
+// const presenceColors = { online: 'bg-emerald-400', ingame: 'bg-secondary', offline: 'bg-muted' };
+
+// export function Avatar({ name, src, presence, size = 'md', className }: AvatarProps) {
+//   const initials = name.slice(0, 2).toUpperCase() || 'U';
+//   return <div className={cn('relative shrink-0', className)}>
+//     <div className={cn('flex overflow-hidden rounded-full border border-primary/60 bg-surface-raised font-serif text-primary-soft', sizes[size])}>
+//       {src ? <img src={src} alt={`${name}'s avatar`} className="h-full w-full object-cover" /> : initials}
+//     </div>
+//     {presence && <span className={cn('absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-background', presenceColors[presence])} aria-label={presence} />}
+//   </div>;
