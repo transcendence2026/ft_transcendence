@@ -62,6 +62,9 @@ export class AuthService {
 	// Handles local user registration, credential hashing, and profile creation
 	async register(registerDto: RegisterUserDto) {
 		const { email, username, password } = registerDto;
+		if (email.toLowerCase().endsWith('@student.42malaga.com') || email.toLowerCase().includes('@student.42')) {
+			throw new ConflictException('42 accounts must sign in using the 42 OAuth button');
+		}
 
     // Checks if the email is already registered
 	const existingEmail = await this.prisma.user.findUnique({ where: { email } });
