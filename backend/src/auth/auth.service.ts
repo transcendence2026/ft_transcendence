@@ -12,6 +12,7 @@ import { RegisterUserDto } from './dto/register-user.dto.js';
 import { LoginUserDto } from './dto/login-user.dto.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { TwoFactorService } from './2fa/two-factor.service.js';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class AuthService {
@@ -44,9 +45,14 @@ export class AuthService {
         return { accessToken, refreshToken};
     }
 
+	private hashTokenSha256(token: string): string {
+		return crypto.createHash('sha256').update(token).digest('hex');
+	}
+
 	// Hashes and persists the active refresh token in PostgreSQL
 	private async updateRefreshTokenHash(userID: string, refreshToken: string) {
-		const hash = await bcrypt.hash(refreshToken, this.saltRounds);
+		const sha256Token = this.hashTokenSha256(refreshToken);
+		const hash = await bcrypt.hash(sha256Token, this.saltRounds);
 		await this.prisma.user.update({
 			where: { id: userID },
 			data: { hashedRefreshToken: hash },
@@ -293,7 +299,9 @@ export class AuthService {
             if(!user || !user.hashedRefreshToken) {
                 throw new UnauthorizedException('Access Denied');
             }
-			const isTokenValid = await bcrypt.compare(refreshToken, user.hashedRefreshToken);
+			const sha256Token = this.hashTokenSha256(refreshToken);
+			const isTokenValid = await bcrypt.compare(sha256Token, user.hashedRefreshToken);
+			//const isTokenValid = await bcrypt.compare(refreshToken, user.hashedRefreshToken);
             if (!isTokenValid) {
                 throw new UnauthorizedException('Access Denied');
             }
