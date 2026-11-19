@@ -1,6 +1,6 @@
 import { Injectable, NestInterceptor, HttpException, ExecutionContext, CallHandler,} from '@nestjs/common';
 import { tap } from 'rxjs';
-import { MetricsService } from './metrics.service';
+import { MetricsService } from './metrics.service.js';
 
 const IGNORED_ROUTES = ['/metrics', '/api/health'];
 

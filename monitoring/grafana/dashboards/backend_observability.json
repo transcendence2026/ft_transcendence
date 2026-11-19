@@ -4,12 +4,12 @@
   "metadata": {
     "name": "backend-observability",
     "namespace": "default",
-    "uid": "09d995d8-8bd2-45e4-9a50-399c94bc1bcc",
-    "resourceVersion": "1794846897342985",
+    "uid": "f7932bd4-9bb5-4d53-a7c2-a4994503ef94",
+    "resourceVersion": "1795101043182993",
     "generation": 1,
-    "creationTimestamp": "2026-11-16T16:34:57Z",
+    "creationTimestamp": "2026-11-19T15:10:43Z",
     "labels": {
-      "grafana.app/deprecatedInternalID": "1172406856966144"
+      "grafana.app/deprecatedInternalID": "2238371787120640"
     },
     "annotations": {
       "grafana.app/createdBy": "user:cg183c9a0iha8f",
@@ -631,10 +631,11 @@
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "topk(5, sum(rate(http_requests_total{route!=\"/metrics\"}[5m])) by (route))",
-                        "instant": false,
+                        "exemplar": false,
+                        "expr": "topk(5, sum(rate(http_requests_total{route!=\"/metrics\"}[5m])) by (route) > 0)",
+                        "instant": true,
                         "legendFormat": "__auto",
-                        "range": true
+                        "range": false
                       },
                       "version": "v0"
                     },
