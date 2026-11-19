@@ -1,0 +1,281 @@
+jest.mock('@nestjs/common', () => ({
+  Injectable: () => () => undefined,
+}));
+jest.mock('../prisma/prisma.service', () => ({
+  PrismaService: class {},
+}));
+
+import { jest } from '@jest/globals';
+import { Test, TestingModule } from '@nestjs/testing';
+import { RecommendationService } from "./recommendation.service.js";
+import { PrismaService } from '../prisma/prisma.service.js';
+import { VectorCacheService } from "./vector-cache.service.js";
+
+// Minimal PrismaService mock: only the calls the service makes
+function createPrismaMock() {
+	return {
+		preference: { findUnique: jest.fn() },
+		review: { findMany: jest.fn(), groupBy: jest.fn(), aggregate:jest.fn() },
+		dish: { findMany: jest.fn() },
+		friendship: { findMany: jest.fn() },
+		block: { findMany: jest.fn() },
+		user: { findMany: jest.fn() },
+	};
+}
+
+// User likes ITALIAN, mild spice (spicyLevel 1 -> 0), price range 2-3
+const userPref = {
+	favoriteCuisines: ['ITALIAN'],
+	spicyLevel: 1,
+	preferredPriceMin: 2,
+	preferredPriceMax: 3,
+};
+
+function makeDish(id: string, cuisine:string, priceRange: number, spicy = false) {
+	return {
+		id,
+		name: `Dish ${id}`,
+		description: null,
+		price: 10,
+		restaurant: { id: `r-${id}`, name: `Restaurant ${id}`, cuisine, priceRange },
+		tags: spicy ? [{ name: 'Spicy' }] : [],
+	};
+}
+
+describe('RecommendationService', () => {
+	let prisma: ReturnType<typeof createPrismaMock>;
+	let service: RecommendationService;
+	let cache: VectorCacheService;
+
+	beforeEach(() => {
+		prisma = createPrismaMock();
+		cache = new VectorCacheService();
+		service = new RecommendationService(prisma as any, cache);
+		prisma.preference.findUnique.mockResolvedValue(userPref);
+		prisma.review.findMany.mockResolvedValue([]);
+		prisma.review.groupBy.mockResolvedValue([]);
+		prisma.review.aggregate.mockResolvedValue({ _avg: { rating: null } });
+		prisma.dish.findMany.mockResolvedValue([]);
+		prisma.friendship.findMany.mockResolvedValue([]);
+		prisma.block.findMany.mockResolvedValue([]);
+		prisma.user.findMany.mockResolvedValue([]);
+	});
+
+	describe('getDishRecommendations', () => {
+		it('returns top-rated or fallback dishes when the user has no preference', async () => {
+			jest.spyOn(prisma.preference, 'findUnique').mockResolvedValue(null);
+			jest.spyOn(prisma.review, 'aggregate').mockResolvedValue({ _avg: { rating: 5 } } as any);
+			jest.spyOn(prisma.review, 'groupBy').mockResolvedValue([]);
+			jest.spyOn(prisma.dish, 'findMany').mockResolvedValue([
+				{ id: 'd1', name: 'Dish 1', description: null, price: 10, restaurant: { id: 'r1', name: 'Rest 1', cuisine: 'ITALIAN', priceRange: 2 }, tags: [] },
+			] as any);
+
+			const result = await service.getDishRecommendations('u1', 1);
+
+			expect(result.length).toBeGreaterThan(0);
+			expect(prisma.dish.findMany).toHaveBeenCalled();
+		});
+
+		it('ranks dishes by similarity, highest first', async () => {
+			prisma.dish.findMany.mockResolvedValue([
+				makeDish('mexican-spicy', 'MEXICAN', 1, true),
+				makeDish('italian', 'ITALIAN', 2),
+				makeDish('japanese', 'JAPANESE', 4),
+			]);
+
+			const result = await service.getDishRecommendations('u1');
+
+			expect(result.map((r) => r.id)).toEqual(['italian', 'japanese', 'mexican-spicy']);
+			expect(result[0].score).toBeGreaterThan(result[1].score);
+			expect(result[1].score).toBeGreaterThan(result[2].score);
+			expect(result[2].score).toBe(0);
+		});
+
+		it('keeps every score within [0, 1]', async () => {
+			prisma.dish.findMany.mockResolvedValue([
+				makeDish('a', 'ITALIAN', 2),
+				makeDish('b', 'KOREAN', 3, true),
+			]);
+
+			const result = await service.getDishRecommendations('u1');
+
+			for (const r of result) {
+				expect(r.score).toBeGreaterThanOrEqual(0);
+				expect(r.score).toBeLessThanOrEqual(1);
+			}
+		});
+
+		it('excludes dishes the user already reviewed', async () => {
+			prisma.review.findMany.mockResolvedValue([{ dishId: 'd1' }, { dishId: 'd2' }]);
+			prisma.dish.findMany.mockResolvedValue([
+				makeDish('d1', 'ITALIAN', 2),
+				makeDish('d2', 'ITALIAN', 2),
+				makeDish('d3', 'ITALIAN', 2),
+			]);
+
+			const result = await service.getDishRecommendations('u1');
+
+			expect(prisma.review.findMany).toHaveBeenCalledWith(
+				expect.objectContaining({ where: { authorId: 'u1' } }),
+			);
+			expect(result.map((r) => r.id)).not.toContain('d1');
+			expect(result.map((r) => r.id)).not.toContain('d2');
+			expect(result.map((r) => r.id)).toContain('d3');
+		});
+
+		it('respects the limit', async () => {
+			prisma.dish.findMany.mockResolvedValue(
+				['a', 'b', 'c', 'd'].map((id) => makeDish(id, 'ITALIAN', 2)),
+			);
+
+			const result = await service.getDishRecommendations('u1', 2);
+
+			expect(result).toHaveLength(2);
+		});
+
+		it('maps tags to plain names and keeps the restaurant info', async () => {
+			prisma.dish.findMany.mockResolvedValue([makeDish('x', 'ITALIAN', 2, true)]);
+
+			const [rec] = await service.getDishRecommendations('u1');
+
+			expect(rec.tags).toEqual(['Spicy']);
+			expect(rec.restaurant).toEqual({
+				id: 'r-x',
+				name: 'Restaurant x',
+				cuisine: 'ITALIAN',
+				priceRange: 2,
+			});
+			expect(rec.source).toBe('personalized');
+		});
+
+		it('loads the catalog once for consecutive requests', async () => {
+			await service.getDishRecommendations('u1');
+			await service.getDishRecommendations('u1');
+			expect(prisma.dish.findMany).toHaveBeenCalledTimes(1);
+		});
+
+		it('reloads the catalog after invalidation', async () => {
+			await service.getDishRecommendations('u1');
+			cache.invalidateCatalog();
+			await service.getDishRecommendations('u1');
+			expect(prisma.dish.findMany).toHaveBeenCalledTimes(2);
+		});
+	});
+
+	describe('cold start (no preference)', () => {
+		beforeEach(() => {
+			prisma.preference.findUnique.mockResolvedValue(null);
+		});
+
+		it('ranks by Bayesian average, not by the raw average', async () => {
+			prisma.review.aggregate.mockResolvedValue({ _avg: { rating: 3.5 } });
+			prisma.review.groupBy.mockResolvedValue([
+				{ dishId: 'lucky', _avg: { rating: 5 }, _count: { rating: 1 } }, // one 5-start review
+				{ dishId: 'solid', _avg: { rating: 4.5 }, _count: { rating: 10 } }, // many good reviews
+			]);
+			prisma.dish.findMany.mockResolvedValue([
+				makeDish('lucky', 'ITALIAN', 2),
+				makeDish('solid', 'JAPANESE', 3),
+			]);
+
+			const result = await service.getDishRecommendations('u1');
+
+			expect(result.map((r) => r.id)).toEqual(['solid', 'lucky']);
+			expect(result.every((r) => r.source === 'top-rated')).toBe(true);
+			for (const r of result) {
+				expect(r.score).toBeGreaterThan(0);
+				expect(r.score).toBeLessThanOrEqual(1);
+			}
+		});
+
+		it('respect the limit', async () => {
+			prisma.review.aggregate.mockResolvedValue({ _avg: { rating: 3} });
+			prisma.review.groupBy.mockResolvedValue(
+				['a', 'b', 'c'].map((id) => ({ dishId: id, _avg: { rating: 4 }, _count: { rating: 2} })),
+			);
+			prisma.dish.findMany.mockResolvedValue(
+				['a', 'b', 'c'].map((id) => makeDish(id, 'ITALIAN', 2)),
+			);
+
+			expect(await service.getDishRecommendations('u1', 2)).toHaveLength(2);
+		});
+	});
+
+	describe('getSimilarFriends', () => {
+		it('returns [] when the user has no preference', async () => {
+			prisma.preference.findUnique.mockResolvedValue(null);
+
+			expect(await service.getSimilarFriends('u1')).toEqual([]);
+			expect(prisma.friendship.findMany).not.toHaveBeenCalled();
+		});
+
+		it('only asks for ACCEPTED friendships', async () => {
+			await service.getSimilarFriends('u1');
+
+			expect(prisma.friendship.findMany).toHaveBeenCalledWith(
+				expect.objectContaining({
+					where: expect.objectContaining({ status: 'ACCEPTED' }),
+				}),
+			);
+		});
+
+		it('reads friendships in both directions and drops blocked users', async () => {
+			prisma.friendship.findMany.mockResolvedValue([
+				{ senderId: 'u1', receiverId: 'f1' }, // user is sender
+				{ senderId: 'f2', receiverId: 'u1' }, // user is the receiver
+				{ senderId: 'u1', receiverId: 'f3' }, // f3 is blocked below
+			]);
+			prisma.block.findMany.mockResolvedValue([{ blockerId: 'f3', blockedId: 'u1' }]);
+
+			await service.getSimilarFriends('u1');
+
+			expect(prisma.user.findMany).toHaveBeenCalledWith(
+				expect.objectContaining({
+					where: expect.objectContaining({ id: { in: ['f1', 'f2'] } }),
+				}),
+			);
+		});
+
+		it('does not query users when every friend is blocked or there are none', async () => {
+			await service.getSimilarFriends('u1');
+
+			expect(prisma.user.findMany).not.toHaveBeenCalled();
+		});
+
+		it('ranks friends by taste similarity and skips friends without preference', async () => {
+			prisma.friendship.findMany.mockResolvedValue([
+				{ senderId: 'u1', receiverId: 'same' },
+				{ senderId: 'u1', receiverId: 'other' },
+				{ senderId: 'u1', receiverId: 'empty' },
+			]);
+			prisma.user.findMany.mockResolvedValue([
+				{
+					id: 'other',
+					username: 'other',
+					preference: { ...userPref, favoriteCuisines: ['KOREAN'] },
+				},
+				{ id: 'same', username: 'same', preference: { ...userPref } },
+				{ id: 'empty', username: 'empty', preference: null },
+			]);
+			
+			const result = await service.getSimilarFriends('u1');
+			
+			expect(result.map((f) => f.id)).toEqual(['same', 'other']);
+			expect(result[0].score).toBeCloseTo(1);
+			expect(result[1].score).toBeLessThan(result[0].score);
+		});
+
+		it('respects the limit', async () => {
+			prisma.friendship.findMany.mockResolvedValue([
+				{senderId: 'u1', receiverId: 'a' },
+				{ senderId: 'u1', receiverId: 'b' },
+			]);
+			prisma.user.findMany.mockResolvedValue([
+				{ id: 'a', username: 'a', preference: { ...userPref } },
+				{ id: 'b', username: 'b', preference: { ...userPref } },
+			]);
+
+			expect(await service.getSimilarFriends('u1', 1)).toHaveLength(1);
+		});
+	});
+});

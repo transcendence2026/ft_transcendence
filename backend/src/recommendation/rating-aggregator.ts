@@ -24,7 +24,7 @@ export class RatingAggregatorService {
   async getRestaurantRatings(restaurantIds?: string[])
   {
     return this.prisma.$queryRaw<
-      { restaurantId: string; avgRating: number; reviewCount: bigint }[]
+      { restaurantId: string; avgRating: number; reviewCount: number }[]
     >`
       SELECT d."restaurantId",
              AVG(rv.rating)::float AS "avgRating",

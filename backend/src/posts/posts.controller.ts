@@ -46,6 +46,18 @@ export class PostsController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Post(':id/like')
+  like(@Param('id') id: string, @Req() req: any) {
+    return this.postsService.like(id, req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id/like')
+  unlike(@Param('id') id: string, @Req() req: any) {
+    return this.postsService.unlike(id, req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Delete(':id/images/:imageId')
   removeImage(@Param('id') id: string, @Param('imageId') imageId: string, @Req() req: any) {
     return this.postsService.removeImage(id, imageId, req.user.id);

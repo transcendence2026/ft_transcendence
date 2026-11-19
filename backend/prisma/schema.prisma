@@ -31,20 +31,25 @@ model User {
   isPrivate          Boolean  @default(false)
   isTwoFactorEnabled Boolean  @default(false)
   twoFactorSecret    String?
+  hashedRefreshToken String?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
   //Relations
   profile             Profile?
   preference          Preference?
-  sentFriendships     Friendship[] @relation("UserSentFriendships")
-  receivedFriendships Friendship[] @relation("UserReceivedFriendships")
-  blockedUsers        Block[]      @relation("UserBlocks")
-  blockedBy           Block[]      @relation("UserBlockedBy")
+  sentFriendships     Friendship[]         @relation("UserSentFriendships")
+  receivedFriendships Friendship[]         @relation("UserReceivedFriendships")
+  blockedUsers        Block[]              @relation("UserBlocks")
+  blockedBy           Block[]              @relation("UserBlockedBy")
   posts               Post[]
   reviews             Review[]
-  sentMessages        Message[]    @relation("UserSentMessages")
-  receivedMessages    Message[]    @relation("UserReceivedMessages")
+  favoriteRestaurants FavoriteRestaurant[]
+  sentMessages        Message[]            @relation("UserSentMessages")
+  receivedMessages    Message[]            @relation("UserReceivedMessages")
+  notificationsSent   Notification[]       @relation("NotificationSender")
+  notifications       Notification[]       @relation("NotificationReceiver")
+  postLikes           PostLike[]
 }
 
 model Profile {
@@ -57,6 +62,19 @@ model Profile {
   bio       String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model PostLike {
+  id        String   @id @default(uuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
 }
 
 // GASTRONOMIC PREFERENCES
@@ -77,17 +95,17 @@ enum Cuisine {
 }
 
 model Preference {
-  id      String          @id @default(uuid())
-  userId  String          @unique
-  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   favoriteCuisines  Cuisine[] // e.g. ["Italian", "Japanese"]
-  spicyLevel        Int   @default(2) // 1 = mild ... 5 = very spicy
-  preferredPriceMin Int   @default(1) // matches Restaurant.priceRange (1-4)
-  preferredPriceMax Int   @default(4)
+  spicyLevel        Int       @default(2) // 1 = mild ... 5 = very spicy
+  preferredPriceMin Int       @default(1) // matches Restaurant.priceRange (1-4)
+  preferredPriceMax Int       @default(4)
 
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([favoriteCuisines], type: Gin)
 }
@@ -137,6 +155,7 @@ model Post {
   authorId  String
   author    User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
   images    PostImage[]
+  likes     PostLike[]
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
@@ -144,23 +163,40 @@ model Post {
 }
 
 model PostImage {
-  id      String    @id @default(uuid())
-  url     String    // URL o path 
-  postId  String
-  post    Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid())
+  url    String // URL o path 
+  postId String
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@index([postId])
 }
 
 model Restaurant {
-  id           String     @id @default(uuid())
-  name         String
-  cuisine      Cuisine
-  priceRange   Int
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  id         String   @id @default(uuid())
+  name       String
+  cuisine    Cuisine
+  priceRange Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  dishes Dish[]
+  dishes              Dish[]
+  favoriteRestaurants FavoriteRestaurant[]
+
+  @@index([cuisine, priceRange])
+  @@index([createdAt, id])
+}
+
+model FavoriteRestaurant {
+  id           String     @id @default(uuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@unique([userId, restaurantId])
+  @@index([userId])
+  @@index([restaurantId])
 }
 
 model Dish {
@@ -175,6 +211,7 @@ model Dish {
 
   reviews Review[]
   tags    Tag[]    @relation("DishTags")
+
   @@index([restaurantId])
 }
 
@@ -196,7 +233,7 @@ model Review {
 
   @@unique([authorId, dishId]) // One review per user for each dish
   @@index([authorId])
-  @@index([dishId])
+  @@index([dishId, rating])
 }
 
 // CHAT AND MESSAGING
@@ -212,4 +249,19 @@ model Message {
 
   @@index([senderId])
   @@index([receiverId])
+}
+
+model Notification {
+  id         String   @id @default(uuid())
+  senderId   String
+  sender     User     @relation("NotificationSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId String
+  receiver   User     @relation("NotificationReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  type       String
+  message    String
+  requestId  String?
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([receiverId, read, createdAt])
 }

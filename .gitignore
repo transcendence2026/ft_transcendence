@@ -1,5 +1,6 @@
 node_modules/
 dist/
+dev-dist/
 
 # Variables de entorno en cualquier nivel
 *.env
@@ -21,6 +22,8 @@ Thumbs.db
 
 # VS Code workspace settings folder
 .vscode/
+.nfs*
+
 
 # Unignores shared VS Code settings
 !.vscode/settings.json
@@ -103,3 +106,4 @@ coverage/
 # 9. CERTS
 
 proxy/certs
+cookies.txt

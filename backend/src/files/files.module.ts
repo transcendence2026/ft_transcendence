@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { FilesController } from './files.controller';
+import { FilesController } from './files.controller.js';
 import { AuthModule } from '../auth/auth.module.js';
 
 @Module({

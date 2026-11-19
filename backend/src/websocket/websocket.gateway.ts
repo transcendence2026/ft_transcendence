@@ -3,7 +3,8 @@ import { ConnectedSocket, MessageBody, SubscribeMessage, WebSocketGateway } from
 import WebSocket from 'ws';
 import { PresenceService, RoomService } from './websocket.service.js';
 import jwt from 'jsonwebtoken';
-import { MessagePayloadDto } from './dto/messagePayload.dto.js';
+import { DirectMessageDto, JoinRoomDto, MessagePayloadDto, TypingDto } from './dto/messagePayload.dto.js';
+import { MessagesService } from '../messages/messages.service.js';
 
 export type Client = {
   userId?: string;
@@ -16,12 +17,11 @@ export class WebsocketGateway {
   constructor(
     private readonly presenceService: PresenceService,
     private readonly roomService: RoomService,
+    private readonly messagesService: MessagesService,
   ) {}
   private readonly logger = new Logger(WebsocketGateway.name);
 
   handleConnection(client: ConnectedClient, request: any) {
-	console.log('>>> [WS CONNECT] Petición recibida en URL:', request?.url);
-    // 1. Extraemos el token de la cookie HttpOnly
     let token: string | undefined;
 
     const cookieHeader = request.headers?.cookie;
@@ -35,7 +35,6 @@ export class WebsocketGateway {
       }
     }
 
-    // 2. Soporte opcional para query param si viniera por URL
     if (!token && request.url?.includes('token=')) {
       token = request.url.split('token=')[1]?.split('&')[0];
     }
@@ -91,11 +90,55 @@ export class WebsocketGateway {
   }
 
   @SubscribeMessage('joinRoom')
-  handleJoinRoom(@MessageBody() data: MessagePayloadDto, @ConnectedSocket() client: Client) {
+  handleJoinRoom(@MessageBody() data: JoinRoomDto, @ConnectedSocket() client: Client) {
     if (!client.userId) {
       return;
     }
 
-    this.roomService.joinRoom(client.userId, data.roomName)
+    this.roomService.joinRoom(client.userId, data.roomName);
+
+    return {
+      event: 'room:joined',
+      data: { roomName: data.roomName },
+    };
+  }
+
+  @SubscribeMessage('chat:message')
+  async handleDirectMessage(@MessageBody() data: DirectMessageDto, @ConnectedSocket() client: Client) {
+    if (!client.userId) {
+      return;
+    }
+
+    const savedMessage = await this.messagesService.createMessage(client.userId, data.receiverId, data.text)
+
+    const receiver = this.presenceService.getUserSockets(data.receiverId)
+    const senderId = this.presenceService.getUserSockets(client.userId)
+
+    receiver?.forEach((user) => {
+      user.send(JSON.stringify({ event: 'chat:receive', data: savedMessage }));
+    })
+
+    senderId?.forEach((user) => {
+      user.send(JSON.stringify({ event: 'chat:receive', data: savedMessage }));
+      if (receiver && receiver.size > 0) {
+        user.send(JSON.stringify({ event: 'chat:delivered', data: { messageId: savedMessage.id } }));
+      }
+    })
+  }
+
+  @SubscribeMessage('chat:typing')
+  handleTyping(@MessageBody() data: TypingDto, @ConnectedSocket() client: Client) {
+    if (!client.userId || !data?.receiverId) {
+      return;
+    }
+
+    const receiver = this.presenceService.getUserSockets(data.receiverId);
+
+    receiver?.forEach((user) => {
+      user.send(JSON.stringify({
+        event: 'chat:typing',
+        data: { senderId: client.userId, isTyping: data.isTyping === true },
+      }));
+    });
   }
 }

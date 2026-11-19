@@ -9,8 +9,8 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { fileTypeFromFile } from 'file-type';
 import { unlink } from 'node:fs/promises';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { createMulterOptions } from './multer-opts-builder';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
+import { createMulterOptions } from './multer-opts-builder.js';
 
 // El cliente hace una petición POST.
 // Envía el header Authorization: Bearer TOKEN.

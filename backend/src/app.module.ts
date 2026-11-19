@@ -1,10 +1,12 @@
 //metemos AuthModule dentro de la AppModule, así cuando arranque la aplicacion,
 //enciende tambien el modulo de autenticacion
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
-import { FilesModule } from './files/files.module';
+import { FilesModule } from './files/files.module.js';
 import { AuthModule } from './auth/auth.module.js'; //importas la rama
 import { ConfigModule } from '@nestjs/config';
 import { HealthModule } from './health/health.module.js';
@@ -21,38 +23,69 @@ import { RecommendationModule } from './recommendation/recommendation.module.js'
 import { FriendsModule } from './friends/friends.module.js';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { MetricsModule } from './metrics/metrics.module.js';
+import { RgpdModule } from './rgpd/rgpd.module.js';
+import { SearchModule } from './search/search.module.js';
+import { NotificationGateway } from './notification/notification.gateway.js';
+import { NotificationController } from './notification/notification.controller.js';
+import { RestaurantsModule } from './restaurants/restaurants.module.js';
 
 @Module({
 	imports: [
-		//ConfigModule: te permite cargar y leer las variables de entorno del .env
+		//ConfigModule: allows you to load and read environment variables from the .env file.
 		ConfigModule.forRoot({
 			isGlobal: true,
 		}),
+		// Rate Limiting: maximum 100 requests every 60 seconds per IP
+		ThrottlerModule.forRoot([
+		{
+			ttl: 60000, // time in milliseconds (1 minute)
+			limit: 100, 
+		},
+		]),
 		PrismaModule,
-		AuthModule, //Importa el Modulo de Autenticación
+		AuthModule,
 		UsersModule,
+<<<<<<< HEAD
 		MetricsModule,
+=======
+>>>>>>> origin/dev
 		FilesModule,
 		PostsModule,
 		ReviewsModule,
 		SocialModule,
 		PrivacyModule,
+		RgpdModule,
 		RecommendationModule,
 		FriendsModule,
 		MessagesModule,
     	HealthModule,
+		SearchModule,
     	EventEmitterModule.forRoot(),
+<<<<<<< HEAD
 		PrometheusModule.register(),
 		//Modulos siguientes que importaremos cuando se hagan
 		//UsersModule,  //Modulo para gesrionar perfiles y datos usuarios
 		//ProductsModule, //Modulo para catálogo de tienda
 		//OrdersModule, //Modulo para compras y carritos
+=======
+		RestaurantsModule,
+>>>>>>> origin/dev
 		ServeStaticModule.forRoot({
 			rootPath: join(process.cwd(), 'uploads'),
 			serveRoot: '/uploads',
 		}), 
 	],
-	controllers: [],
-	providers: [WebsocketGateway, PresenceService, RoomService],
+	controllers: [NotificationController],
+	providers: [
+		WebsocketGateway,
+		PresenceService,
+		RoomService,
+		NotificationGateway,
+		{
+		//global guard that intercepts all routes and Apply the limit of 100 calls per minute
+		provide: APP_GUARD,
+		useClass: ThrottlerGuard,
+		},
+	],
 })
 export class AppModule {}

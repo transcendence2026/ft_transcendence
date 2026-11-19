@@ -7,38 +7,36 @@ import * as qrcode from 'qrcode';
 export class TwoFactorService {
 	constructor(private readonly prisma: PrismaService) {}
 
-		//GENERA el  SECRETO único y la imagen QR
+		//generate the unique secret and the QR image
 	async generateTwoFactorSecret(userId: string, userEmail: string) {
-		//generateSecret(): La librería otplib te devuelve un secreto aleatorio unico
+		//generateSecret(): The otplib library returns an unique, random secret.
 		const secret = generateSecret();
-		//damos nombre a la app, que aparecera en Google Authenticator
+		//We give the app a name, which will appear in Google Authenticator.
 		const appName = 'Ft_Transcendence';
-		//generateURI(...): La librería monta la URL con el formato otpauth://totp/... 
-		//que une el email, la app y el secreto.
+		//generateURI(...): The library constructs the URL using the otpauth://totp/... format, 
+		//which combines the email, the app, and the secret.
 		const otpauthUrl = generateURI({
             issuer: appName,
             label: userEmail,
             secret: secret,
         });
-		//buscamos al usuario por id y guardamos el código secreto en la BD (falta activar el 2FA)
+		//We look up the user by ID and save the secret code to the database (2FA still needs to be activated).
 		await this.prisma.user.update({
 			where: { id: userId},
 			data: { twoFactorSecret: secret},
 		});
-		// La librería qrcode convierte la URL anterior en una imagen digital
+		// The qrcode library converts the URL above into a digital image.
     	const qrCodeImage = await qrcode.toDataURL(otpauthUrl);
-		//Devuelves un objeto JSON con el código secreto en texto y la imagen QR en base64
-		// para que el usuario pueda escanearlo con su móvil.
+		//Return a JSON object containing the secret code in text and in QR image
+		// so that the user can scan it or enter the secret manually
 		return {
 		secret,
 		qrCodeImage,
 		};
 	}
 
-	//Tras escaner el QR se te genera un codigo de 6 digitos
-
-	//Ahora toca validar y ACTIVAR el Doble Factor
-	//recibes id y el codigo de 6 digitos y buscas al usuario en la BD
+	//After scanning the QR code, a 6-digit code is generated for you.
+	//Now it’s time to validate and ACTIVATE Two-Factor Authentication
 	async turnOnTwoFactor(userId: string, code: string) {
 		const user = await this.prisma.user.findUnique({
 			where: { id:userId },
@@ -46,22 +44,21 @@ export class TwoFactorService {
 		if (!user || !user.twoFactorSecret) {
       		throw new UnauthorizedException('No 2FA secret has been configured previously');
     	}
-		//authenticator.verify(...): La librería comprueba si el código de 6 dígitos (code) 
-		//encaja matemáticamente con el secreto del usuario (user.twoFactorSecret)
+		//authenticator.verify(...): // The library checks if the 6-digit code mathematically matches the user's secret
 		const isCodeValid = verify({
-			token: code, //El token de 2FA: código de 6 dígitos que introdujo el usuario (code)
-			secret: user.twoFactorSecret, //La llave secreta que teníamos guardada en la base de datos
+			token: code,
+			secret: user.twoFactorSecret,
 		});
 		if (!isCodeValid) {
       		throw new UnauthorizedException('Invalid verification code');
 		}
-		//Si es valido, se activa el doble factor
+		//If it is valid, two-factor authentication is activated.
 		return this.prisma.user.update({
 			where: { id: userId },
 			data: { isTwoFactorEnabled: true},
 		});
 	}
-	// VERIFICAR EL CODIGO 6 DIGITOS introducido durante el login (o cuando sea necesario)
+	// VERIFY THE 6-DIGIT CODE entered during login (or whenever necessary)
     async verifyCode(userId: string, code: string): Promise<boolean> {
         const user = await this.prisma.user.findUnique({
             where: { id: userId },
@@ -71,7 +68,7 @@ export class TwoFactorService {
             throw new UnauthorizedException('No 2FA secret configured for this user');
         }
 		
-		//obligamos a que el codigo sea de 6 digitos
+		//We require the code to be 6 digits long.
 		if (!code || !/^\d{6}$/.test(code)) {
 			throw new UnauthorizedException('Invalid 2FA code format');
 		}
@@ -88,28 +85,25 @@ export class TwoFactorService {
         return true;
     }
 
-	//Funcion para poder desactivar el 2FA, pidiendo confirmacion de 6 digitos
+	//Function to disable 2FA, requiring a 6-digit confirmation code
 	async turnOffTwoFactor(userId: string, code: string) {
 		const user = await this.prisma.user.findUnique({
 			where: { id:userId},
 		});
-		//comprobamos si hay ese secreto unico aleatorio en BD o ese Usuario
 		if (!user || !user.twoFactorSecret) {
       		throw new UnauthorizedException('No 2FA secret has been configured previously');
     	}
-		//Comprobamos si estaba Activado el 2FA
 		if(!user.isTwoFactorEnabled) {
 			throw new UnauthorizedException('2FA is not enabled for this user');
 		}
-		//Comprobamos si es válido ese codigo de 6 digitos, antes de Borrar nada
 		const isCodeValid = verify({
-			token: code, //El token de 2FA: código de 6 dígitos que introdujo el usuario (code)
-			secret: user.twoFactorSecret, //La llave secreta que teníamos guardada en la base de datos
+			token: code,
+			secret: user.twoFactorSecret,
 		});
 		if (!isCodeValid) {
       		throw new UnauthorizedException('Invalid verification code');
 		}
-		//Si es valido, entonces si apagamos el 2fa y limpiamos el secreto
+		//If it is valid, then we disable 2FA and clear the secret
 		return this.prisma.user.update({
 			where: { id: userId },
 			data: { 

@@ -37,7 +37,8 @@ certs:
 			-newkey rsa:2048 \
 			-keyout $(CERT_KEY) \
 			-out $(CERT_CRT) \
-			-subj "/CN=localhost"; \
+			-subj "/CN=localhost" \
+			-addext "subjectAltName=DNS:localhost,IP:127.0.0.1"; \
 	else \
 		echo "Certificate already exists; skipping."; \
 	fi
@@ -62,7 +63,10 @@ push:
 	$(COMPOSE) exec backend npm run db:push
 
 seed:
-	$(COMPOSE) exec backend npx prisma db seed
+	$(COMPOSE) exec backend npx tsx --no-cache prisma/seed.ts
+	
+users:
+	@$(COMPOSE) exec db psql -U postgres -d transcendence -c "SELECT email, username FROM \"User\";"
 
 down:
 	$(MONITORING) down
