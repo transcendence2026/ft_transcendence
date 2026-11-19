@@ -1,6 +1,6 @@
 .PHONY: help build certs up push seed down restart logs ps clean monitor, monitor-down, monitor-logs
 
-COMPOSE_FILE ?= docker-compose.yml
+COMPOSE_FILE ?= docker-compose-prod.yml
 COMPOSE := docker compose -f $(COMPOSE_FILE)
 MONITORING := docker compose -f monitoring/docker-compose.yml
 NET := ft_transcendence_shared
