@@ -64,8 +64,8 @@ export class TwoFactorController {
         path: '/api/auth/refresh',
       });
     }
-
-    return result;
+	const { refreshToken, ...safeResult } = result;
+    return safeResult;
   }
 
 	// turn-off: Disable 2FA

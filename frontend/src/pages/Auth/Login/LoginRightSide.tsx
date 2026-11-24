@@ -54,7 +54,7 @@ export default function LoginRightSide() {
   const [userId, setUserId] = useState<string>("");
   const [code, setCode] = useState<string>("");
   
-  const { login, oauth42 } = useAuth();
+  const { login, oauth42, refreshUser } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   useEffect(() => {
@@ -89,22 +89,20 @@ export default function LoginRightSide() {
   };
 
   // Paso 2: Enviar userId y code al endpoint de verificación
+    // Eliminamos el último resto de localStorage en el flujo 2FA 
+	// para que toda la autenticación funcione al 100 % con cookies HttpOnly
   const handleVerify2Fa = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setErrorMessage(null);
     setIsSubmitting(true);
     try {
-      const res = await axios.post("/api/auth/2fa/authenticate", {
+      await axios.post("/api/auth/2fa/authenticate", {
         userId,
         code,
       });
 
-      const token = res.data.accessToken || res.data.token;
-      if (token) {
-        localStorage.setItem("token", token);
-        navigate("/dashboard");
-        window.location.reload();
-      }
+      await refreshUser();
+      navigate("/dashboard");
     } catch (err) {
       setErrorMessage(getAuthErrorMessage(err, "El código 2FA no es válido o ha expirado."));
     } finally {
