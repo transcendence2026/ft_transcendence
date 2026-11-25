@@ -10,6 +10,7 @@ export default function Notifications() {
   const [actionError, setActionError] = useState<string | null>(null);
 
   const updateFriendRequest = async (requestId: string, action: "accept" | "reject") => {
+    const item = notification.find((candidate) => candidate.requestId === requestId);
     setProcessingRequestId(requestId);
     setActionError(null);
     try {
@@ -20,10 +21,10 @@ export default function Notifications() {
       if (!response.ok) {
         throw new Error(`Friend request update failed: ${response.status}`);
       }
-      const item = notification.find((candidate) => candidate.requestId === requestId);
       if (item) markAsRead(item.id);
     } catch (error) {
       console.error("No se pudo actualizar la solicitud de amistad", error);
+      if (item) markAsRead(item.id);
       setActionError("No se pudo actualizar la solicitud de amistad.");
     } finally {
       setProcessingRequestId(null);
