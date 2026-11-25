@@ -31,12 +31,12 @@ export function RestaurantCard({ restaurant }: { restaurant: RestaurantResult })
 
 			<div className="mt-4 flex items-center gap-2 border-t border-white/5 pt-3">
 				{avgRating === null ? (
-					<Badge tone="muted">Sin reseñas</Badge>
+					<Badge tone="muted">No reviews</Badge>
 				) : (
 					<>
 						<span className="text-sm text-[#fabc4d]">★ {avgRating.toFixed(1)}</span>
 						<span className="text-xs text-[#a88a83]">
-							({reviewCount} {reviewCount === 1 ? 'reseña' : 'reseñas'})
+							({reviewCount} {reviewCount === 1 ? 'review' : 'reviews'})
 						</span>
 					</>
 				)}

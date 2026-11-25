@@ -177,20 +177,20 @@ export default function RestaurantDetail() {
 						to="/discover"
 						className="text-xs text-[#a88a83] hover:text-[#fabc4d] focus-visible:outline focus-visible:outline-1 focus-visible:outline-[#fabc4d]"
 					>
-						← Volver a explorar
+						← Explore again
 					</Link>
 
 					{state.status === 'loading' && <Loader label="Cargando restaurante..." />}
 
 					{state.status === 'notFound' && (
 						<p role="alert" className="border border-white/5 bg-[#1d1b1a] p-6 text-center text-sm text-[#a88a83]">
-							Este restaurante no existe.
+							This restaurant doesn't exist.
 						</p>
 					)}
 
 					{state.status === 'error' && (
 						<p role="alert" className="border border-[#ef6540]/30 bg-[#ef6540]/15 px-4 py-3 text-sm text-[#ffb4a1]">
-							No se pudo cargar el restaurante ({state.message}).
+							The restaurant could not be loaded ({state.message}).
 						</p>
 					)}
 
@@ -268,20 +268,20 @@ function Content({
 					aria-pressed={isFavorite}
 					className="mt-4 inline-flex items-center gap-2 border border-[#fabc4d]/40 px-4 py-2 text-sm text-[#fabc4d] hover:bg-[#fabc4d]/10 disabled:opacity-50"
 				>
-					{isFavorite ? '★ Remove from favorites' : '☆ Añadir a favoritos'}
+					{isFavorite ? '★ Remove from favorites' : '☆ Add to favourites'}
 				</button>
 				<p className="mt-2 text-sm text-[#a88a83]">
 					<span className="text-[#fabc4d]">{'€'.repeat(r.priceRange)}</span> ·{' '}
 					{r.avgRating !== null
-						? `★ ${r.avgRating.toFixed(1)} (${r.reviewCount} ${r.reviewCount === 1 ? 'reseña' : 'reseñas'})`
-						: 'Sin reseñas todavía'}
+						? `★ ${r.avgRating.toFixed(1)} (${r.reviewCount} ${r.reviewCount === 1 ? 'review' : 'reviews'})`
+						: 'No reviews yet'}
 				</p>
 			</header>
 
 			<section aria-labelledby="dishes-title" className="border border-white/5 bg-[#211f1e] p-5">
-				<h2 id="dishes-title" className="text-[20px] text-[#e6e1df]">Platos</h2>
+				<h2 id="dishes-title" className="text-[20px] text-[#e6e1df]">Dishes</h2>
 				{r.dishes.length === 0 ? (
-					<p className="mt-3 text-sm text-[#a88a83]">Este restaurante aún no tiene platos.</p>
+					<p className="mt-3 text-sm text-[#a88a83]">This restaurant doesn't have any dishes on the menu yet.</p>
 				) : (
 					<>
 						{selectedTag && (
@@ -290,7 +290,7 @@ function Content({
 								onClick={() => setSelectedTag(null)}
 								className="mt-3 text-xs text-[#fabc4d] hover:underline"
 							>
-								Ver todos los platos
+								View all dishes
 							</button>
 						)}
 						<ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -331,18 +331,18 @@ function Content({
 			</section>
 
 			<section className="border border-white/5 bg-[#211f1e] p-5">
-				<h2 className="text-[20px] text-[#e6e1df]">Escribe una reseña</h2>
+				<h2 className="text-[20px] text-[#e6e1df]">Write a review</h2>
 
 				<form onSubmit={onSubmitReview} className="mt-4 flex flex-col gap-4">
 					<label className="flex flex-col gap-1 text-sm text-[#a88a83]">
-						Plato
+						Dish
 						<select
 							value={reviewDishId}
 							onChange={(event) => onReviewDishChange(event.target.value)}
 							required
 							className="border border-white/10 bg-[#1d1b1a] px-3 py-2 text-[#e6e1df]"
 						>
-							<option value="">Selecciona un plato</option>
+							<option value="">Choose a dish</option>
 								{r.dishes.map((dish) => (
 									<option key={dish.id} value={dish.id}>
 										{dish.name}
@@ -352,7 +352,7 @@ function Content({
 					</label>
 
 					<label className="flex flex-col gap-1 text-sm text-[#a88a83]">
-						Clasificación
+						Ranking
 						<select
 							value={reviewRating}
 							onChange={(event) => onReviewRatingChange(Number(event.target.value))}
@@ -367,7 +367,7 @@ function Content({
 					</label>
 
 					<label className="flex flex-col gap-1 text-sm text-[#a88a83]">
-						Comentario
+						Comment
 						<textarea
 							value={reviewComment}
 							onChange={(event) => onReviewCommentChange(event.target.value)}
@@ -395,9 +395,9 @@ function Content({
 			</section>
 
 			<section aria-labelledby="reviews-title" className="border border-white/5 bg-[#211f1e] p-5">
-				<h2 id="reviews-title" className="text-[20px] text-[#e6e1df]">Reseñas recientes</h2>
+				<h2 id="reviews-title" className="text-[20px] text-[#e6e1df]">Recent reviews</h2>
 				{r.recentReviews.length === 0 ? (
-					<p className="mt-3 text-sm text-[#a88a83]">Todavía no hay reseñas.</p>
+					<p className="mt-3 text-sm text-[#a88a83]">There are no reviews yet.</p>
 				) : (
 					<ul className="mt-4 flex flex-col gap-3">
 						{r.recentReviews.map((rev) => (
