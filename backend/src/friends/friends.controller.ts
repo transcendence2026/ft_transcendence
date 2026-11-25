@@ -21,4 +21,9 @@ export class FriendsController {
 
   @Delete('requests/:requestId')
   cancel(@Req() req: any, @Param('requestId') requestId: string) { return this.friendsService.cancelRequest(requestId, req.user.id); }
+
+  @Delete(':friendId')
+  removeFriend(@Req() req: any, @Param('friendId') friendId: string) {
+    return this.friendsService.removeFriend(friendId, req.user.id);
+  }
 }

@@ -40,7 +40,7 @@ export default function AppLayout({
   const navigate = useNavigate();
   const location = useLocation();
   const username = user?.username ?? "Usuario";
-  const { notification, markAllAsRead, markAsRead } = useNotification();
+  const { notification, markAllAsRead } = useNotification();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [toastNotification, setToastNotification] = useState<typeof notification[number]>();
   const unreadNotifications = notification.filter((item) => !item.read);
@@ -81,7 +81,6 @@ export default function AppLayout({
               type="button"
               className="min-w-0 flex-1 text-left"
               onClick={() => {
-                markAsRead(toastNotification.id);
                 setToastNotification(undefined);
                 navigate("/notifications");
               }}

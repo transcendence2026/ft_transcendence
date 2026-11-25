@@ -83,6 +83,21 @@ export class FriendsService {
     return this.prisma.friendship.delete({ where: { id: requestId } });
   }
 
+  async removeFriend(friendId: string, userId: string) {
+    const friendship = await this.prisma.friendship.findFirst({
+      where: {
+        status: FriendshipStatus.ACCEPTED,
+        OR: [
+          { senderId: userId, receiverId: friendId },
+          { senderId: friendId, receiverId: userId },
+        ],
+      },
+    });
+    if (!friendship) throw new NotFoundException('Friendship not found');
+
+    return this.prisma.friendship.delete({ where: { id: friendship.id } });
+  }
+
   async list(userId: string) {
     const relations = await this.prisma.friendship.findMany({
       where: { OR: [{ senderId: userId }, { receiverId: userId }] },

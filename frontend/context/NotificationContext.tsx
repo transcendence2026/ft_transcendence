@@ -23,6 +23,7 @@ interface NotificationContextValue {
   notification: NotificationType[]
   markAsRead: (notificationId: string) => void
   markAllAsRead: () => void
+  dismissNotification: (notificationId: string) => Promise<void>
   error: string | undefined;
 }
 
@@ -93,8 +94,21 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     })
   }
 
+  const dismissNotification = async (notificationId: string) => {
+    try {
+      const response = await fetch(`/api/notifications/${notificationId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Unable to dismiss notification');
+      setNotification((current) => current.filter((notif) => notif.id !== notificationId));
+    } catch {
+      setError('Unable to dismiss notification');
+    }
+  }
+
   return (
-    <NotificationContext.Provider value={{ notification, markAsRead, markAllAsRead, error }}>
+    <NotificationContext.Provider value={{ notification, markAsRead, markAllAsRead, dismissNotification, error }}>
       {children}
     </NotificationContext.Provider>
   );

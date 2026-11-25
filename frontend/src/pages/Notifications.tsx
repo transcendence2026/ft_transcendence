@@ -5,7 +5,7 @@ import { useState } from "react";
 
 export default function Notifications() {
   const { logout } = useAuth();
-  const { notification, markAllAsRead, markAsRead } = useNotification();
+  const { notification, markAllAsRead, dismissNotification } = useNotification();
   const [processingRequestId, setProcessingRequestId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -21,10 +21,10 @@ export default function Notifications() {
       if (!response.ok) {
         throw new Error(`Friend request update failed: ${response.status}`);
       }
-      if (item) markAsRead(item.id);
+      if (item) await dismissNotification(item.id);
     } catch (error) {
       console.error("No se pudo actualizar la solicitud de amistad", error);
-      if (item) markAsRead(item.id);
+      if (item) await dismissNotification(item.id);
       setActionError("No se pudo actualizar la solicitud de amistad.");
     } finally {
       setProcessingRequestId(null);
@@ -91,7 +91,7 @@ export default function Notifications() {
                       />
                       <button
                         type="button"
-                        onClick={() => markAsRead(item.id)}
+                        onClick={() => void dismissNotification(item.id)}
                         className="min-w-0 flex-1 text-left"
                       >
                         <span className="block text-sm leading-6 text-[#e6e1df]">
