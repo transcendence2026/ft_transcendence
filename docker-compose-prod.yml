@@ -86,7 +86,7 @@ networks:
   # Internal network that prevents direct external access to the database.
   backend-net:
     driver: bridge
-    # internal: true
+    internal: true
   shared:
 
 volumes:
