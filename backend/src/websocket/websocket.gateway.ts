@@ -5,6 +5,7 @@ import { PresenceService, RoomService } from './websocket.service.js';
 import jwt from 'jsonwebtoken';
 import { DirectMessageDto, JoinRoomDto, MessagePayloadDto, TypingDto } from './dto/messagePayload.dto.js';
 import { MessagesService } from '../messages/messages.service.js';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 export type Client = {
   userId?: string;
@@ -18,6 +19,7 @@ export class WebsocketGateway {
     private readonly presenceService: PresenceService,
     private readonly roomService: RoomService,
     private readonly messagesService: MessagesService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
   private readonly logger = new Logger(WebsocketGateway.name);
 
@@ -110,6 +112,15 @@ export class WebsocketGateway {
     }
 
     const savedMessage = await this.messagesService.createMessage(client.userId, data.receiverId, data.text)
+
+    if (client.userId !== data.receiverId) {
+      this.eventEmitter.emit('notification.create', {
+        senderId: client.userId,
+        receiverId: data.receiverId,
+        type: 'message',
+        message: 'Has recibido un nuevo mensaje.',
+      });
+    }
 
     const receiver = this.presenceService.getUserSockets(data.receiverId)
     const senderId = this.presenceService.getUserSockets(client.userId)

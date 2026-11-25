@@ -49,6 +49,8 @@ model User {
   receivedMessages    Message[]            @relation("UserReceivedMessages")
   notificationsSent   Notification[]       @relation("NotificationSender")
   notifications       Notification[]       @relation("NotificationReceiver")
+  archivedConversations ConversationArchive[] @relation("ArchivedConversations")
+  conversationsArchivedByOthers ConversationArchive[] @relation("ArchivedConversationPeer")
   postLikes           PostLike[]
 }
 
@@ -249,6 +251,17 @@ model Message {
 
   @@index([senderId])
   @@index([receiverId])
+}
+
+model ConversationArchive {
+  userId     String
+  user       User     @relation("ArchivedConversations", fields: [userId], references: [id], onDelete: Cascade)
+  peerId     String
+  peer       User     @relation("ArchivedConversationPeer", fields: [peerId], references: [id], onDelete: Cascade)
+  archivedAt DateTime @default(now())
+
+  @@id([userId, peerId])
+  @@index([peerId])
 }
 
 model Notification {

@@ -2,6 +2,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -19,10 +20,20 @@ type NotificationType = {
   event?: string;
 }
 
+export function getNotificationDestination(
+  notification: Pick<NotificationType, 'type' | 'senderId'>,
+): string | null {
+  if (notification.type === 'message') {
+    return `/chat?userId=${encodeURIComponent(notification.senderId)}`;
+  }
+  return null;
+}
+
 interface NotificationContextValue {
   notification: NotificationType[]
-  markAsRead: (notificationId: string) => void
-  markAllAsRead: () => void
+  incomingNotification: NotificationType | null
+  markAsRead: (notificationId: string) => Promise<void>
+  markAllAsRead: () => Promise<void>
   error: string | undefined;
 }
 
@@ -32,69 +43,106 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const { status, messages } = useWebSocket();
   
   const [notification, setNotification] = useState<NotificationType[]>([])
+  const [incomingNotification, setIncomingNotification] = useState<NotificationType | null>(null)
   const [error, setError ] = useState<string | undefined>(undefined)
-
+  const processedMessages = useRef(new WeakSet<object>())
 
   useEffect(() => {
-    if (status === 'open') {
-      void fetch('/api/notifications', { credentials: 'include' })
-        .then((response) => {
-          if (!response.ok) throw new Error('Unable to load notifications');
-          return response.json() as Promise<NotificationType[]>;
-        })
-        .then(setNotification)
-        .catch(() => setError('Unable to load notifications'));
+    if (status !== 'open') {
+      if (status === 'idle') {
+        setNotification([]);
+        setIncomingNotification(null);
+        setError(undefined);
+      }
+      return;
     }
+
+    let isCurrentSession = true;
+    void fetch('/api/notifications', { credentials: 'include' })
+      .then((response) => {
+        if (!response.ok) throw new Error('Unable to load notifications');
+        return response.json() as Promise<NotificationType[]>;
+      })
+      .then((loadedNotifications) => {
+        if (!isCurrentSession) return;
+        setNotification((current) => {
+          const notificationsById = new Map(
+            loadedNotifications.map((item) => [item.id, item]),
+          );
+          current.forEach((item) => notificationsById.set(item.id, item));
+          return [...notificationsById.values()].sort(
+            (first, second) => Date.parse(second.createdAt) - Date.parse(first.createdAt),
+          );
+        });
+        setError(undefined);
+      })
+      .catch(() => {
+        if (isCurrentSession) setError('Unable to load notifications');
+      });
+
+    return () => {
+      isCurrentSession = false;
+    };
   }, [status]);
 
   useEffect(() => {
     if (status != 'open' || messages.length <= 0) return;
 
-    try {
-      const lastMessage = JSON.parse(messages.slice(-1)[0].data) as {
-        event?: string;
-        data?: NotificationType;
-      };
+    for (const frame of messages) {
+      if (processedMessages.current.has(frame)) continue;
+      processedMessages.current.add(frame);
+      if (frame.data === 'Bienvenido al WebSocket !') continue;
 
-      if (lastMessage.event === 'notification' && lastMessage.data) {
-        setNotification((prev) => [
-          lastMessage.data!,
-          ...prev.filter((notification) => notification.id !== lastMessage.data!.id),
-        ]);
+      try {
+        const lastMessage = JSON.parse(frame.data) as {
+          event?: string;
+          data?: NotificationType;
+        };
+
+        if (lastMessage.event === 'notification' && lastMessage.data) {
+          setIncomingNotification(lastMessage.data);
+          setNotification((prev) => [
+            lastMessage.data!,
+            ...prev.filter((notification) => notification.id !== lastMessage.data!.id),
+          ]);
+        }
+      } catch {
+        setError('Unable to process notification message');
       }
-    } catch (err) {
-      setError("Error will catching notifications");
     }
   }, [messages, status])
 
-  const markAsRead = (notificationId: string) => {
-    void fetch(`/api/notifications/${notificationId}/read`, {
-      method: 'PATCH',
-      credentials: 'include',
-    }).catch(() => setError('Unable to mark notification as read'));
-    setNotification(prevState => {
-      return prevState.map((notif) => {
-        if (notif.id === notificationId) {
-          return { ...notif, read: true };
-        }
-        return notif;
+  const markAsRead = async (notificationId: string) => {
+    try {
+      const response = await fetch(`/api/notifications/${notificationId}/read`, {
+        method: 'PATCH',
+        credentials: 'include',
       });
-    })
+      if (!response.ok) throw new Error('Unable to mark notification as read');
+      setNotification((prevState) => prevState.map((notif) => (
+        notif.id === notificationId ? { ...notif, read: true } : notif
+      )));
+      setError(undefined);
+    } catch {
+      setError('Unable to mark notification as read');
+    }
   }
-  const markAllAsRead = () => {
-    void fetch('/api/notifications/read-all', {
-      method: 'PATCH',
-      credentials: 'include',
-    }).catch(() => setError('Unable to mark notifications as read'));
-    setNotification(prevState => {
-      return prevState?.map((notif) => {
-        return {...notif, read: true}
-      })
-    })
+  const markAllAsRead = async () => {
+    try {
+      const response = await fetch('/api/notifications/read-all', {
+        method: 'PATCH',
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Unable to mark notifications as read');
+      setNotification((prevState) => prevState.map((notif) => ({ ...notif, read: true })));
+      setError(undefined);
+    } catch {
+      setError('Unable to mark notifications as read');
+    }
   }
 
   return (
-    <NotificationContext.Provider value={{ notification, markAsRead, markAllAsRead, error }}>
+    <NotificationContext.Provider value={{ notification, incomingNotification, markAsRead, markAllAsRead, error }}>
       {children}
     </NotificationContext.Provider>
   );
