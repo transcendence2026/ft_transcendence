@@ -548,7 +548,14 @@ function ProfileContent() {
 				  {profilePostsLoading && !profilePosts.length ? (
 					<Loader label="Loading posts" />
 				  ) : profilePosts.length ? (
-					profilePosts.map((post) => <SocialPostCard key={post.id} post={post} />) 
+					profilePosts.map((post) => (
+						<SocialPostCard
+							key={post.id}
+							post={post}
+							onPostUpdated={(updatedPost) => setProfilePosts((current) => current.map((item) => item.id === updatedPost.id ? updatedPost : item))}
+							onPostDeleted={(postId) => setProfilePosts((current) => current.filter((item) => item.id !== postId))}
+						/>
+					))
 				  ) : ( 
 				    <p className="text-muted">No visible posts yet.</p>
 				  )}
