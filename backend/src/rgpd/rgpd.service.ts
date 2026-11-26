@@ -99,7 +99,7 @@ export class RgpdService {
 			},
 		});
 		if (!user) {
-      		throw new NotFoundException('Usuario no encontrado');
+      		throw new NotFoundException('User not found');
     	}
 
 		// Standardized GDPR JSON export payload
