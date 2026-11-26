@@ -88,7 +88,7 @@ function profileImage(url?: string | null) {
 
 function ProfileContent() {
   const { id } = useParams<{ id: string }>();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, refreshUser } = useAuth();
   const navigate = useNavigate();
   const isOwnProfile = !id || id === user?.id;
   const profileId = id ?? user?.id;
@@ -209,6 +209,7 @@ function ProfileContent() {
       const response = await axios.post<{ user?: { profile?: ProfileData['profile'] }; profile?: ProfileData['profile'] }>(`${API_BASE_URL}/api/users/avatar`, data);
       const updatedProfile = response.data.user?.profile ?? response.data.profile;
       setProfile((current) => current ? { ...current, profile: updatedProfile ?? current.profile } : current);
+      await refreshUser();
       setAvatarPreview(null);
       setMessage('Avatar updated.');
       setError(null);
