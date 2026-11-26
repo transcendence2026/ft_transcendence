@@ -9,11 +9,11 @@ export const Footer: React.FC = () => {
       <div className="flex flex-wrap justify-center items-center gap-4 sm:gap-6 px-4">
         <span>© 2026 TasteSync</span>
         <Link to="/terms" className="hover:text-indigo-400 transition-colors">
-          Términos / Terms
+          Terms
         </Link>
         <span>•</span>
         <Link to="/privacy" className="hover:text-indigo-400 transition-colors">
-          Privacidad / Privacy
+          Privacy
         </Link>
       </div>
     </footer>

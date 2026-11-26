@@ -646,7 +646,7 @@ function DashboardContent() {
                       }}
                       className="border border-red-500/30 bg-red-950/30 px-2.5 py-1 text-[10px] tracking-[0.5px] text-red-300 uppercase hover:bg-red-950/50"
                     >
-                      Desactivate
+                      Deactivate
                     </button>
                   </div>
                 ) : (
