@@ -42,7 +42,7 @@ export default function App() {
             <div className="min-h-screen flex flex-col bg-gray-950 text-white">
               <main className="flex-1">
                 <Routes>
-                  {/* Rutas exclusivas para invitados */}
+                  {/* Guest-only routes */}
                   <Route
                     path="/login"
                     element={
@@ -60,7 +60,7 @@ export default function App() {
                     }
                   />
 
-                  {/* Rutas protegidas para usuarios logueados */}
+                  {/* Protected routes for logged-in users */}
                   <Route
                     path="/dashboard"
                     element={
@@ -102,21 +102,21 @@ export default function App() {
                     }
                   />
 
-                  {/* Páginas institucionales públicas */}
+                  {/* Public institutional pages */}
                   <Route path="/terms" element={<TermsOfService />} />
                   <Route path="/privacy" element={<PrivacyPolicy />} />
                   <Route path="/discover" element={<PrivateRoute><Discover /></PrivateRoute>} />
                   <Route path="/restaurants/:id" element={<PrivateRoute><RestaurantDetail /></PrivateRoute>} />
 
-                  {/* Playground de componentes del equipo */}
+                  {/* Team component playground */}
                   <Route path="/components" element={<ComponentPlayground />} />
 
-                  {/* Cualquier otra URL va al dashboard */}
+                  {/* Any other URL redirects to the dashboard */}
                   <Route path="*" element={<Navigate to="/dashboard" replace />} />
                 </Routes>
               </main>
 
-              {/* Pie de página accesible en todas las vistas */}
+              {/* Footer accessible across all views */}
               <Footer />
             </div>
           </BrowserRouter>
