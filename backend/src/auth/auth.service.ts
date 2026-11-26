@@ -14,6 +14,16 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { TwoFactorService } from './2fa/two-factor.service.js';
 import * as crypto from 'crypto';
 
+
+const DEFAULT_AVATARS = ['/imgPlaceholder1.png', '/imgPlaceholder2.png'];
+
+function getDefaultAvatar(seedValue: string): string {
+  const hash = seedValue
+    .split('')
+    .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return DEFAULT_AVATARS[hash % DEFAULT_AVATARS.length];
+}
+
 @Injectable()
 export class AuthService {
 	private readonly saltRounds = 10;
@@ -87,9 +97,11 @@ export class AuthService {
                 username,
                 passwordHash: hashedPassword,
                 status: 'ONLINE',
-				profile: {
-                    create: {},
-				}
+                profile: {
+                create: {
+                    avatarUrl: getDefaultAvatar(email),
+                },
+                },
             },
         });
         // If validation succeeds, generates and returns the JWT tokens
