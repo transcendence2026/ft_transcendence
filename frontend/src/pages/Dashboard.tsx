@@ -634,7 +634,7 @@ function DashboardContent() {
                   <div className="flex flex-col items-end gap-2">
                     <span className="inline-flex shrink-0 items-center gap-1.5 border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] tracking-[0.8px] text-emerald-400 uppercase">
                       <span className="size-1.5 rounded-full bg-emerald-400" />
-                      Activado
+                      Activated
                     </span>
                     <button
                       type="button"
@@ -646,7 +646,7 @@ function DashboardContent() {
                       }}
                       className="border border-red-500/30 bg-red-950/30 px-2.5 py-1 text-[10px] tracking-[0.5px] text-red-300 uppercase hover:bg-red-950/50"
                     >
-                      Desactivar
+                      Desactivate
                     </button>
                   </div>
                 ) : (
@@ -678,10 +678,12 @@ function DashboardContent() {
                   {isSuccess ? (
                     <div className="mt-4 border border-green-500/30 bg-green-950/40 p-3 text-center text-sm text-green-300">
                       2FA activated successfully!
+					  </div>
+                    ) : (
                     <div className="mt-4 space-y-4">
                       {qrCodeImage && (
                         <div className="mx-auto w-fit bg-white p-2">
-                          <img src={qrCodeImage} alt="Código QR 2FA" className="h-36 w-36" />
+                          <img src={qrCodeImage} alt="2FA QR Code" className="h-36 w-36" />
                         </div>
                       )}
                       <div>
@@ -729,7 +731,7 @@ function DashboardContent() {
               {/* 2FA Deactivation Modal */}
               {showDisableModal && (
                 <div className="mt-4 border border-white/5 bg-[#141312] p-4">
-                  <h4 className="text-[14px] text-[#e6e1df]">Desactivar 2FA</h4>
+                  <h4 className="text-[14px] text-[#e6e1df]">Desactivate 2FA</h4>
                   <p className="mt-1 text-[12px] text-[#a88a83]">
                     Enter the 6-digit code from your app.
                   </p>
