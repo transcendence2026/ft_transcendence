@@ -18,6 +18,13 @@ import {
   useNotification,
 } from "../../context/NotificationContext";
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL !== undefined
+    ? import.meta.env.VITE_API_URL
+    : import.meta.env.DEV
+      ? "http://localhost:3000"
+      : "";
+
 const NAV_ITEMS = [
   { id: "flux", label: "INICIO", icon: Compass, href: "/dashboard" },
   { id: "curiosities", label: "EXPLORAR", icon: Search, href: "/discover" },
@@ -32,6 +39,11 @@ interface AppLayoutProps {
   isSaved?: boolean;
   onToggleSaved?: () => void;
   fullHeight?: boolean;
+}
+
+function getAvatarSrc(url?: string | null): string | null {
+  if (!url || url === "default-avatar.png") return null;
+  return url.startsWith("http") ? url : `${API_BASE_URL}${url}`;
 }
 
 export default function AppLayout({
@@ -286,9 +298,21 @@ export default function AppLayout({
                   MI PERFIL
                 </p>
               </div>
-              <div className="flex size-8 items-center justify-center rounded-full bg-[#ffb4a1]">
-                <UserRound aria-hidden="true" className="size-3 text-[#611300]" strokeWidth={2} />
-              </div>
+              {(() => {
+                const avatarSrc = getAvatarSrc(user?.avatarUrl);
+
+                return avatarSrc ? (
+                    <img
+                    src={avatarSrc}
+                    alt={username}
+                    className="size-8 rounded-full border border-white/10 object-cover"
+                    />
+                ) : (
+                    <div className="flex size-8 items-center justify-center rounded-full bg-[#ffb4a1]">
+                    <UserRound aria-hidden="true" className="size-3 text-[#611300]" strokeWidth={2} />
+                    </div>
+                );
+                })()}
             </button>
           </div>
         </header>

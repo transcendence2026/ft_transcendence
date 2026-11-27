@@ -61,6 +61,7 @@ services:
       # The backend can access the database and receive traffic from the proxy.
       - backend-net
       - proxy-net
+      - shared
     expose:
       # Expose port 3000 only to other services, not directly to the host.
       - "3000"
@@ -86,6 +87,7 @@ networks:
   backend-net:
     driver: bridge
     internal: true
+  shared:
 
 volumes:
   # Named volumes preserve state and dependencies between container restarts.

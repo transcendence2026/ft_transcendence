@@ -14,17 +14,17 @@ export function NewChatUserList({
 	return (
 		<div className="mt-3 max-h-52 overflow-y-auto">
 			{loading && results.length === 0 ? (
-				<p className="px-2 py-4 text-center text-[12px] text-[#a88a83]">Buscando...</p>
+				<p className="px-2 py-4 text-center text-[12px] text-[#a88a83]">Searching...</p>
 			) : error ? (
 				<div className="px-2 py-4 text-center text-[12px] text-[#a88a83]">
 					<p>{error}</p>
 					<button type="button" onClick={retry} className="mt-1 text-[#fabc4d] underline">
-						Reintentar
+						Try again
 					</button>
 				</div>
 			) : results.length === 0 ? (
 				<p className="px-2 py-4 text-center text-[12px] leading-relaxed text-[#a88a83]">
-					No se encontró ningún usuario.
+					No users were found.
 				</p>
 			) : (
 				<>
@@ -43,7 +43,7 @@ export function NewChatUserList({
 									@{user.username}
 								</span>
 								<span className="block text-[10px] tracking-[0.8px] text-[#a88a83] uppercase">
-									{user.friendshipStatus === "ACCEPTED" ? "Amigo" : "Usuario"}
+									{user.friendshipStatus === "ACCEPTED" ? "Friend" : "User"}
 								</span>
 							</span>
 						</button>
@@ -55,7 +55,7 @@ export function NewChatUserList({
 							onClick={() => void loadMore()}
 							className="w-full px-2 py-2 text-center text-[11px] text-[#fabc4d] hover:underline disabled:opacity-50"
 						>
-							{loadingMore ? "Cargando..." : "Cargar más"}
+							{loadingMore ? "Loading..." : "Load more"}
 						</button>
 					)}
 				</>

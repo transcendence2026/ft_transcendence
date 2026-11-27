@@ -25,6 +25,7 @@ export interface User {
     email: string;
     role?: string;
     isTwoFactorEnabled?: boolean;
+    avatarUrl?: string | null;
 }
 
 interface AuthResponse {

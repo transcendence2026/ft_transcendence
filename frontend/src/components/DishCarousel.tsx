@@ -53,18 +53,18 @@ export function DishCarousel({ onTagClick }: { onTagClick?: (tag: string) => voi
 			<div className="flex items-end justify-between gap-4">
 				<div>
 					<p className="text-[10px] font-bold tracking-[2px] text-[#fabc4d] uppercase">
-						{topRated ? 'LOS MÁS VALORADOS' : 'RECOMENDACIONES DE TasteSync'}
+						{topRated ? 'TOP RATED' : 'TasteSync RECOMMENDATIONS'}
 					</p>
 					<h2 id="recommendations-title" className="mt-1 text-[20px] text-[#e6e1df]">
-						{topRated ? 'Platos populares' : 'Lo mejor para ti'}
+						{topRated ? 'Popular dishes' : 'Top picks for you'}
 					</h2>
 				</div>
 				{dishes.length > 1 && (
 					<div className="flex gap-2">
-						<Button type="button" variant="ghost" aria-label="Anteriores" onClick={() => scroll(-1)}>
+						<Button type="button" variant="ghost" aria-label="Previous" onClick={() => scroll(-1)}>
 							<ChevronLeft aria-hidden="true" className="size-4" />
 						</Button>
-						<Button type="button" variant="ghost" aria-label="Siguientes" onClick={() => scroll(1)}>
+						<Button type="button" variant="ghost" aria-label="Next" onClick={() => scroll(1)}>
 							<ChevronRight aria-hidden="true" className="size-4" />
 						</Button>
 					</div>
@@ -73,24 +73,24 @@ export function DishCarousel({ onTagClick }: { onTagClick?: (tag: string) => voi
 
 			<div className="mt-4">
 				{loading ? (
-					<Loader label="Preparando recomendaciones..." />
+					<Loader label="Putting together recommendations for dishes and restaurants..." />
 				) : error ? (
 					<div className="flex items-center gap-3 text-sm text-[#ffb4a1]">
-						<span>No se pudieron cargar las recomendaciones.</span>
+						<span>The recommendations could not be loaded.</span>
 						<Button type="button" variant="secondary" onClick={() => setAttempt((n) => n + 1)}>
-							Reintentar
+							Please try again
 						</Button>
 					</div>
 				) : dishes.length === 0 ? (
 					<p className="text-sm text-[#a88a83]">
-						Todavía no hay recomendaciones disponibles para tu perfil.
+						There are no recommendations available for your profile yet.
 					</p>
 				) : (
 					// tabIndex makes the track focusable so arrow keys scroll it
 					<ul
 						ref={trackRef}
 						tabIndex={0}
-						aria-label="Lista de platos recomendados"
+						aria-label="List of recommended dishes"
 						className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 focus-visible:outline focus-visible:outline-1 focus-visible:outline-[#fabc4d]"
 					>
 						{visibleDishes.map((dish) => (
@@ -122,7 +122,7 @@ export function DishCarousel({ onTagClick }: { onTagClick?: (tag: string) => voi
 										<button
 											key={tag}
 											type="button"
-											aria-label={`Filtrar por ${tag}`}
+											aria-label={`Filter by ${tag}`}
 											onClick={() => {
 												setSelectedTag((currentTag) => (currentTag === tag ? null : tag));
 												onTagClick?.(tag);

@@ -1,0 +1,83 @@
+services:
+  cadvisor:
+      image: gcr.io/cadvisor/cadvisor:v0.49.1
+      container_name: cadvisor
+      hostname: cadvisor
+      restart: unless-stopped
+      privileged: true
+      devices: 
+        - /dev/kmsg:/dev/kmsg
+# cAdvisor needs access to the host's system directories (:ro) 
+# to monitor container and system-wide performance metrics (CPU, memory, disk, network) via the Linux kernel.
+      command:
+        - "--docker=unix:///run/docker-host.sock"
+        - "--docker_only=true"
+      volumes:
+        #Mounts the host's entire root filesystem as a virtual directory
+        - "/:/rootfs:ro"
+        #The directory containing the Docker daemon socket (docker.sock) and other system processes.
+        #- "/var/run:/var/run:ro"
+        # cAdvisor reads the exact CPU, memory, and I/O usage assigned by the kernel cgroups to each process and container from here.
+        - "/sys:/sys:ro"
+        # Directory containing Docker's data and metadata, including container images, layers, and configuration files.
+        - "${DOCKER_SOCK:-/var/run/docker.sock}:/run/docker-host.sock"
+        #- "/var/lib/docker/:/var/lib/docker:ro"
+        #Information about physical disks and partitions connected to the operating system
+        - "/dev/disk/:/dev/disk:ro"
+      ports:
+        - "8081:8080"
+        #"127.0.0.1:8081:8080"
+      networks:
+      - monitoring-net
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    configs:
+      - source: prometheus_cfg
+        target: /etc/prometheus/prometheus.yml
+    volumes:
+    # - ./prometheus-config.yml:/etc/prometheus/prometheus.yml:ro
+    - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - monitoring-net
+  grafana:
+    build: ./grafana
+    container_name: grafana
+    restart: unless-stopped
+    volumes:
+      - grafana_data:/var/lib/grafana
+    environment:
+        GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+        GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+    ports:
+      - "9000:3000"
+    networks:
+      - monitoring-net
+
+configs:
+  prometheus_cfg:
+    content: |
+        global:
+            scrape_interval: 15s
+        scrape_configs:
+            - job_name: 'cadvisor'
+              scrape_interval: 5s
+              static_configs:
+                - targets: ['cadvisor:8080']
+            - job_name: 'backend'
+              metrics_path: /metrics
+              static_configs:
+                - targets: ['backend:3000']
+              scrape_interval: 5s
+
+networks:
+  monitoring-net:
+      external: true
+      name: ft_transcendence_shared
+
+
+volumes:
+  grafana_data:
+  prometheus_data:
