@@ -10,7 +10,7 @@ export class RgpdService {
 	async exportUserData(userId: string) {
 		const user = await this.prisma.user.findUnique({
 			where: { id: userId },
-			select: { //select: seleccionas los datos en concreto que se pueden obtener (no todos)
+			select: { // Select only the specific fields permitted for export (excluding passwordHash, secrets, etc.)
 				id: true,
 				email: true,
 				username: true,
@@ -99,7 +99,7 @@ export class RgpdService {
 			},
 		});
 		if (!user) {
-      		throw new NotFoundException('Usuario no encontrado');
+      		throw new NotFoundException('User not found');
     	}
 
 		// Standardized GDPR JSON export payload
@@ -107,8 +107,8 @@ export class RgpdService {
       		exportMetadata: {
 				platform: 'TasteSync',
 				exportDate: new Date().toISOString(),
-				regulation: 'RGPD (Reglamento General de Protección de Datos)',
-				rightsExercised: 'Derecho de acceso y portabilidad (Art. 15 y 20)',
+				regulation: 'GDPR (General Data Protection Regulation)',
+				rightsExercised: 'Right of access and data portability (Art. 15 & 20)',
 			},
 			account: {
 				id: user.id,
@@ -145,7 +145,7 @@ export class RgpdService {
 			where: { id: userId },
 		});
 		if (!user) {
-			throw new NotFoundException('Usuario no encontrado');
+			throw new NotFoundException('User not found');
 		}
 
 		// Database cascade deletes associated records (profile, posts, reviews, friendships, blocks)
@@ -153,7 +153,7 @@ export class RgpdService {
 			where: { id: userId },
 		});
 		return {
-			message: 'Cuenta y datos personales eliminados con éxito en cumplimiento del RGPD.',
+			message: 'Account and personal data successfully deleted in compliance with GDPR.',
 			deletedAt: new Date().toISOString(),
 		};
 	}

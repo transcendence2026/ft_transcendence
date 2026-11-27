@@ -38,6 +38,11 @@ export class NotificationGateway {
         return this.prisma.notification.update({ where: { id }, data: { read: true } });
     }
 
+    async dismiss(id: string, receiverId: string) {
+        await this.prisma.notification.deleteMany({ where: { id, receiverId } });
+        return { dismissed: true };
+    }
+
     markAllAsRead(receiverId: string) {
         return this.prisma.notification.updateMany({
             where: { receiverId, read: false },

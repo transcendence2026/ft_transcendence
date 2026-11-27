@@ -48,7 +48,8 @@ export class AuthController {
     	if (result.accessToken && result.refreshToken) {
         	this.setAuthCookie(res, result.accessToken, result.refreshToken);
 		}
-		return result;
+		const { refreshToken, ...safeResult } = result;
+		return safeResult;
 	}
 
 	@Post('login')
@@ -65,7 +66,8 @@ export class AuthController {
 		if(result.accessToken && result.refreshToken) {
 			this.setAuthCookie(res, result.accessToken, result.refreshToken);
 		}
-		return result;
+		const { refreshToken, ...safeResult } = result;
+    	return safeResult;
 	}
 
 	@Post('logout')
