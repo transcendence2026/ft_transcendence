@@ -39,8 +39,7 @@ export class NotificationGateway {
     }
 
     async dismiss(id: string, receiverId: string) {
-        const result = await this.prisma.notification.deleteMany({ where: { id, receiverId } });
-        if (result.count === 0) throw new NotFoundException('Notification not found');
+        await this.prisma.notification.deleteMany({ where: { id, receiverId } });
         return { dismissed: true };
     }
 
