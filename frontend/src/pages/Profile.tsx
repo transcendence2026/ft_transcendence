@@ -102,6 +102,7 @@ function ProfileContent() {
   const [friendship, setFriendship] = useState<ProfileData['friendship'] | null>(null);
   const [incomingRequests, setIncomingRequests] = useState<FriendRequest[]>([]);
   const [friends, setFriends] = useState<FriendSummary[]>([]);
+  const [removingFriendId, setRemovingFriendId] = useState<string | null>(null);
   const [outgoingRequests, setOutgoingRequests] = useState<FriendListResponse['outgoingRequests']>([]);
   const [profilePosts, setProfilePosts] = useState<SocialPost[]>([]);
   const [profilePostsCursor, setProfilePostsCursor] = useState<string | null>(null);
@@ -234,6 +235,23 @@ function ProfileContent() {
     await axios.delete(`${API_BASE_URL}/api/friends/requests/${requestId}`);
     setOutgoingRequests((current) => current.filter((request) => request.id !== requestId));
     setMessage('Friend request cancelled.');
+  };
+
+  const removeFriend = async (friend: FriendSummary) => {
+    if (!window.confirm(`Remove ${friend.username} from your friends?`)) return;
+
+    setRemovingFriendId(friend.id);
+    setError(null);
+    setMessage(null);
+    try {
+      await axios.delete(`${API_BASE_URL}/api/friends/${friend.id}`);
+      setFriends((current) => current.filter((item) => item.id !== friend.id));
+      setMessage(`${friend.username} was removed from your friends.`);
+    } catch {
+      setError('Could not remove this friend. Please try again.');
+    } finally {
+      setRemovingFriendId(null);
+    }
   };
 
   const downloadJournal = async () => {
@@ -403,7 +421,29 @@ function ProfileContent() {
             {/* 1. Amigos */}
 			<div>
               <div className="flex items-center justify-between"><h2 className="font-serif text-2xl">Friends</h2><Badge tone="success">{friends.length}</Badge></div>
-              <div className="mt-4 space-y-3">{friends.length ? friends.map((friend) => <button key={friend.id} type="button" onClick={() => navigate(`/profile/${friend.id}`)} className="flex w-full items-center gap-3 border border-border bg-surface p-3 text-left hover:border-primary"><Avatar name={friend.username} src={profileImage(friend.profile?.avatarUrl)} size="sm" /><span className="text-sm font-semibold">{friend.username}</span></button>) : <p className="text-sm text-muted">Your accepted friends will appear here.</p>}</div>
+              <div className="mt-4 space-y-3">
+                {friends.length ? friends.map((friend) => (
+                  <div key={friend.id} className="flex items-center justify-between gap-3 border border-border bg-surface p-3">
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/profile/${friend.id}`)}
+                      className="flex min-w-0 items-center gap-3 text-left hover:text-primary"
+                    >
+                      <Avatar name={friend.username} src={profileImage(friend.profile?.avatarUrl)} size="sm" />
+                      <span className="truncate text-sm font-semibold">{friend.username}</span>
+                    </button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      disabled={removingFriendId === friend.id}
+                      onClick={() => void removeFriend(friend)}
+                      className="shrink-0 px-3 py-1 text-xs text-red-400 hover:bg-red-500/10"
+                    >
+                      {removingFriendId === friend.id ? 'Removing...' : 'Remove'}
+                    </Button>
+                  </div>
+                )) : <p className="text-sm text-muted">Your accepted friends will appear here.</p>}
+              </div>
             </div>
 			{/* 2. Solicitudes */}
             <div>
@@ -548,7 +588,14 @@ function ProfileContent() {
 				  {profilePostsLoading && !profilePosts.length ? (
 					<Loader label="Loading posts" />
 				  ) : profilePosts.length ? (
-					profilePosts.map((post) => <SocialPostCard key={post.id} post={post} />) 
+					profilePosts.map((post) => (
+						<SocialPostCard
+							key={post.id}
+							post={post}
+							onPostUpdated={(updatedPost) => setProfilePosts((current) => current.map((item) => item.id === updatedPost.id ? updatedPost : item))}
+							onPostDeleted={(postId) => setProfilePosts((current) => current.filter((item) => item.id !== postId))}
+						/>
+					))
 				  ) : ( 
 				    <p className="text-muted">No visible posts yet.</p>
 				  )}

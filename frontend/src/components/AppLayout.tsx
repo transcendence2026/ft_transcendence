@@ -94,7 +94,6 @@ export default function AppLayout({
               type="button"
               className="min-w-0 flex-1 text-left"
               onClick={() => {
-                markAsRead(toastNotification.id);
                 setToastNotification(undefined);
                 navigate(getNotificationDestination(toastNotification) ?? "/notifications");
               }}

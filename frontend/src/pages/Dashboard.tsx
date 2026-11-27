@@ -586,7 +586,14 @@ function DashboardContent() {
               {loading ? (
                 <Loader label="Cargando publicaciones..." />
               ) : (
-                posts.map((post) => <SocialPostCard key={post.id} post={post} />)
+                posts.map((post) => (
+                  <SocialPostCard
+                    key={post.id}
+                    post={post}
+                    onPostUpdated={(updatedPost) => setPosts((current) => current.map((item) => item.id === updatedPost.id ? updatedPost : item))}
+                    onPostDeleted={(postId) => setPosts((current) => current.filter((item) => item.id !== postId))}
+                  />
+                ))
               )}
 
               {error && (

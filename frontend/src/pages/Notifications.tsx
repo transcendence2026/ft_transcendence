@@ -8,11 +8,12 @@ import { useState } from "react";
 export default function Notifications() {
   const { logout } = useAuth();
   const navigate = useNavigate();
-  const { notification, markAllAsRead, markAsRead, error } = useNotification();
+  const { notification, markAllAsRead, dismissNotification, error } = useNotification();
   const [processingRequestId, setProcessingRequestId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const updateFriendRequest = async (requestId: string, action: "accept" | "reject") => {
+    const item = notification.find((candidate) => candidate.requestId === requestId);
     setProcessingRequestId(requestId);
     setActionError(null);
     try {
@@ -23,10 +24,10 @@ export default function Notifications() {
       if (!response.ok) {
         throw new Error(`Friend request update failed: ${response.status}`);
       }
-      const item = notification.find((candidate) => candidate.requestId === requestId);
-      if (item) markAsRead(item.id);
+      if (item) await dismissNotification(item.id);
     } catch (error) {
       console.error("No se pudo actualizar la solicitud de amistad", error);
+      if (item) await dismissNotification(item.id);
       setActionError("No se pudo actualizar la solicitud de amistad.");
     } finally {
       setProcessingRequestId(null);
@@ -96,7 +97,7 @@ export default function Notifications() {
                       <button
                         type="button"
                         onClick={() => {
-                          markAsRead(item.id);
+                          void dismissNotification(item.id);
                           const destination = getNotificationDestination(item);
                           if (destination) navigate(destination);
                         }}

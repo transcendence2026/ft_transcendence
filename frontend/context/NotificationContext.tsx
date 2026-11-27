@@ -34,6 +34,7 @@ interface NotificationContextValue {
   incomingNotification: NotificationType | null
   markAsRead: (notificationId: string) => Promise<void>
   markAllAsRead: () => Promise<void>
+  dismissNotification: (notificationId: string) => Promise<void>
   error: string | undefined;
 }
 
@@ -46,6 +47,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const [incomingNotification, setIncomingNotification] = useState<NotificationType | null>(null)
   const [error, setError ] = useState<string | undefined>(undefined)
   const processedMessages = useRef(new WeakSet<object>())
+  const notificationRef = useRef(notification)
+
+  useEffect(() => {
+    notificationRef.current = notification;
+  }, [notification]);
 
   useEffect(() => {
     if (status !== 'open') {
@@ -58,6 +64,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     }
 
     let isCurrentSession = true;
+    const knownNotificationIds = new Set(notificationRef.current.map((item) => item.id));
     void fetch('/api/notifications', { credentials: 'include' })
       .then((response) => {
         if (!response.ok) throw new Error('Unable to load notifications');
@@ -69,7 +76,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           const notificationsById = new Map(
             loadedNotifications.map((item) => [item.id, item]),
           );
-          current.forEach((item) => notificationsById.set(item.id, item));
+          current.forEach((item) => {
+            if (notificationsById.has(item.id) || !knownNotificationIds.has(item.id)) {
+              notificationsById.set(item.id, item);
+            }
+          });
           return [...notificationsById.values()].sort(
             (first, second) => Date.parse(second.createdAt) - Date.parse(first.createdAt),
           );
@@ -141,8 +152,29 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const dismissNotification = async (notificationId: string) => {
+    try {
+      const response = await fetch(`/api/notifications/${notificationId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Unable to dismiss notification');
+      setNotification((current) => current.filter((notif) => notif.id !== notificationId));
+      setError(undefined);
+    } catch {
+      setError('Unable to dismiss notification');
+    }
+  }
+
   return (
-    <NotificationContext.Provider value={{ notification, incomingNotification, markAsRead, markAllAsRead, error }}>
+    <NotificationContext.Provider value={{
+      notification,
+      incomingNotification,
+      markAsRead,
+      markAllAsRead,
+      dismissNotification,
+      error,
+    }}>
       {children}
     </NotificationContext.Provider>
   );
