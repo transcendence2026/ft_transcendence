@@ -1,4 +1,4 @@
-import { Controller, Get, Inject, Param, Req, UseGuards } from '@nestjs/common';
+import { Controller, Delete, Get, Inject, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { MessagesService } from './messages.service.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 
@@ -9,6 +9,24 @@ export class MessagesController {
   @Get()
   findAll() {
     return this.messagesService.findAll();
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('conversations')
+  findConversations(@Req() req: any, @Query('archived') archived?: string) {
+    return this.messagesService.findConversations(req.user.id, archived === 'true');
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('conversations/:peerId/archive')
+  archiveConversation(@Req() req: any, @Param('peerId') peerId: string) {
+    return this.messagesService.archiveConversation(req.user.id, peerId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('conversations/:peerId/archive')
+  unarchiveConversation(@Req() req: any, @Param('peerId') peerId: string) {
+    return this.messagesService.unarchiveConversation(req.user.id, peerId);
   }
 
   @UseGuards(JwtAuthGuard)

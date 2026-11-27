@@ -102,6 +102,7 @@ function ProfileContent() {
   const [friendship, setFriendship] = useState<ProfileData['friendship'] | null>(null);
   const [incomingRequests, setIncomingRequests] = useState<FriendRequest[]>([]);
   const [friends, setFriends] = useState<FriendSummary[]>([]);
+  const [removingFriendId, setRemovingFriendId] = useState<string | null>(null);
   const [outgoingRequests, setOutgoingRequests] = useState<FriendListResponse['outgoingRequests']>([]);
   const [profilePosts, setProfilePosts] = useState<SocialPost[]>([]);
   const [profilePostsCursor, setProfilePostsCursor] = useState<string | null>(null);
@@ -160,7 +161,7 @@ function ProfileContent() {
     };
   }, [authLoading, id, user?.id, isOwnProfile, profileId]);
 
-  // Si es un perfil privado bloqueado, no intentamos pedir posts
+  // If it is a locked private profile, do not attempt to fetch posts.
   const isLockedPrivateProfile = !isOwnProfile && Boolean(profile?.isPrivate) && !profile?.stats;
 
   useEffect(() => {
@@ -237,6 +238,23 @@ function ProfileContent() {
     setMessage('Friend request cancelled.');
   };
 
+  const removeFriend = async (friend: FriendSummary) => {
+    if (!window.confirm(`Remove ${friend.username} from your friends?`)) return;
+
+    setRemovingFriendId(friend.id);
+    setError(null);
+    setMessage(null);
+    try {
+      await axios.delete(`${API_BASE_URL}/api/friends/${friend.id}`);
+      setFriends((current) => current.filter((item) => item.id !== friend.id));
+      setMessage(`${friend.username} was removed from your friends.`);
+    } catch {
+      setError('Could not remove this friend. Please try again.');
+    } finally {
+      setRemovingFriendId(null);
+    }
+  };
+
   const downloadJournal = async () => {
     setIsExportingJournal(true);
     try {
@@ -258,7 +276,7 @@ function ProfileContent() {
     }
   };
 
-  // Alternar privacidad
+  // Toggle privacy
   const togglePrivacy = async () => {
     try {
       const nextState = !isPrivate;
@@ -271,7 +289,7 @@ function ProfileContent() {
     }
   };
 
-  // Bloquear usuario ajeno
+  // Block other user
   const blockUser = async () => {
     if (!profileId || !profile) return;
     if (!window.confirm(`Are you sure you want to block ${profile?.username}?`)) return;
@@ -289,7 +307,7 @@ function ProfileContent() {
     }
   };
 
-  // Desbloquear usuario desde la lista o desde su perfil
+  // Unblock user from the list or from their profile
   const unblockUser = async (targetId: string) => {
     try {
       await axios.delete(
@@ -349,7 +367,7 @@ function ProfileContent() {
           <label className="mt-5 block text-xs font-medium text-text-soft">Bio
             <textarea value={form.bio} onChange={(event) => setForm({ ...form, bio: event.target.value })} rows={4} className="mt-1.5 w-full resize-y rounded-control border border-border bg-surface-raised px-4 py-2.5 text-sm text-text focus:border-primary focus:outline-none" />
           </label>
-		  {/* AQUÍ VA BOTON DE PERFIL PUBLICO/PRIVADO */}
+		  {/* PUBLIC/PRIVATE PROFILE BUTTON GOES HERE */}
 		  <div className="mt-5 flex items-center justify-between rounded-control border border-border bg-surface-raised p-4">
             <div>
               <p className="text-sm font-medium text-text">Private account</p>
@@ -404,7 +422,29 @@ function ProfileContent() {
             {/* 1. Amigos */}
 			<div>
               <div className="flex items-center justify-between"><h2 className="font-serif text-2xl">Friends</h2><Badge tone="success">{friends.length}</Badge></div>
-              <div className="mt-4 space-y-3">{friends.length ? friends.map((friend) => <button key={friend.id} type="button" onClick={() => navigate(`/profile/${friend.id}`)} className="flex w-full items-center gap-3 border border-border bg-surface p-3 text-left hover:border-primary"><Avatar name={friend.username} src={profileImage(friend.profile?.avatarUrl)} size="sm" /><span className="text-sm font-semibold">{friend.username}</span></button>) : <p className="text-sm text-muted">Your accepted friends will appear here.</p>}</div>
+              <div className="mt-4 space-y-3">
+                {friends.length ? friends.map((friend) => (
+                  <div key={friend.id} className="flex items-center justify-between gap-3 border border-border bg-surface p-3">
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/profile/${friend.id}`)}
+                      className="flex min-w-0 items-center gap-3 text-left hover:text-primary"
+                    >
+                      <Avatar name={friend.username} src={profileImage(friend.profile?.avatarUrl)} size="sm" />
+                      <span className="truncate text-sm font-semibold">{friend.username}</span>
+                    </button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      disabled={removingFriendId === friend.id}
+                      onClick={() => void removeFriend(friend)}
+                      className="shrink-0 px-3 py-1 text-xs text-red-400 hover:bg-red-500/10"
+                    >
+                      {removingFriendId === friend.id ? 'Removing...' : 'Remove'}
+                    </Button>
+                  </div>
+                )) : <p className="text-sm text-muted">Your accepted friends will appear here.</p>}
+              </div>
             </div>
 			{/* 2. Solicitudes */}
             <div>
@@ -441,7 +481,7 @@ function ProfileContent() {
             </div>
           </section>}
 
-		  {/* CONTENIDO DEL PERFIL: TARJETA DE PRIVACIDAD O TABS */}
+		  {/* PROFILE CONTENT: PRIVACY CARD OR TABS */}
           <section className="profile-content mt-8">
 		    {isLockedPrivateProfile ? (
               <div className="flex flex-col items-center justify-center rounded-control border border-border bg-surface p-12 text-center">
@@ -549,7 +589,14 @@ function ProfileContent() {
 				  {profilePostsLoading && !profilePosts.length ? (
 					<Loader label="Loading posts" />
 				  ) : profilePosts.length ? (
-					profilePosts.map((post) => <SocialPostCard key={post.id} post={post} />) 
+					profilePosts.map((post) => (
+						<SocialPostCard
+							key={post.id}
+							post={post}
+							onPostUpdated={(updatedPost) => setProfilePosts((current) => current.map((item) => item.id === updatedPost.id ? updatedPost : item))}
+							onPostDeleted={(postId) => setProfilePosts((current) => current.filter((item) => item.id !== postId))}
+						/>
+					))
 				  ) : ( 
 				    <p className="text-muted">No visible posts yet.</p>
 				  )}

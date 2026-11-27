@@ -1,5 +1,5 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Archive,
   BadgeCheck,
@@ -95,6 +95,31 @@ interface BackendChatMessage {
   created_at?: string;
 }
 
+interface BackendConversation {
+  userId: string;
+  username: string;
+  lastMessage: string;
+  lastMessageAt: string;
+}
+
+function toThreadTimestamp(timestamp: string): string {
+  return new Date(timestamp).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function toSalonThread(conversation: BackendConversation): SalonThread {
+  return {
+    id: conversation.userId,
+    category: "Conversación",
+    timestamp: toThreadTimestamp(conversation.lastMessageAt),
+    title: conversation.username,
+    participants: `@${conversation.username}`,
+    preview: conversation.lastMessage,
+  };
+}
+
 function toChatMessage(
   message: BackendChatMessage,
   currentUserId: string | undefined,
@@ -171,8 +196,13 @@ const INITIAL_MESSAGES: ChatMessage[] = [];
 export default function EpicureSalonWorkspace() {
   const { status, messages: wsMessages, sendMessage, reconnect } = useWebSocket();
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const requestedThreadId = searchParams.get("userId");
+  const navigate = useNavigate();
 
   const [threads, setThreads] = useState<SalonThread[]>(INITIAL_THREADS);
+  const [archivedThreads, setArchivedThreads] = useState<SalonThread[]>([]);
+  const [showArchivedThreads, setShowArchivedThreads] = useState(false);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(
     INITIAL_THREADS[0]?.id ?? null
   );
@@ -190,8 +220,67 @@ export default function EpicureSalonWorkspace() {
 
   const [draft, setDraft] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setThreads([]);
+      setArchivedThreads([]);
+      setActiveThreadId(null);
+      return;
+    }
+
+    let isCurrent = true;
+    setThreads([]);
+    setArchivedThreads([]);
+    setActiveThreadId(null);
+
+    const fetchConversations = async () => {
+      try {
+        const [activeResponse, archivedResponse] = await Promise.all([
+          fetch("/api/message/conversations", { credentials: "include" }),
+          fetch("/api/message/conversations?archived=true", { credentials: "include" }),
+        ]);
+        if (!activeResponse.ok || !archivedResponse.ok) {
+          throw new Error("Unable to load conversations");
+        }
+
+        const [conversations, archivedConversations]: [
+          BackendConversation[],
+          BackendConversation[],
+        ] = await Promise.all([activeResponse.json(), archivedResponse.json()]);
+        if (!isCurrent) return;
+        setNotice(null);
+
+        const loadedThreads = conversations.map(toSalonThread);
+        const loadedArchivedThreads = archivedConversations.map(toSalonThread);
+        const loadedThreadIds = new Set(loadedThreads.map((thread) => thread.id));
+        const loadedArchivedThreadIds = new Set(loadedArchivedThreads.map((thread) => thread.id));
+
+        setThreads((current) => [
+          ...loadedThreads,
+          ...current.filter((thread) => !loadedThreadIds.has(thread.id)),
+        ]);
+        setArchivedThreads((current) => [
+          ...loadedArchivedThreads,
+          ...current.filter((thread) => !loadedArchivedThreadIds.has(thread.id)),
+        ]);
+        setActiveThreadId((current) => current ?? loadedThreads[0]?.id ?? null);
+      } catch (error) {
+        if (isCurrent) {
+          console.error("Error al recuperar las conversaciones", error);
+          setNotice("No se pudieron cargar las conversaciones.");
+        }
+      }
+    };
+
+    void fetchConversations();
+    return () => {
+      isCurrent = false;
+    };
+  }, [user?.id]);
 
   const stopTypingIndicator = () => {
     if (typingTimeoutRef.current) {
@@ -284,20 +373,37 @@ export default function EpicureSalonWorkspace() {
   }, [activeThreadId]);
 
   const activeThread = useMemo(() => {
-    return threads.find((thread) => thread.id === activeThreadId) ?? null;
-  }, [threads, activeThreadId]);
+    const visibleThreads = showArchivedThreads ? archivedThreads : threads;
+    return visibleThreads.find((thread) => thread.id === activeThreadId) ?? null;
+  }, [threads, archivedThreads, showArchivedThreads, activeThreadId]);
+
+  useEffect(() => {
+    if (!requestedThreadId) return;
+
+    if (threads.some((thread) => thread.id === requestedThreadId)) {
+      setShowArchivedThreads(false);
+      setActiveThreadId(requestedThreadId);
+      return;
+    }
+
+    if (archivedThreads.some((thread) => thread.id === requestedThreadId)) {
+      setShowArchivedThreads(true);
+      setActiveThreadId(requestedThreadId);
+    }
+  }, [requestedThreadId, threads, archivedThreads]);
 
   const filteredThreads = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    if (!query) return threads;
+    const visibleThreads = showArchivedThreads ? archivedThreads : threads;
+    if (!query) return visibleThreads;
 
-    return threads.filter(
+    return visibleThreads.filter(
       (thread) =>
         thread.title.toLowerCase().includes(query) ||
         thread.participants.toLowerCase().includes(query) ||
         thread.preview.toLowerCase().includes(query)
     );
-  }, [threads, searchQuery]);
+  }, [threads, archivedThreads, showArchivedThreads, searchQuery]);
 
   const availableUsers = useMemo(() => {
     // TODO: Add a user search endpoint and populate this list with its results.
@@ -337,13 +443,29 @@ export default function EpicureSalonWorkspace() {
   };
 
 // New handleSelectUser
-const handleSelectUser = (selected: UserResult) => {
+const handleSelectUser = async (selected: UserResult) => {
+  const archivedThread = archivedThreads.find((thread) => thread.id === selected.id);
+  if (archivedThread) {
+    try {
+      const response = await fetch(`/api/message/conversations/${selected.id}/archive`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error(`Unable to restore conversation: ${response.status}`);
+      setArchivedThreads((current) => current.filter((thread) => thread.id !== selected.id));
+    } catch (error) {
+      console.error("Error al restaurar la conversación", error);
+      setNotice("No se pudo restaurar la conversación.");
+      return;
+    }
+  }
+
   const fullName = [selected.firstName, selected.lastName].filter(Boolean).join(" ");
   setThreads((current) =>
     current.some((thread) => thread.id === selected.id)
       ? current
       : [
-          {
+          archivedThread ?? {
             id: selected.id,
             category: selected.friendshipStatus === "ACCEPTED" ? "Amigo" : "Usuario",
             timestamp: "",
@@ -355,18 +477,69 @@ const handleSelectUser = (selected: UserResult) => {
         ],
   );
   setActiveThreadId(selected.id);
+  setShowArchivedThreads(false);
   setIsNewChatOpen(false);
   setNewChatQuery("");
   setNotice(null);
 };
 
-  const handleArchiveThread = () => {
+  const handleArchiveThread = async () => {
     if (!activeThreadId) return;
-    const nextThreads = threads.filter((thread) => thread.id !== activeThreadId);
-    setThreads(nextThreads);
-    setActiveThreadId(nextThreads[0]?.id ?? null);
-    setMessages([]);
-    setNotice("Conversación archivada");
+    setIsArchiving(true);
+    try {
+      const response = await fetch(`/api/message/conversations/${activeThreadId}/archive`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error(`Unable to archive conversation: ${response.status}`);
+
+      const archivedThread = threads.find((thread) => thread.id === activeThreadId);
+      const nextThreads = threads.filter((thread) => thread.id !== activeThreadId);
+      if (archivedThread) {
+        setArchivedThreads((current) => [
+          archivedThread,
+          ...current.filter((thread) => thread.id !== archivedThread.id),
+        ]);
+      }
+      setThreads(nextThreads);
+      setActiveThreadId(nextThreads[0]?.id ?? null);
+      setMessages([]);
+      setNotice("Conversación archivada");
+    } catch (error) {
+      console.error("Error al archivar la conversación", error);
+      setNotice("No se pudo archivar la conversación.");
+    } finally {
+      setIsArchiving(false);
+    }
+  };
+
+  const handleUnarchiveThread = async () => {
+    if (!activeThreadId) return;
+    setIsArchiving(true);
+    try {
+      const response = await fetch(`/api/message/conversations/${activeThreadId}/archive`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error(`Unable to restore conversation: ${response.status}`);
+
+      const restoredThread = archivedThreads.find((thread) => thread.id === activeThreadId);
+      if (restoredThread) {
+        setThreads((current) => [
+          restoredThread,
+          ...current.filter((thread) => thread.id !== restoredThread.id),
+        ]);
+        setArchivedThreads((current) => current.filter((thread) => thread.id !== restoredThread.id));
+        setShowArchivedThreads(false);
+        setActiveThreadId(restoredThread.id);
+      }
+      setNotice("Conversación restaurada");
+    } catch (error) {
+      console.error("Error al restaurar la conversación", error);
+      setNotice("No se pudo restaurar la conversación.");
+    } finally {
+      setIsArchiving(false);
+    }
   };
 
   const handleAttachment = (event: ChangeEvent<HTMLInputElement>) => {
@@ -424,6 +597,7 @@ const handleSelectUser = (selected: UserResult) => {
 
   return (
     <AppLayout
+      fullHeight
       isSaved={isSaved}
       onToggleSaved={() => {
         setIsSaved((current) => !current);
@@ -446,9 +620,9 @@ const handleSelectUser = (selected: UserResult) => {
           </div>
         )}
 
-        <main className="grid flex-1 grid-cols-12 bg-[#0f0e0d]">
-          <section className="col-span-3 flex flex-col justify-between border-r border-white/5 bg-[#1d1b1a]/95">
-            <div className="flex h-full flex-col">
+        <main className="grid min-h-0 flex-1 grid-cols-12 overflow-hidden bg-[#0f0e0d]">
+          <section className="col-span-3 flex min-h-0 flex-col justify-between border-r border-white/5 bg-[#1d1b1a]/95">
+            <div className="flex h-full min-h-0 flex-col">
               <div className="flex flex-col gap-2 border-b border-white/5 p-4">
                 <div className="flex items-center justify-between">
                   <div>
@@ -515,9 +689,44 @@ const handleSelectUser = (selected: UserResult) => {
                   </div>
                 </div>
 
-                <p className="text-[12px] leading-4 tracking-[0.3px] text-[#a88a83]">
-                  Habla directamente con el equipo y gestiona tus reservas
-                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    aria-pressed={!showArchivedThreads}
+                    onClick={() => {
+                      setShowArchivedThreads(false);
+                      if (showArchivedThreads) {
+                        setActiveThreadId(threads[0]?.id ?? null);
+                        setMessages([]);
+                      }
+                    }}
+                    className={`flex-1 border px-2 py-2 text-[10px] tracking-[1px] uppercase ${
+                      !showArchivedThreads
+                        ? "border-[#fabc4d]/30 bg-[#211f1e] text-[#fabc4d]"
+                        : "border-white/5 text-[#a88a83] hover:bg-white/5"
+                    }`}
+                  >
+                    Conversaciones ({threads.length})
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={showArchivedThreads}
+                    onClick={() => {
+                      setShowArchivedThreads(true);
+                      if (!showArchivedThreads) {
+                        setActiveThreadId(archivedThreads[0]?.id ?? null);
+                        setMessages([]);
+                      }
+                    }}
+                    className={`flex-1 border px-2 py-2 text-[10px] tracking-[1px] uppercase ${
+                      showArchivedThreads
+                        ? "border-[#fabc4d]/30 bg-[#211f1e] text-[#fabc4d]"
+                        : "border-white/5 text-[#a88a83] hover:bg-white/5"
+                    }`}
+                  >
+                    Archivadas ({archivedThreads.length})
+                  </button>
+                </div>
 
                 <div className="relative mt-1">
                   <Search
@@ -544,22 +753,29 @@ const handleSelectUser = (selected: UserResult) => {
                   <p className="text-[15px] text-[#e6e1df]">
                     {searchQuery.trim()
                       ? "No se encontraron resultados"
-                      : "No hay conversaciones"}
+                      : showArchivedThreads
+                        ? "No hay conversaciones archivadas"
+                        : "No hay conversaciones"}
                   </p>
                   <p className="mt-1 text-[12px] leading-relaxed text-[#a88a83]">
                     {searchQuery.trim()
                       ? "Prueba con otro término de búsqueda."
-                      : "Cuando inicies un chat con el restaurante, aparecerá aquí."}
+                      : showArchivedThreads
+                        ? "Las conversaciones archivadas aparecerán aquí."
+                        : "Cuando inicies un chat, aparecerá aquí."}
                   </p>
                 </div>
               ) : (
-                <div className="flex max-h-[600px] flex-1 flex-col overflow-y-auto">
+                <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
                   {filteredThreads.map((thread) => {
                     const isSelected = thread.id === activeThreadId;
                     return (
                       <article
                         key={thread.id}
-                        onClick={() => setActiveThreadId(thread.id)}
+                        onClick={() => {
+                          setActiveThreadId(thread.id);
+                          navigate("/chat", { replace: true });
+                        }}
                         className={`cursor-pointer border-b border-white/5 p-3 transition-colors ${
                           isSelected
                             ? "border-l-2 border-l-[#fabc4d] bg-[#211f1e] pl-3.5"
@@ -630,7 +846,7 @@ const handleSelectUser = (selected: UserResult) => {
             </div>
           </section>
 
-          <section className="col-span-9 flex flex-col justify-between bg-[#141312]">
+          <section className="col-span-9 flex min-h-0 flex-col justify-between bg-[#141312]">
             {!activeThread ? (
               <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
                 <div className="flex size-16 items-center justify-center border border-[#fabc4d]/20 bg-[#1d1b1a] shadow-lg">
@@ -700,11 +916,14 @@ const handleSelectUser = (selected: UserResult) => {
                     </button>
                     <button
                       type="button"
-                      onClick={handleArchiveThread}
-                      className="flex items-center gap-1.5 border border-[#fabc4d]/20 bg-[#211f1e] px-3 py-1.5 text-[10px] tracking-[1px] text-[#fabc4d] uppercase hover:bg-[#fabc4d]/10"
+                      disabled={isArchiving}
+                      onClick={() => void (showArchivedThreads
+                        ? handleUnarchiveThread()
+                        : handleArchiveThread())}
+                      className="flex items-center gap-1.5 border border-[#fabc4d]/20 bg-[#211f1e] px-3 py-1.5 text-[10px] tracking-[1px] text-[#fabc4d] uppercase hover:bg-[#fabc4d]/10 disabled:opacity-50"
                     >
                       <Archive aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
-                      <span>ARCHIVAR</span>
+                      <span>{showArchivedThreads ? "RESTAURER" : "ARCHIVER"}</span>
                     </button>
                   </div>
                 </div>
@@ -715,7 +934,7 @@ const handleSelectUser = (selected: UserResult) => {
                   </div>
                 )}
 
-                <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-6">
+                <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-6">
                   {messages.length === 0 ? (
                     <div className="my-auto flex flex-col items-center justify-center py-12 text-center">
                       <p className="text-[16px] text-[#e6e1df]">No hay mensajes todavía</p>
@@ -989,7 +1208,7 @@ const handleSelectUser = (selected: UserResult) => {
 
                 <form
                   onSubmit={(e) => void handleSendMessage(e)}
-                  className="border-t border-white/5 bg-[#0f0e0d]/90 p-4 backdrop-blur-sm"
+                  className="shrink-0 border-t border-white/5 bg-[#0f0e0d]/90 p-4 backdrop-blur-sm"
                 >
                   <div className="flex flex-col gap-2 border border-white/5 bg-[#211f1e] p-2.5">
                     <div className="flex items-center justify-between px-2 pt-1">

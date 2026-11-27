@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Bell,
@@ -13,7 +13,10 @@ import {
   Wine,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-import { useNotification } from "../../context/NotificationContext";
+import {
+  getNotificationDestination,
+  useNotification,
+} from "../../context/NotificationContext";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_URL !== undefined
@@ -35,6 +38,7 @@ interface AppLayoutProps {
   sidebarFooter?: ReactNode;
   isSaved?: boolean;
   onToggleSaved?: () => void;
+  fullHeight?: boolean;
 }
 
 function getAvatarSrc(url?: string | null): string | null {
@@ -47,27 +51,34 @@ export default function AppLayout({
   sidebarFooter,
   isSaved = false,
   onToggleSaved,
+  fullHeight = false,
 }: AppLayoutProps) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const username = user?.username ?? "Usuario";
-  const { notification, markAllAsRead, markAsRead } = useNotification();
+  const { notification, incomingNotification, markAllAsRead, markAsRead } = useNotification();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [toastNotification, setToastNotification] = useState<typeof notification[number]>();
+  const lastIncomingNotificationId = useRef(incomingNotification?.id);
   const unreadNotifications = notification.filter((item) => !item.read);
 
   useEffect(() => {
-    const latestNotification = notification[notification.length - 1];
-    if (!latestNotification || sessionStorage.getItem(`notification-toast:${latestNotification.id}`)) {
+    if (
+      !incomingNotification ||
+      incomingNotification.id === lastIncomingNotificationId.current
+    ) {
       return;
     }
 
-    sessionStorage.setItem(`notification-toast:${latestNotification.id}`, "shown");
-    setToastNotification(latestNotification);
+    lastIncomingNotificationId.current = incomingNotification.id;
+    if (sessionStorage.getItem(`notification-toast:${incomingNotification.id}`)) return;
+
+    sessionStorage.setItem(`notification-toast:${incomingNotification.id}`, "shown");
+    setToastNotification(incomingNotification);
     const timeoutId = window.setTimeout(() => setToastNotification(undefined), 6000);
     return () => window.clearTimeout(timeoutId);
-  }, [notification]);
+  }, [incomingNotification]);
 
   useEffect(() => {
     if (!isNotificationOpen) return;
@@ -79,7 +90,9 @@ export default function AppLayout({
   }, [isNotificationOpen]);
 
   return (
-    <div className="relative flex min-h-screen w-full bg-[#141312] pl-[288px] font-['Liberation_Serif',serif] text-[#e6e1df]">
+    <div className={`relative flex w-full bg-[#141312] pl-[288px] font-['Liberation_Serif',serif] text-[#e6e1df] ${
+      fullHeight ? "h-dvh overflow-hidden" : "min-h-screen"
+    }`}>
       {toastNotification && (
         <div
           role="status"
@@ -93,9 +106,8 @@ export default function AppLayout({
               type="button"
               className="min-w-0 flex-1 text-left"
               onClick={() => {
-                markAsRead(toastNotification.id);
                 setToastNotification(undefined);
-                navigate("/notifications");
+                navigate(getNotificationDestination(toastNotification) ?? "/notifications");
               }}
             >
               <p className="text-[10px] font-bold tracking-[1.8px] text-[#fabc4d] uppercase">
@@ -103,7 +115,9 @@ export default function AppLayout({
               </p>
               <p className="mt-1 text-sm leading-5 text-[#e6e1df]">{toastNotification.message}</p>
               <p className="mt-2 text-[10px] tracking-[1px] text-[#a88a83] uppercase">
-                Ver centro de avisos
+                {toastNotification.type === "message"
+                  ? "Ver conversación"
+                  : "Ver centro de avisos"}
               </p>
             </button>
             <button
@@ -162,8 +176,8 @@ export default function AppLayout({
         {sidebarFooter ?? <SidebarAccount onLogout={() => void logout()} />}
       </aside>
 
-      <div className="flex flex-1 flex-col">
-        <header className="sticky top-0 z-10 flex h-[80px] items-center justify-between border-b border-white/5 bg-[#141312]/85 px-6 backdrop-blur-md">
+      <div className={`flex flex-1 flex-col ${fullHeight ? "min-h-0 overflow-hidden" : ""}`}>
+        <header className="sticky top-0 z-10 flex h-[80px] shrink-0 items-center justify-between border-b border-white/5 bg-[#141312]/85 px-6 backdrop-blur-md">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-3">
               <ChefHat aria-hidden="true" className="h-8 w-8 text-[#fabc4d]" strokeWidth={1.25} />
@@ -240,16 +254,22 @@ export default function AppLayout({
                         No tienes notificaciones nuevas.
                       </p>
                     ) : (
-                      notification.slice(-5).reverse().map((item) => (
-                        <div
+                      notification.slice(0, 5).map((item) => (
+                        <button
+                          type="button"
                           key={item.id}
+                          onClick={() => {
+                            markAsRead(item.id);
+                            setIsNotificationOpen(false);
+                            navigate(getNotificationDestination(item) ?? "/notifications");
+                          }}
                           className={`border-b border-white/5 px-1 py-3 last:border-0 ${item.read ? "opacity-60" : ""}`}
                         >
-                          <p className="text-[12px] leading-5 text-[#e6e1df]">{item.message}</p>
+                          <span className="block text-left text-[12px] leading-5 text-[#e6e1df]">{item.message}</span>
                           <p className="mt-1 text-[10px] tracking-[0.6px] text-[#a88a83] uppercase">
                             {item.type}
                           </p>
-                        </div>
+                        </button>
                       ))
                     )}
                   </div>
@@ -297,7 +317,7 @@ export default function AppLayout({
           </div>
         </header>
 
-        <div className="h-[4px] w-full bg-gradient-to-r from-transparent via-[#fabc4d]/40 to-transparent" />
+        <div className="h-[4px] w-full shrink-0 bg-gradient-to-r from-transparent via-[#fabc4d]/40 to-transparent" />
         {children}
       </div>
     </div>
