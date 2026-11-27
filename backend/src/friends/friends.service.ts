@@ -64,7 +64,18 @@ export class FriendsService {
     if (!request) throw new NotFoundException('Friendship request not found');
     if (request.receiverId !== receiverId) throw new ForbiddenException('Only the receiver can accept this request');
     if (request.status !== FriendshipStatus.PENDING) throw new ConflictException('This request is no longer pending');
-    return this.prisma.friendship.update({ where: { id: requestId }, data: { status: FriendshipStatus.ACCEPTED }, include: { sender: { select: userSummary } } });
+    const friendship = await this.prisma.friendship.update({
+      where: { id: requestId },
+      data: { status: FriendshipStatus.ACCEPTED },
+      include: { sender: { select: userSummary } },
+    });
+    this.eventEmitter.emit('notification.create', {
+      senderId: receiverId,
+      receiverId: request.senderId,
+      type: 'friend_accepted',
+      message: 'Tu solicitud de amistad ha sido aceptada.',
+    });
+    return friendship;
   }
 
   async rejectRequest(requestId: string, receiverId: string) {

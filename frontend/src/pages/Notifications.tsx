@@ -1,11 +1,14 @@
 import AppLayout, { SidebarAccount } from "../components/AppLayout";
 import { useAuth } from "../../context/AuthContext";
 import { useNotification } from "../../context/NotificationContext";
+import { getNotificationDestination } from "../../context/NotificationContext";
+import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 
 export default function Notifications() {
   const { logout } = useAuth();
-  const { notification, markAllAsRead, dismissNotification } = useNotification();
+  const navigate = useNavigate();
+  const { notification, markAllAsRead, dismissNotification, error } = useNotification();
   const [processingRequestId, setProcessingRequestId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -62,6 +65,11 @@ export default function Notifications() {
                 {actionError}
               </p>
             )}
+            {error && (
+              <p role="alert" className="border-b border-red-400/20 bg-red-950/20 px-5 py-3 text-sm text-red-200">
+                {error}
+              </p>
+            )}
             {notification.length === 0 ? (
               <div className="px-6 py-16 text-center">
                 <p className="text-[11px] font-bold tracking-[2px] text-[#fabc4d] uppercase">
@@ -74,10 +82,7 @@ export default function Notifications() {
               </div>
             ) : (
               <div>
-                {notification
-                  .slice()
-                  .reverse()
-                  .map((item) => (
+                {notification.map((item) => (
                     <div
                       key={item.id}
                       className={`flex w-full items-start gap-4 border-b border-white/5 p-5 text-left transition-colors last:border-0 hover:bg-[#211f1e] ${
@@ -91,7 +96,11 @@ export default function Notifications() {
                       />
                       <button
                         type="button"
-                        onClick={() => void dismissNotification(item.id)}
+                        onClick={() => {
+                          void dismissNotification(item.id);
+                          const destination = getNotificationDestination(item);
+                          if (destination) navigate(destination);
+                        }}
                         className="min-w-0 flex-1 text-left"
                       >
                         <span className="block text-sm leading-6 text-[#e6e1df]">

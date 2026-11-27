@@ -45,11 +45,11 @@ export class TwoFactorService {
       		throw new UnauthorizedException('No 2FA secret has been configured previously');
     	}
 		//authenticator.verify(...): // The library checks if the 6-digit code mathematically matches the user's secret
-		const isCodeValid = verify({
+		const isCodeValid =  await verify({
 			token: code,
 			secret: user.twoFactorSecret,
 		});
-		if (!isCodeValid) {
+		if (!isCodeValid.valid) {
       		throw new UnauthorizedException('Invalid verification code');
 		}
 		//If it is valid, two-factor authentication is activated.
@@ -73,12 +73,12 @@ export class TwoFactorService {
 			throw new UnauthorizedException('Invalid 2FA code format');
 		}
 
-        const isCodeValid = verify({
+        const isCodeValid = await verify({
             token: code,
             secret: user.twoFactorSecret,
         });
 
-        if (!isCodeValid) {
+        if (!isCodeValid.valid) {
             throw new UnauthorizedException('Invalid 2FA code');
         }
 
@@ -96,11 +96,11 @@ export class TwoFactorService {
 		if(!user.isTwoFactorEnabled) {
 			throw new UnauthorizedException('2FA is not enabled for this user');
 		}
-		const isCodeValid = verify({
+		const isCodeValid =  await verify({
 			token: code,
 			secret: user.twoFactorSecret,
 		});
-		if (!isCodeValid) {
+		if (!isCodeValid.valid) {
       		throw new UnauthorizedException('Invalid verification code');
 		}
 		//If it is valid, then we disable 2FA and clear the secret

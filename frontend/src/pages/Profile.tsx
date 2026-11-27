@@ -161,7 +161,7 @@ function ProfileContent() {
     };
   }, [authLoading, id, user?.id, isOwnProfile, profileId]);
 
-  // Si es un perfil privado bloqueado, no intentamos pedir posts
+  // If it is a locked private profile, do not attempt to fetch posts.
   const isLockedPrivateProfile = !isOwnProfile && Boolean(profile?.isPrivate) && !profile?.stats;
 
   useEffect(() => {
@@ -275,7 +275,7 @@ function ProfileContent() {
     }
   };
 
-  // Alternar privacidad
+  // Toggle privacy
   const togglePrivacy = async () => {
     try {
       const nextState = !isPrivate;
@@ -288,7 +288,7 @@ function ProfileContent() {
     }
   };
 
-  // Bloquear usuario ajeno
+  // Block other user
   const blockUser = async () => {
     if (!profileId || !profile) return;
     if (!window.confirm(`Are you sure you want to block ${profile?.username}?`)) return;
@@ -306,7 +306,7 @@ function ProfileContent() {
     }
   };
 
-  // Desbloquear usuario desde la lista o desde su perfil
+  // Unblock user from the list or from their profile
   const unblockUser = async (targetId: string) => {
     try {
       await axios.delete(
@@ -366,7 +366,7 @@ function ProfileContent() {
           <label className="mt-5 block text-xs font-medium text-text-soft">Bio
             <textarea value={form.bio} onChange={(event) => setForm({ ...form, bio: event.target.value })} rows={4} className="mt-1.5 w-full resize-y rounded-control border border-border bg-surface-raised px-4 py-2.5 text-sm text-text focus:border-primary focus:outline-none" />
           </label>
-		  {/* AQUÍ VA BOTON DE PERFIL PUBLICO/PRIVADO */}
+		  {/* PUBLIC/PRIVATE PROFILE BUTTON GOES HERE */}
 		  <div className="mt-5 flex items-center justify-between rounded-control border border-border bg-surface-raised p-4">
             <div>
               <p className="text-sm font-medium text-text">Private account</p>
@@ -480,7 +480,7 @@ function ProfileContent() {
             </div>
           </section>}
 
-		  {/* CONTENIDO DEL PERFIL: TARJETA DE PRIVACIDAD O TABS */}
+		  {/* PROFILE CONTENT: PRIVACY CARD OR TABS */}
           <section className="profile-content mt-8">
 		    {isLockedPrivateProfile ? (
               <div className="flex flex-col items-center justify-center rounded-control border border-border bg-surface p-12 text-center">

@@ -106,3 +106,4 @@ coverage/
 # 9. CERTS
 
 proxy/certs
+cookies.txt

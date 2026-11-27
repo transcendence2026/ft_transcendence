@@ -164,7 +164,7 @@ function DashboardContent() {
   void messages;
   const username = user?.username ?? "Usuario";
 
-  // Estados para el flujo de activación del 2FA
+  // States for the 2FA activation flow
   const [show2FaModal, setShow2FaModal] = useState<boolean>(false);
   const [qrCodeImage, setQrCodeImage] = useState<string | null>(null);
   const [secret, setSecret] = useState<string | null>(null);
@@ -173,7 +173,7 @@ function DashboardContent() {
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
   const [loading2Fa, setLoading2Fa] = useState<boolean>(false);
 
-  // Estados para la desactivación del 2FA
+  // States for 2FA deactivation
   const [showDisableModal, setShowDisableModal] = useState<boolean>(false);
   const [disableCode, setDisableCode] = useState<string>("");
 
@@ -326,7 +326,7 @@ function DashboardContent() {
     }
   };
 
-  // Paso 1: Pedir el QR a NestJS
+  // Step 1: Request the QR code from NestJS
   const handleStart2FA = async () => {
     setErrorMessage("");
     setLoading2Fa(true);
@@ -338,20 +338,20 @@ function DashboardContent() {
       setSecret(response.data.secret);
       setShow2FaModal(true);
     } catch (err: any) {
-      console.error("Error al generar el 2FA:", err);
-      setErrorMessage("No se pudo generar el código QR. Inténtalo de nuevo.");
+      console.error("Error generating 2FA:", err);
+      setErrorMessage("Could not generate the QR code. Please try again.");
     } finally {
       setLoading2Fa(false);
     }
   };
 
-  // Paso 2: Enviar los 6 dígitos a NestJS para activar
+  // Step 2: Send the 6 digits to NestJS to activate
   const handleConfirm2FA = async (e: FormEvent) => {
     e.preventDefault();
     setErrorMessage("");
 
     if (twoFactorCode.length !== 6) {
-      setErrorMessage("Introduce el código de 6 dígitos.");
+      setErrorMessage("Enter the 6-digit code.");
       return;
     }
 
@@ -371,20 +371,20 @@ function DashboardContent() {
         setTwoFactorCode("");
       }, 2000);
     } catch (err: any) {
-      console.error("Error al activar 2FA:", err);
-      setErrorMessage("Código incorrecto. Vuelve a intentarlo.");
+      console.error("Error activating 2FA:", err);
+      setErrorMessage("Incorrect code. Please try again.");
     } finally {
       setLoading2Fa(false);
     }
   };
 
-  // Paso 3: Para desactivar 2FA, enviar a NestJS el código de 6 dígitos
+  // Step 3: To deactivate 2FA, send the 6-digit code to NestJS
   const handleDisable2FA = async (e: FormEvent) => {
     e.preventDefault();
     setErrorMessage("");
 
     if (disableCode.length !== 6) {
-      setErrorMessage("Introduce el código de 6 dígitos.");
+      setErrorMessage("Enter the 6-digit code.");
       return;
     }
 
@@ -402,9 +402,9 @@ function DashboardContent() {
         setDisableCode("");
       }, 2000);
     } catch (err: any) {
-      console.error("Error al desactivar 2FA:", err);
+      console.error("Error deactivating 2FA:", err);
       setErrorMessage(
-        err.response?.data?.message || "Código incorrecto. No se pudo desactivar el 2FA."
+        err.response?.data?.message || "Incorrect code. Could not deactivate 2FA."
       );
     } finally {
       setLoading2Fa(false);
@@ -624,16 +624,16 @@ function DashboardContent() {
                       strokeWidth={1.5}
                     />
                     <span className="text-[10px] font-bold tracking-[1.5px] text-[#fabc4d] uppercase">
-                      SEGURIDAD DE LA CUENTA
+                      ACCOUNT SECURITY
                     </span>
                   </div>
                   <h3 className="mt-1 text-[16px] text-[#e6e1df]">
-                    Autenticación en Dos Pasos (2FA)
+                    Two-Factor Authentication (2FA)
                   </h3>
                   <p className="mt-1 text-[12px] leading-relaxed text-[#a88a83]">
                     {user?.isTwoFactorEnabled
-                      ? "Tu cuenta está protegida con verificación en dos pasos."
-                      : "Añade un código temporal para proteger el acceso a tu cuenta."}
+                      ? "Your account is protected with two-step verification."
+                      : "Add a temporary code to protect access to your account."}
                   </p>
                 </div>
 
@@ -641,7 +641,7 @@ function DashboardContent() {
                   <div className="flex flex-col items-end gap-2">
                     <span className="inline-flex shrink-0 items-center gap-1.5 border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] tracking-[0.8px] text-emerald-400 uppercase">
                       <span className="size-1.5 rounded-full bg-emerald-400" />
-                      Activado
+                      Activated
                     </span>
                     <button
                       type="button"
@@ -653,7 +653,7 @@ function DashboardContent() {
                       }}
                       className="border border-red-500/30 bg-red-950/30 px-2.5 py-1 text-[10px] tracking-[0.5px] text-red-300 uppercase hover:bg-red-950/50"
                     >
-                      Desactivar
+                      Deactivate
                     </button>
                   </div>
                 ) : (
@@ -663,19 +663,19 @@ function DashboardContent() {
                     onClick={() => void handleStart2FA()}
                     className="shrink-0 bg-[#ef6540] px-3 py-1.5 text-[11px] tracking-[0.5px] text-[#611300] uppercase transition-opacity hover:opacity-90 disabled:opacity-50"
                   >
-                    {loading2Fa ? "Cargando..." : "Activar"}
+                    {loading2Fa ? "Loading..." : "Activate"}
                   </button>
                 )}
               </div>
 
-              {/* Modal de Activación 2FA */}
+              {/* 2FA Activation Modal */}
               {show2FaModal && (
                 <div className="mt-4 border border-white/5 bg-[#141312] p-4">
                   <h4 className="text-[14px] text-[#e6e1df]">
-                    Configura tu aplicación Authenticator
+                    Set up your Authenticator app
                   </h4>
                   <p className="mt-1 text-[12px] text-[#a88a83]">
-                    Escanea el código QR o introduce la clave manualmente.
+                    Scan the QR code or enter the key manually.
                   </p>
                   {errorMessage && (
                     <div className="mt-3 border border-red-500/30 bg-red-950/40 p-2 text-xs text-red-200">
@@ -684,18 +684,18 @@ function DashboardContent() {
                   )}
                   {isSuccess ? (
                     <div className="mt-4 border border-green-500/30 bg-green-950/40 p-3 text-center text-sm text-green-300">
-                      ¡2FA activado correctamente!
-                    </div>
-                  ) : (
+                      2FA activated successfully!
+					  </div>
+                    ) : (
                     <div className="mt-4 space-y-4">
                       {qrCodeImage && (
                         <div className="mx-auto w-fit bg-white p-2">
-                          <img src={qrCodeImage} alt="Código QR 2FA" className="h-36 w-36" />
+                          <img src={qrCodeImage} alt="2FA QR Code" className="h-36 w-36" />
                         </div>
                       )}
                       <div>
                         <span className="text-[10px] tracking-[1px] text-[#a88a83] uppercase">
-                          Clave secreta
+                          Secret key
                         </span>
                         <p className="mt-0.5 font-mono text-xs break-all text-[#ffb4a1] select-all">
                           {secret}
@@ -703,7 +703,7 @@ function DashboardContent() {
                       </div>
                       <form onSubmit={(e) => void handleConfirm2FA(e)} className="space-y-3">
                         <label className="block text-[10px] tracking-[1px] text-[#a88a83] uppercase">
-                          Código de 6 dígitos
+                          6-digit code
                           <input
                             type="text"
                             inputMode="numeric"
@@ -719,14 +719,14 @@ function DashboardContent() {
                             type="submit"
                             className="flex-1 bg-[#ef6540] py-2 text-[11px] tracking-[0.5px] text-[#611300] uppercase hover:opacity-90"
                           >
-                            Confirmar
+                            Confirm
                           </button>
                           <button
                             type="button"
                             onClick={() => setShow2FaModal(false)}
                             className="border border-white/10 bg-[#211f1e] px-3 py-2 text-[11px] text-[#a88a83] uppercase hover:text-[#e6e1df]"
                           >
-                            Cancelar
+                            Cancel
                           </button>
                         </div>
                       </form>
@@ -735,12 +735,12 @@ function DashboardContent() {
                 </div>
               )}
 
-              {/* Modal de Desactivación 2FA */}
+              {/* 2FA Deactivation Modal */}
               {showDisableModal && (
                 <div className="mt-4 border border-white/5 bg-[#141312] p-4">
-                  <h4 className="text-[14px] text-[#e6e1df]">Desactivar 2FA</h4>
+                  <h4 className="text-[14px] text-[#e6e1df]">Desactivate 2FA</h4>
                   <p className="mt-1 text-[12px] text-[#a88a83]">
-                    Introduce el código de 6 dígitos de tu aplicación.
+                    Enter the 6-digit code from your app.
                   </p>
                   {errorMessage && (
                     <div className="mt-3 border border-red-500/30 bg-red-950/40 p-2 text-xs text-red-200">
@@ -749,12 +749,12 @@ function DashboardContent() {
                   )}
                   {isSuccess ? (
                     <div className="mt-4 border border-green-500/30 bg-green-950/40 p-3 text-center text-sm text-green-300">
-                      ¡2FA desactivado correctamente!
+                      2FA deactivated successfully!
                     </div>
                   ) : (
                     <form onSubmit={(e) => void handleDisable2FA(e)} className="mt-4 space-y-3">
                       <label className="block text-[10px] tracking-[1px] text-[#a88a83] uppercase">
-                        Código de 6 dígitos
+                        6-digit code
                         <input
                           type="text"
                           inputMode="numeric"
@@ -771,14 +771,14 @@ function DashboardContent() {
                           type="submit"
                           className="flex-1 border border-red-500/40 bg-red-950/60 py-2 text-[11px] tracking-[0.5px] text-red-200 uppercase hover:bg-red-900/60"
                         >
-                          Confirmar
+                          Confirm
                         </button>
                         <button
                           type="button"
                           onClick={() => setShowDisableModal(false)}
                           className="border border-white/10 bg-[#211f1e] px-3 py-2 text-[11px] text-[#a88a83] uppercase hover:text-[#e6e1df]"
                         >
-                          Cancelar
+                          Cancel
                         </button>
                       </div>
                     </form>
@@ -787,10 +787,10 @@ function DashboardContent() {
               )}
             </div>
 
-            {/* COMUNIDAD */}
+            {/* COMMUNITY */}
             <div className="border border-white/5 bg-[#211f1e] p-4">
               <p className="text-[10px] font-bold tracking-[2px] text-[#fabc4d] uppercase">
-                PULSO DE LA COMUNIDAD
+                COMMUNITY PULSE
               </p>
               <h3 className="mt-1 text-[18px] text-[#e6e1df]">Aprender juntos</h3>
               <p className="mt-1.5 text-[13px] leading-relaxed text-[#a88a83]">

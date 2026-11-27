@@ -68,8 +68,8 @@ export function useRestaurantSearch(filters: SearchFilters) {
 			setResults((current) => [...current, ...page.results]);
 			setNextCursor(page.nextCursor);
 		} catch (err) {
-			if (axios.isAxiosError(err)) return;
-			// The backend anwers 400 for a cursor it no longer knows: start over
+			if (axios.isCancel(err)) return; // superseded by a newer request
+			// The backend answers 400 for a cursor it no longer knows: start over
 			if (axios.isAxiosError(err) && err.response?.status === 400) {
 				setReloadKey((key) => key + 1);
 				return;

@@ -16,7 +16,6 @@ import { RecommendationService } from '../recommendation/recommendation.service.
 import { VectorCacheService } from '../recommendation/vector-cache.service.js';
 
 const BENCH_PREFIX = '__BENCH__';
-const cache = new VectorCacheService();
 
 // CLI args
 function arg(name: string, fallback: number): number {
@@ -59,37 +58,59 @@ function report(label: string, samples: number[]): void {
 }
 
 // Data setup / teardown 
+const BENCH_USER_PREFIX = 'bench_sim_';
+
 async function cleanup(prisma: PrismaService): Promise<void> {
-  const { count } = await prisma.review.deleteMany({
+  const reviews = await prisma.review.deleteMany({
     where: { comment: { startsWith: BENCH_PREFIX } },
   });
-  console.log(`Cleanup: deleted ${count} simulated reviews`);
+  const users = await prisma.user.deleteMany({
+    where: { username: { startsWith: BENCH_USER_PREFIX } },
+  });
+  console.log(
+    `Cleanup: deleted ${reviews.count} simulated reviews and ${users.count} simulated users`,
+  );
+}
+
+// Creates throwaway users so there are enough unique (author, dish) pairs
+async function createBenchUsers(
+  prisma: PrismaService,
+  count: number,
+): Promise<string[]> {
+  await prisma.user.createMany({
+    data: Array.from({ length: count }, (_, i) => ({
+      username: `${BENCH_USER_PREFIX}${i}`,
+      email: `${BENCH_USER_PREFIX}${i}@bench.local`,
+      passwordHash: null,
+    })),
+    skipDuplicates: true,
+  });
+  const created = await prisma.user.findMany({
+    where: { username: { startsWith: BENCH_USER_PREFIX } },
+    select: { id: true },
+  });
+  return created.map((u) => u.id);
 }
 
 async function insertSimulatedReviews(
   prisma: PrismaService,
-  userIds: string[],
+  authorIds: string[],
   dishIds: string[],
 ): Promise<void> {
-  const existingReviews = await prisma.review.findMany({
-    select: { authorId: true, dishId: true },
-  });
-  const existingPairs = new Set(
-    existingReviews.map((review) => `${review.authorId}:${review.dishId}`),
+  const candidates = authorIds.flatMap((authorId) =>
+    dishIds.map((dishId) => ({ authorId, dishId })),
   );
-  const candidates = userIds.flatMap((authorId) =>
-    dishIds
-      .filter((dishId) => !existingPairs.has(`${authorId}:${dishId}`))
-      .map((dishId) => ({ authorId, dishId })),
-  );
-
-  candidates.sort(() => Math.random() - 0.5);
 
   if (candidates.length < TOTAL_REVIEWS) {
     throw new Error(
-      `Only ${candidates.length} unique user-dish combinations are available; ` +
-        `cannot insert ${TOTAL_REVIEWS} simulated reviews.`,
+      `Only ${candidates.length} unique author-dish pairs; cannot insert ${TOTAL_REVIEWS} reviews.`,
     );
+  }
+
+  // Fisher-Yates shuffle
+  for (let i = candidates.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
   }
 
   const data = candidates.slice(0, TOTAL_REVIEWS).map((pair, index) => ({
@@ -98,7 +119,6 @@ async function insertSimulatedReviews(
     rating: 1 + Math.floor(Math.random() * 5),
   }));
 
-  // createMany keeps the insert fast; chunk to avoid huge single statements
   const CHUNK = 500;
   for (let i = 0; i < data.length; i += CHUNK) {
     await prisma.review.createMany({ data: data.slice(i, i + CHUNK) });
@@ -128,38 +148,49 @@ async function main(): Promise<void> {
   const prisma = new PrismaService();
   await prisma.$connect();
 
-  const service = new RecommendationService(prisma, cache);
-
   try {
     if (ONLY_CLEANUP) {
       await cleanup(prisma);
       return;
     }
 
+    // Evaluate only real seed users; bench users exist just to author reviews
     const users = await prisma.user.findMany({ select: { id: true } });
     const dishes = await prisma.dish.findMany({ select: { id: true } });
-    const userIds = users.map((u) => u.id);
+    const evalUserIds = users.map((u) => u.id);
     const dishIds = dishes.map((d) => d.id);
-    console.log(`Seed: ${userIds.length} users, ${dishIds.length} dishes`);
+    console.log(`Seed: ${evalUserIds.length} users, ${dishIds.length} dishes`);
 
-    // Baseline with seed data only
-    const baseline = await measure(
-      () => service.getDishRecommendations(userIds[0]),
-      WARMUP_RUNS,
-      MEASURED_RUNS,
-    );
-    report('Baseline (seed only)', baseline);
+    const runScenario = async (label: string): Promise<void> => {
+      // Cold: brand-new cache on every call, so each run hits the DB
+      let i = 0;
+      const cold = await measure(
+        () =>
+          new RecommendationService(prisma, new VectorCacheService())
+            .getDishRecommendations(evalUserIds[i++ % evalUserIds.length]),
+        WARMUP_RUNS,
+        MEASURED_RUNS,
+      );
+      report(`${label} - cold cache`, cold);
 
-    await insertSimulatedReviews(prisma, userIds, dishIds);
+      // Warm: one shared cache across all calls
+      const shared = new RecommendationService(prisma, new VectorCacheService());
+      i = 0;
+      const warm = await measure(
+        () => shared.getDishRecommendations(evalUserIds[i++ % evalUserIds.length]),
+        WARMUP_RUNS,
+        MEASURED_RUNS,
+      );
+      report(`${label} - warm cache`, warm);
+    };
 
-    // Rotate through users so we do not benchmark a single warm path
-    let i = 0;
-    const loaded = await measure(
-      () => service.getDishRecommendations(userIds[i++ % userIds.length]),
-      WARMUP_RUNS,
-      MEASURED_RUNS,
-    );
-    report(`With ${TOTAL_REVIEWS} simulated reviews`, loaded);
+    await runScenario('Baseline (seed only)');
+
+    const benchUserCount = Math.ceil(TOTAL_REVIEWS / dishIds.length) + 1;
+    const benchUserIds = await createBenchUsers(prisma, benchUserCount);
+    await insertSimulatedReviews(prisma, benchUserIds, dishIds);
+
+    await runScenario(`With ${TOTAL_REVIEWS} simulated reviews`);
   } finally {
     await cleanup(prisma); // always remove simulated data
     await prisma.$disconnect();
