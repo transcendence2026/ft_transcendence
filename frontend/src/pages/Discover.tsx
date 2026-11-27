@@ -45,16 +45,16 @@ export default function Discover() {
 				<div className="mx-auto flex max-w-6xl flex-col gap-6">
 					<div className="border-b border-white/5 pb-5">
 						<p className="text-[11px] font-bold tracking-[2.75px] text-[#fabc4d] uppercase">
-							DESCUBRE
+							DISCOVER
 						</p>
 						<h1 className="mt-1 text-[28px] tracking-[-0.5px] text-[#e6e1df]">
-							{isRestaurants ? 'Encuentra el mejor restaurante' : 'Encuentra a otros foodies'}
+							{isRestaurants ? 'Find the best restaurant' : 'Meet other foodies'}
 						</h1>
 					</div>
 
 					<DishCarousel />
 
-					<div role="tablist" aria-label="Tipo de búsqueda" className="flex gap-6 border-b border-white/5">
+					<div role="tablist" aria-label="Search type" className="flex gap-6 border-b border-white/5">
 						{TABS.map(({ id, label }) => (
 							<button
 								key={id}
@@ -73,25 +73,25 @@ export default function Discover() {
 						))}
 					</div>
 
-					<section aria-label="Búsqueda y filtros" className="border border-white/5 bg-[#1d1b1a] p-5">
+					<section aria-label="Search and filters" className="border border-white/5 bg-[#1d1b1a] p-5">
 						<Input
-							label={isRestaurants ? 'Buscar restaurantes o platos' : 'Buscar usuarios'}
+							label={isRestaurants ? 'Search for restaurants or dishes' : 'Search for users'}
 							type="search"
 							value={q}
 							onChange={(event) => setQ(event.target.value)}
-							placeholder={isRestaurants ? 'Pizza, sushi, Trattoria...' : 'Nombre de usuario o nombre...'}
+							placeholder={isRestaurants ? 'Pizza, sushi, Trattoria...' : 'Username or name...'}
 						/>
 
 						{isRestaurants && (
 							<div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
 								<label className={LABEL_CLASS}>
-									Tipo de Cocina
+									Cuisine type
 									<select
 										className={SELECT_CLASS}
 										value={cuisine}
 										onChange={(event) => setCuisine(event.target.value)}
 									>
-										<option value="">Todas</option>
+										<option value="">All Cusine</option>
 										{CUISINE.map((value) => (
 											<option key={value} value={value}>
 												{CUISINE_LABELS[value]}
@@ -101,13 +101,13 @@ export default function Discover() {
 								</label>
 
 								<label className={LABEL_CLASS}>
-									Precio
+									Price
 									<select
 										className={SELECT_CLASS}
 										value={price}
 										onChange={(event) => setPrice(event.target.value)}
 									>
-										<option value="">Cualquiera</option>
+										<option value="">Any price</option>
 										<option value="1">€</option>
 										<option value="2">€€</option>
 										<option value="3">€€€</option>
@@ -116,13 +116,13 @@ export default function Discover() {
 								</label>
 
 								<label className={LABEL_CLASS}>
-									Valoración mínima
+									Minimum rating
 									<select
 										className={SELECT_CLASS}
 										value={rating}
 										onChange={(event) => setRating(event.target.value)}
 									>
-										<option value="">Cualquiera</option>
+										<option value="">Any rating</option>
 										<option value="2">2 ★ o más</option>
 										<option value="3">3 ★ o más</option>
 										<option value="4">4 ★ o más</option>
@@ -135,7 +135,7 @@ export default function Discover() {
 						{hasFilters && (
 							<div className="mt-4">
 								<Button type="button" variant="ghost" onClick={clearFilters}>
-									{isRestaurants ? 'Limpiar filtros' : 'Limpiar búsqueda'}
+									{isRestaurants ? 'Clean filters' : 'Clear search'}
 								</Button>
 							</div>
 						)}
