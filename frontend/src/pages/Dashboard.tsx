@@ -39,9 +39,9 @@ interface FeedResponse {
 const placeholderPosts: FeedPost[] = [
   {
     id: "placeholder-1",
-    title: "El feed está listo para tu mesa",
+    title: "The feed is ready for your table",
     content:
-      "Aún no hay publicaciones disponibles. Comparte tu próximo plato con la comunidad y aparecerá aquí.",
+      "No posts available yet. Share your next dish with the community and it will appear here.",
     createdAt: new Date().toISOString(),
     author: { id: "placeholder-author", username: "transcendence", profile: null },
     images: [],
@@ -113,11 +113,11 @@ export function PostCard({ post }: { post: FeedPost }) {
             onClick={() => void addFriend()}
             className="px-2 py-1 text-xs text-[#ffb4a1]"
           >
-            {friendshipLoading ? "..." : "+ Amigo"}
+            {friendshipLoading ? "..." : "+ Friend"}
           </Button>
         )}
-        {friendshipStatus === "PENDING" && <Badge tone="muted">Solicitud enviada</Badge>}
-        {friendshipStatus === "ACCEPTED" && <Badge tone="success">Amigos</Badge>}
+        {friendshipStatus === "PENDING" && <Badge tone="muted">Request sent</Badge>}
+        {friendshipStatus === "ACCEPTED" && <Badge tone="success">Friends</Badge>}
       </div>
       <div className="mt-5">
         <h2 className="text-xl text-[#e6e1df]">{post.title}</h2>
@@ -129,7 +129,7 @@ export function PostCard({ post }: { post: FeedPost }) {
             <img
               key={image.id}
               src={imageUrl(image.url)}
-              alt={`Plato compartido por ${post.author.username}`}
+              alt={`Dish shared by ${post.author.username}`}
               className="aspect-[4/3] w-full object-cover"
             />
           ))}
@@ -149,7 +149,7 @@ export function PostCard({ post }: { post: FeedPost }) {
           □ 0
         </Button>
         <Button type="button" variant="ghost" className="px-0 py-0 text-xs text-[#a88a83]">
-          ↗ Compartir
+          ↗ Share
         </Button>
       </div>
     </article>
@@ -162,7 +162,7 @@ function DashboardContent() {
   const { sendMessage, messages } = useWebSocket();
   void sendMessage;
   void messages;
-  const username = user?.username ?? "Usuario";
+  const username = user?.username ?? "User";
 
   // States for the 2FA activation flow
   const [show2FaModal, setShow2FaModal] = useState<boolean>(false);
@@ -232,7 +232,7 @@ function DashboardContent() {
           setPosts(placeholderPosts);
           setUsingPlaceholder(true);
           setHasMore(false);
-          setError("El feed en directo no está disponible en este momento.");
+          setError("The live feed is currently unavailable.");
         }
       })
       .finally(() => {
@@ -259,7 +259,7 @@ function DashboardContent() {
             setCursor(data.nextCursor);
             setHasMore(data.hasMore);
           })
-          .catch(() => setError("No se pudieron cargar más publicaciones."))
+          .catch(() => setError("Could not load more posts."))
           .finally(() => setLoadingMore(false));
       },
       { rootMargin: "320px" }
@@ -414,27 +414,27 @@ function DashboardContent() {
   return (
     <AppLayout sidebarFooter={<SidebarAccount onLogout={() => void handleLogout()} />}>
         <main className="grid flex-1 grid-cols-12 bg-[#0f0e0d]">
-          {/* COLONNE CENTRALE (8 cols) : FEED CULINAIRE */}
+          {/* CENTER COLUMN (8 cols): CULINARY FEED */}
           <section className="col-span-12 flex flex-col border-r border-white/5 bg-[#141312] p-6 lg:col-span-8">
             <div className="mb-6 flex items-end justify-between border-b border-white/5 pb-5">
               <div>
                 <p className="text-[11px] font-bold tracking-[2.75px] text-[#fabc4d] uppercase">
-                  COMUNIDAD GASTRONÓMICA
+                  GASTRONOMIC COMMUNITY
                 </p>
                 <h1 className="mt-1 text-[28px] tracking-[-0.5px] text-[#e6e1df]">
-                  Bienvenido de nuevo, {username}
+                  Welcome back, {username}
                 </h1>
               </div>
               <button
                 type="button"
                 className="hidden items-center gap-2 border border-white/10 bg-[#211f1e] px-3 py-2 text-[11px] tracking-[1px] text-[#a88a83] uppercase transition-colors hover:border-[#fabc4d]/40 hover:text-[#e6e1df] sm:flex"
               >
-                <span>Ver archivo</span>
+                <span>View archive</span>
                 <ArrowRight aria-hidden="true" className="size-3" strokeWidth={1.75} />
               </button>
             </div>
 
-            {/* Roster des Chefs / Membres actifs */}
+            {/* Roster of Chefs / Active members */}
             <div className="mb-6 grid grid-cols-2 gap-2.5 sm:grid-cols-5">
               {rosterNames.map((name, index) => {
                 const post = posts[index];
@@ -454,7 +454,7 @@ function DashboardContent() {
                     />
                     <p className="w-full truncate text-[12px] text-[#e6e1df]">{name}</p>
                     <span className="bg-[#211f1e] px-1.5 py-0.5 text-[9px] tracking-[0.8px] text-[#fabc4d] uppercase">
-                      {index === 0 ? "EN LÍNEA" : "COCINA"}
+                      {index === 0 ? "ONLINE" : "KITCHEN"}
                     </span>
                   </div>
                 );
@@ -581,10 +581,10 @@ function DashboardContent() {
               )}
             </div>
 
-            {/* Liste des publications */}
+            {/* List of posts */}
             <div className="space-y-5 pb-8">
               {loading ? (
-                <Loader label="Cargando publicaciones..." />
+                <Loader label="Loading posts..." />
               ) : (
                 posts.map((post) => (
                   <SocialPostCard
@@ -604,16 +604,16 @@ function DashboardContent() {
 
               {!loading && !usingPlaceholder && (
                 <div ref={sentinelRef} className="min-h-20">
-                  {loadingMore && <Loader label="Cargando más publicaciones..." />}
+                  {loadingMore && <Loader label="Loading more posts..." />}
                 </div>
               )}
             </div>
           </div>
           </section>
 
-          {/* COLONNE DROITE (4 cols) : SÉCURITÉ 2FA & TENDANCES */}
+          {/* RIGHT COLUMN (4 cols): 2FA SECURITY & TRENDS */}
           <aside className="col-span-12 flex flex-col gap-6 bg-[#1d1b1a]/95 p-6 lg:col-span-4">
-            {/* PANNEAU 2FA */}
+            {/* 2FA PANEL */}
             <div className="border border-white/5 bg-[#211f1e] p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -738,7 +738,7 @@ function DashboardContent() {
               {/* 2FA Deactivation Modal */}
               {showDisableModal && (
                 <div className="mt-4 border border-white/5 bg-[#141312] p-4">
-                  <h4 className="text-[14px] text-[#e6e1df]">Desactivate 2FA</h4>
+                  <h4 className="text-[14px] text-[#e6e1df]">Deactivate 2FA</h4>
                   <p className="mt-1 text-[12px] text-[#a88a83]">
                     Enter the 6-digit code from your app.
                   </p>
@@ -785,18 +785,6 @@ function DashboardContent() {
                   )}
                 </div>
               )}
-            </div>
-
-            {/* COMMUNITY */}
-            <div className="border border-white/5 bg-[#211f1e] p-4">
-              <p className="text-[10px] font-bold tracking-[2px] text-[#fabc4d] uppercase">
-                COMMUNITY PULSE
-              </p>
-              <h3 className="mt-1 text-[18px] text-[#e6e1df]">Aprender juntos</h3>
-              <p className="mt-1.5 text-[13px] leading-relaxed text-[#a88a83]">
-                Comparte tus platos favoritos, descubre nuevas técnicas y conecta con otros
-                apasionados de la cocina.
-              </p>
             </div>
           </aside>
         </main>
