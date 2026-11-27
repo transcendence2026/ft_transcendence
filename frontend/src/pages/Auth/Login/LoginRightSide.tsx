@@ -44,25 +44,25 @@ function getAuthErrorMessage(error: unknown, fallback: string): string {
 export default function LoginRightSide() {
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
-  const [remember, setRemember] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  //2FA state
+  // 2FA state
   const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
   const [userId, setUserId] = useState<string>("");
   const [code, setCode] = useState<string>("");
-  
+
   const { login, oauth42, refreshUser } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+
   useEffect(() => {
-	const idFromUrl = searchParams.get("userId");
-	if (idFromUrl) {
-		setUserId(idFromUrl);
-		setRequiresTwoFactor(true);
-	}
+    const idFromUrl = searchParams.get("userId");
+    if (idFromUrl) {
+      setUserId(idFromUrl);
+      setRequiresTwoFactor(true);
+    }
   }, [searchParams]);
 
   // Submit credentials
@@ -129,10 +129,9 @@ export default function LoginRightSide() {
             <div className="mt-5">
               <button
                 type="button"
-                //onClick={oauth42}
-				onClick={() => {
-					oauth42();
-    			}}
+                onClick={() => {
+                  oauth42();
+                }}
                 className="auth-secondary-button"
               >
                 <span className="flex h-5 w-5 items-center justify-center rounded-control bg-primary-soft text-xs font-bold text-background">
@@ -166,15 +165,7 @@ export default function LoginRightSide() {
               </label>
 
               <label className="auth-label">
-                <div className="mb-1 flex justify-between">
-                  <span>Password</span>
-                  <Link
-                    to="#forgot"
-                    className="text-primary-soft transition-colors hover:text-primary-hover"
-                  >
-                    Forgot your password?
-                  </Link>
-                </div>
+                <span className="mb-1 block">Password</span>
                 <div className="auth-input-shell">
                   <Lock />
                   <input
@@ -195,16 +186,6 @@ export default function LoginRightSide() {
                 </div>
               </label>
 
-              <label className="flex w-full cursor-pointer items-center gap-2 py-1 font-sans text-xs text-text-soft transition-colors hover:text-text">
-                <input
-                  type="checkbox"
-                  checked={remember}
-                  onChange={(e) => setRemember(e.target.checked)}
-                  className="h-3.5 w-3.5 cursor-pointer rounded border-border bg-surface accent-primary"
-                />
-                Remember this device for 30 days
-              </label>
-
               <button
                 type="submit"
                 disabled={isSubmitting}
@@ -219,7 +200,7 @@ export default function LoginRightSide() {
               to="/register"
               className="auth-outline-button mt-4"
             >
-              Don't have an account? Create account
+              Don&apos;t have an account? Create account
             </Link>
           </>
         ) : (
