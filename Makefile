@@ -9,7 +9,8 @@ CERT_DIR := proxy/certs
 CERT_KEY := $(CERT_DIR)/selfsigned.key
 CERT_CRT := $(CERT_DIR)/selfsigned.crt
 
-# Socket de Docker detectado automáticamente (rootless o root)
+# Automatically detected Docker socket (rootless or root)
+# Socket path varies per user in rootless environments (e.g., 42); hardcoding /var/run/docker.sock breaks across sessions.
 export DOCKER_SOCK := $(shell docker context inspect --format '{{.Endpoints.docker.Host}}' 2>/dev/null | sed 's|unix://||')
 
 help:

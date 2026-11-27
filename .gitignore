@@ -1,39 +1,19 @@
-node_modules/
-dist/
-dev-dist/
 
-# Variables de entorno en cualquier nivel
-*.env
-backend/.env
-
-# Certificados y claves SSL
+# Certificates and keys for HTTPS
 *.key
 *.crt
 certs/
 proxy/certs/
-
-# 1. SYSTEM FILES AND EDITORS
  
 # macOS system folder view settings
 .DS_Store
 
-# Windows thumbnail cache file
-Thumbs.db
-
 # VS Code workspace settings folder
 .vscode/
-.nfs*
-
 
 # Unignores shared VS Code settings
 !.vscode/settings.json
 
-# Vim editor temporary swap and buffer files
-*.swp
-*.swo
-
- 
-# 2. ENVIRONMENT VARIABLES AND SECRETS
 
 # Main file for local secret environment variables
 .env
@@ -44,20 +24,16 @@ Thumbs.db
 
 # Unignores example environment template file
 !.env.example
-
- 
-# 3. DEPENDENCIES (Node.js)
  
 # Node modules directories
 node_modules/
 /node_modules
 apps/*/node_modules
 
-# 4. NESTJS (Backend) - Build and Cache
-
 # NestJS compiled JavaScript output directory
 dist/
 /dist
+dev-dist/
 
 # Compiled JS files generated alongside TS source files
 backend/**/*.js
@@ -70,8 +46,6 @@ backend/**/*.js
 *.tsbuildinfo
 
 
-# 5. REACT (Frontend) - Build and Cache
-
 # React production build output folder
 build/
 dist-react/
@@ -79,8 +53,6 @@ dist-react/
 # Vite local development cache folder
 .vite/
 
- 
-# 6. LOGS
 
 # Directory and files for runtime/package manager logs
 logs
@@ -90,20 +62,8 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
- 
-# 7. DOCKER AND DATA PERSISTENCE
 
 # Local PostgreSQL database volume directory
 .postgres-data/
 postgres-data/
 
- 
-# 8. TEST COVERAGE
-
-# Automated test coverage reports directory
-coverage/
-
-# 9. CERTS
-
-proxy/certs
-cookies.txt

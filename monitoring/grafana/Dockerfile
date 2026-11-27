@@ -1,8 +1,8 @@
 FROM grafana/grafana:latest
 
-# Provisioning de datasources y dashboards (equivalente a "volumes:" con bind mounts)
+# Datasources and dashboards provisioning (equivalent to "volumes:" with bind mounts)
 COPY ./provisioning /etc/grafana/provisioning
 COPY ./dashboards /var/lib/grafana/dashboards
 
-# Puerto (documental; se publica con -p al hacer docker run)
+# Port (informational; published with -p when running docker run)
 EXPOSE 3000

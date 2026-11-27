@@ -13,10 +13,7 @@ services:
       # Share uploaded files with the backend while serving them read-only through Nginx.
       - uploads_data:/usr/share/nginx/uploads:ro
     networks:
-      # The edge network is reserved for a future public-facing layer.
-      # - edge-net
       - proxy-net
-    # Start the proxy after the application services are available.
     depends_on:
       backend:
         condition: service_healthy
@@ -28,9 +25,9 @@ services:
     build:
       context: ./db
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgrespassword
-      POSTGRES_DB: transcendence
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgrespassword}
+      POSTGRES_DB: ${POSTGRES_DB:-transcendence}
     # Keep the database inaccessible from the host by default.
     networks:
       - backend-net
@@ -50,7 +47,7 @@ services:
       context: ./backend
     environment:
       PORT: 3000
-      DATABASE_URL: postgresql://postgres:postgrespassword@db:5432/transcendence?schema=public
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgrespassword@db:5432/transcendence?schema=public}
       JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
       FRONTEND_URL: ${FRONTEND_URL:-https://localhost:8443}
       BACKEND_URL: ${BACKEND_URL:-http://localhost:3000}
