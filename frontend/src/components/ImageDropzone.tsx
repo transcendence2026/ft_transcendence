@@ -38,14 +38,14 @@ export const ImageDropzone: React.FC<ImageDropzoneProps> = ({
     // Validar tipo MIME (Solo imágenes válidas)
     const allowedTypes = ['image/jpeg', 'image/png'];
     if (!allowedTypes.includes(file.type)) {
-      setErrorMessage('Formato no válido. Solo se permiten imágenes (JPG, PNG).');
+      setErrorMessage('Invalid format. Only images are allowed (JPG, PNG).');
       return;
     }
 
     // Validar Tamaño (Máximo 2 MB)
     const maxSizeBytes = 2 * 1024 * 1024;
     if (file.size > maxSizeBytes) {
-      setErrorMessage('La imagen supera el peso máximo permitido (2 MB).');
+      setErrorMessage('The image exceeds the maximum allowed weight (2 MB).');
       return;
     }
 
@@ -109,8 +109,8 @@ export const ImageDropzone: React.FC<ImageDropzoneProps> = ({
             onClick={() => fileInputRef.current?.click()}
             className={`relative border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all duration-200 flex flex-col items-center justify-center gap-3 ${
               isDragging
-                ? 'border-primary bg-secondary-50/50 dark:bg-secondary/10 scale-[1.01]'
-                : 'border-border dark:border-border hover:border-secondary bg-white dark:bg-surface'
+                ? 'border-primary bg-secondary-50/50 bg-secondary/10 scale-[1.01]'
+                : 'border-border border-border hover:border-secondary bg-surface'
             }`}
           >
             {previewUrl ? (
@@ -151,13 +151,13 @@ export const ImageDropzone: React.FC<ImageDropzoneProps> = ({
             )}
     
             <div className="space-y-1">
-              <p className="text-sm font-medium text-text dark:text-text-soft">
+              <p className="text-sm font-medium text-text text-text-soft">
                 {selectedFile
                   ? selectedFile.name
-                  : `Drag and drop your ${variant === 'avatar' ? 'avatar' : 'imagen'} here, or click to explore`}
+                  : `Drag and drop your ${variant === 'avatar' ? 'avatar' : 'image'} here, or click to explore`}
               </p>
-              <p className="text-xs text-text dark:text-text-soft">
-                PNG o JPG (máx. 2MB)
+              <p className="text-xs text-text text-text-soft">
+                PNG or JPG (máx. 2MB)
               </p>
             </div>
           </div>
@@ -165,11 +165,11 @@ export const ImageDropzone: React.FC<ImageDropzoneProps> = ({
           {/* Indicador / Barra de Progreso */}
           {isUploading && (
             <div className="space-y-2">
-              <div className="flex justify-between text-xs font-semibold text-text dark:text-text-soft">
+              <div className="flex justify-between text-xs font-semibold text-text text-text-soft">
                 <span>Subiendo archivo...</span>
                 <span>{uploadProgress}%</span>
               </div>
-              <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+              <div className="w-full h-2 bg-gray-200 bg-gray-700 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-primary transition-all duration-150 ease-out"
                   style={{ width: `${uploadProgress}%` }}
@@ -180,7 +180,7 @@ export const ImageDropzone: React.FC<ImageDropzoneProps> = ({
     
           {/* Feedback de Error Visual */}
           {errorMessage && (
-            <div className="flex items-center gap-2 p-3 text-xs text-red-600 bg-red-50 dark:bg-red-950/30 rounded-lg border border-red-200 dark:border-red-900">
+            <div className="flex items-center gap-2 p-3 text-xs text-red-600 bg-red-50 bg-red-950/30 rounded-lg border border-red-200 border-red-900">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{errorMessage}</span>
             </div>

@@ -21,6 +21,8 @@ import { SocialModule } from './social/social.module.js';
 import { PrivacyModule } from './privacy/privacy.module.js';
 import { RecommendationModule } from './recommendation/recommendation.module.js';
 import { FriendsModule } from './friends/friends.module.js';
+import { PrometheusModule } from '@willsoto/nestjs-prometheus';
+import { MetricsModule } from './metrics/metrics.module.js';
 import { RgpdModule } from './rgpd/rgpd.module.js';
 import { SearchModule } from './search/search.module.js';
 import { NotificationGateway } from './notification/notification.gateway.js';
@@ -43,6 +45,7 @@ import { RestaurantsModule } from './restaurants/restaurants.module.js';
 		PrismaModule,
 		AuthModule,
 		UsersModule,
+		MetricsModule,
 		FilesModule,
 		PostsModule,
 		ReviewsModule,
@@ -55,6 +58,11 @@ import { RestaurantsModule } from './restaurants/restaurants.module.js';
     	HealthModule,
 		SearchModule,
     	EventEmitterModule.forRoot(),
+		PrometheusModule.register(),
+		//Modulos siguientes que importaremos cuando se hagan
+		//UsersModule,  //Modulo para gesrionar perfiles y datos usuarios
+		//ProductsModule, //Modulo para catálogo de tienda
+		//OrdersModule, //Modulo para compras y carritos
 		RestaurantsModule,
 		ServeStaticModule.forRoot({
 			rootPath: join(process.cwd(), 'uploads'),
